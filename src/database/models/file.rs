@@ -76,6 +76,7 @@ impl File {
 #[cfg(test)]
 mod tests {
     use super::File;
+    use crate::database::create_in_memory;
 
     #[test]
     fn test_pseudorandom_sha256_string_is_valid_length_and_contains_valid_chars() {
@@ -89,5 +90,22 @@ mod tests {
                 assert!(valid_chars.contains(chr));
             }
         }
+    }
+
+    #[tokio::test]
+    async fn test_insert_unique() {
+        let database = create_in_memory().await.unwrap();
+
+        assert!(
+            File::insert(&database, "foobar", "path/foo/bar", &false, &false)
+                .await
+                .is_ok()
+        );
+
+        assert!(
+            File::insert(&database, "foobar", "path/foo/bar", &false, &false)
+                .await
+                .is_err()
+        );
     }
 }
