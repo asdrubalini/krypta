@@ -63,7 +63,7 @@ pub async fn sync_database_from_source_folder(
 
             log::info!("Adding {} to the database", path);
 
-            Ok(File::insert(&database, &title, &path, &false, &false).await?)
+            Ok(File::insert(&database, &title, &path, false, false).await?)
         });
 
         handles.push(handle);

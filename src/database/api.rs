@@ -22,6 +22,16 @@ pub async fn connect_or_create() -> Result<Database, sqlx::Error> {
     Ok(connection)
 }
 
+/// Connect to SQLite database
+pub async fn create_in_memory() -> Result<Database, sqlx::Error> {
+    let options = SqliteConnectOptions::from_str("sqlite::memory:")?;
+    let connection = SqlitePool::connect_with(options).await?;
+
+    load_schema(&connection).await;
+
+    Ok(connection)
+}
+
 /// Load database schema
 pub async fn load_schema(database: &Database) {
     log::info!("New database... loading schema");

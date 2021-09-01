@@ -14,6 +14,7 @@ pub struct File {
     pub updated_at: DateTime<Utc>,
 }
 
+#[allow(dead_code)]
 impl File {
     /// Search files stored in database
     pub async fn search(database: &Database, query: &str) -> Result<Vec<File>, sqlx::Error> {
@@ -43,8 +44,8 @@ impl File {
         database: &Database,
         title: &str,
         path: &str,
-        is_remote: &bool,
-        is_encrypted: &bool,
+        is_remote: bool,
+        is_encrypted: bool,
     ) -> Result<(), sqlx::Error> {
         let now = chrono::Utc::now();
         let random_hash = File::pseudorandom_sha256_string();
@@ -69,5 +70,42 @@ impl File {
             .await?;
 
         Ok(files.iter().map(|path| path.0.to_owned()).collect())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::File;
+    use crate::database::create_in_memory;
+
+    #[test]
+    fn test_pseudorandom_sha256_string_is_valid_length_and_contains_valid_chars() {
+        let valid_chars = "0123456789abcdfe";
+
+        for _ in 0..10_000 {
+            let result = File::pseudorandom_sha256_string();
+            assert_eq!(result.len(), 64);
+
+            for chr in result.chars() {
+                assert!(valid_chars.contains(chr));
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_insert_unique() {
+        let database = create_in_memory().await.unwrap();
+
+        assert!(
+            File::insert(&database, "foobar", "path/foo/bar", false, false)
+                .await
+                .is_ok()
+        );
+
+        assert!(
+            File::insert(&database, "foobar", "path/foo/bar", false, false)
+                .await
+                .is_err()
+        );
     }
 }
