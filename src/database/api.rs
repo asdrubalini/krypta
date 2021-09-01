@@ -41,3 +41,14 @@ pub async fn load_schema(database: &Database) {
         .await
         .expect("Cannot load database schema");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::create_in_memory;
+
+    #[tokio::test]
+    async fn test_create_sqlite_connection_in_memory() {
+        let database = create_in_memory().await;
+        assert!(database.is_ok());
+    }
+}
