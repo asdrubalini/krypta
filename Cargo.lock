@@ -1751,6 +1751,7 @@ dependencies = [
  "bitflags",
  "byteorder",
  "bytes 1.0.1",
+ "chrono",
  "crc",
  "crossbeam-channel",
  "crossbeam-queue",
@@ -2148,6 +2149,7 @@ dependencies = [
 name = "vault-manager"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "dotenv",
  "log",
  "pretty_env_logger",

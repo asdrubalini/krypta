@@ -19,6 +19,8 @@ It has the following fields:
 - `is_remote`: whether or not the file exists on remote endpoint
 - `random_hash`: randomly-generated hash unique to each file (SHA-256)
 - `data_hash`: original data hash, used to make sure that decryption was successful (CRC-32)
+- `created_at`
+- `updated_at`
 
 Another crucial table is `endpoint` which stores details about configured enpoints, such as connection method and credentials.
 
