@@ -12,8 +12,6 @@ async fn main() {
     dotenv().ok();
     pretty_env_logger::init();
 
-    println!("test github cache");
-
     let database = database::connect_or_create()
         .await
         .expect("Cannot open database");
