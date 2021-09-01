@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS "file" (
 	"title"	TEXT NOT NULL UNIQUE,
 	"path"	TEXT NOT NULL UNIQUE,
 	"is_remote" INTEGER NOT NULL,
+	"is_encrypted" INTEGER NOT NULL,
 	"random_hash"	TEXT NOT NULL UNIQUE,
 	"data_hash"	INTEGER NOT NULL UNIQUE,
 	"created_at" TEXT NOT NULL,

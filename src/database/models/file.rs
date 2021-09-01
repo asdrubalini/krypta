@@ -6,6 +6,8 @@ pub struct File {
     pub id: i64,
     pub title: String,
     pub path: String,
+    pub is_remote: bool,
+    pub is_encrypted: bool,
     pub random_hash: String,
     pub data_hash: String,
     pub created_at: DateTime<Utc>,
@@ -29,6 +31,7 @@ impl File {
         title: &str,
         path: &str,
         is_remote: &bool,
+        is_encrypted: &bool,
         random_hash: &str,
         data_hash: &str,
     ) -> Result<(), sqlx::Error> {
@@ -38,6 +41,7 @@ impl File {
             .bind(title)
             .bind(path)
             .bind(is_remote)
+            .bind(is_encrypted)
             .bind(random_hash)
             .bind(data_hash)
             .bind(&now)
