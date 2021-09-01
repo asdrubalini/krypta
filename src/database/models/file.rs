@@ -14,6 +14,7 @@ pub struct File {
     pub updated_at: DateTime<Utc>,
 }
 
+#[allow(dead_code)]
 impl File {
     /// Search files stored in database
     pub async fn search(database: &Database, query: &str) -> Result<Vec<File>, sqlx::Error> {
@@ -69,5 +70,24 @@ impl File {
             .await?;
 
         Ok(files.iter().map(|path| path.0.to_owned()).collect())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::File;
+
+    #[test]
+    fn test_pseudorandom_sha256_string_is_valid_length_and_contains_valid_chars() {
+        let valid_chars = "0123456789abcdfe";
+
+        for _ in 0..10_000 {
+            let result = File::pseudorandom_sha256_string();
+            assert_eq!(result.len(), 64);
+
+            for chr in result.chars() {
+                assert!(valid_chars.contains(chr));
+            }
+        }
     }
 }
