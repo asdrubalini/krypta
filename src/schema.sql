@@ -15,7 +15,6 @@ CREATE TABLE IF NOT EXISTS "file" (
 	"is_remote" INTEGER NOT NULL,
 	"is_encrypted" INTEGER NOT NULL,
 	"random_hash"	TEXT NOT NULL UNIQUE,
-	"data_hash"	INTEGER NOT NULL UNIQUE,
 	"created_at" TEXT NOT NULL,
 	"updated_at" TEXT NOT NULL,
 	PRIMARY KEY("id" AUTOINCREMENT)
@@ -36,8 +35,5 @@ CREATE UNIQUE INDEX IF NOT EXISTS "file_title" ON "file" (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "file_random_hash" ON "file" (
 	"random_hash"
-);
-CREATE UNIQUE INDEX IF NOT EXISTS "file_data_hash" ON "file" (
-	"data_hash"
 );
 COMMIT;
