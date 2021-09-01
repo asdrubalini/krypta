@@ -16,10 +16,11 @@ It has the following fields:
 - `id`: database's incremental and unique id
 - `title`: friendly file's name
 - `path`: original, unencrypted file path
+- `is_remote`: whether or not the file exists on remote endpoint
 - `random_hash`: randomly-generated hash unique to each file (SHA-256)
 - `data_hash`: original data hash, used to make sure that decryption was successful (CRC-32)
 
-Another crucial table is `endpoints` which stores details about configured enpoints, such as connection method and credentials.
+Another crucial table is `endpoint` which stores details about configured enpoints, such as connection method and credentials.
 
 Finally, the `key` table stores the encryption key.
 

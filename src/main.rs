@@ -1,6 +1,7 @@
 mod database;
 mod storage;
 mod tui;
+mod utils;
 
 use dotenv::dotenv;
 use pretty_env_logger;
@@ -10,10 +11,7 @@ async fn main() {
     dotenv().ok();
     pretty_env_logger::init();
 
-    let db = database::connect_or_create().await.unwrap();
-    let res = database::models::File::search(&db, "feet".to_string())
+    let database = database::connect_or_create()
         .await
-        .unwrap();
-
-    println!("{:?}", res);
+        .expect("Cannot open database");
 }
