@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_variables)]
 mod database;
 mod storage;
 mod sync;
