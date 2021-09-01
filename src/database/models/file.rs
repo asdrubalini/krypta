@@ -44,8 +44,8 @@ impl File {
         database: &Database,
         title: &str,
         path: &str,
-        is_remote: &bool,
-        is_encrypted: &bool,
+        is_remote: bool,
+        is_encrypted: bool,
     ) -> Result<(), sqlx::Error> {
         let now = chrono::Utc::now();
         let random_hash = File::pseudorandom_sha256_string();
@@ -97,13 +97,13 @@ mod tests {
         let database = create_in_memory().await.unwrap();
 
         assert!(
-            File::insert(&database, "foobar", "path/foo/bar", &false, &false)
+            File::insert(&database, "foobar", "path/foo/bar", false, false)
                 .await
                 .is_ok()
         );
 
         assert!(
-            File::insert(&database, "foobar", "path/foo/bar", &false, &false)
+            File::insert(&database, "foobar", "path/foo/bar", false, false)
                 .await
                 .is_err()
         );
