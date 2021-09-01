@@ -2,7 +2,7 @@ SELECT
   file.id,
   file.title, 
   file.path,
-  file.random_hsh,
+  file.random_hash,
   file.data_hash
 FROM 
   file_tag 
