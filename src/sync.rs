@@ -47,12 +47,14 @@ pub async fn sync_database_from_source_folder(
 
     let full_source_path_length = full_source_path.iter().peekable().count();
 
+    log::trace!("Start fetching paths from database");
     // Start fetching files' paths from database
     let database_files_handle = {
         let database = database.clone();
         tokio::spawn(async move { File::get_file_paths(&database).await })
     };
 
+    log::trace!("Start finding local files");
     // - Find all files in `source_folder`, ignoring folders and without following links
     // - Turn DirItem(s) into PathBuf and strip off the host-specific paths in order to
     // have something that we can put into the database
@@ -70,6 +72,8 @@ pub async fn sync_database_from_source_folder(
                 .canonicalize_and_skip_n(full_source_path_length)
         });
 
+    log::trace!("Done with finding local files");
+
     // Await for paths from database
     let database_files = database_files_handle
         .await
@@ -81,6 +85,8 @@ pub async fn sync_database_from_source_folder(
 
     let mut handles: Vec<JoinHandle<Result<(), SyncError>>> = vec![];
 
+    log::trace!("Start adding to database");
+
     // Finally add files to database
     for file_to_sync in files_to_sync {
         let database = database.clone();
@@ -91,8 +97,6 @@ pub async fn sync_database_from_source_folder(
                 .unwrap()
                 .to_string_lossy()
                 .to_string();
-
-            log::info!("Adding {:?} to the database", file_to_sync);
 
             File::insert(&database, &title, &file_to_sync, false, false)
                 .await
