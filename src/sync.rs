@@ -27,6 +27,8 @@ pub async fn sync_database_from_source_folder(
     let full_source_path = std::fs::canonicalize(Path::new(&source_folder))
         .map_err(SyncError::SourceFolderNotFound)?;
 
+    let full_source_path_length = full_source_path.iter().peekable().count();
+
     // Find all files in source_path, ignoring folders
     let local_files = WalkDir::new(source_folder)
         .follow_links(false)
@@ -63,7 +65,7 @@ pub async fn sync_database_from_source_folder(
                 .canonicalize()
                 .map_err(SyncError::FileMovedDuringSync)?
                 .iter()
-                .skip(10)
+                .skip(full_source_path_length)
                 .collect::<PathBuf>()
                 .to_string_lossy()
                 .to_string();
