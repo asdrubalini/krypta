@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::database::Database;
 use rand::Rng;
 use sqlx::types::chrono::{DateTime, Utc};
@@ -43,7 +45,7 @@ impl File {
     pub async fn insert(
         database: &Database,
         title: &str,
-        path: &str,
+        path: &PathBuf,
         is_remote: bool,
         is_encrypted: bool,
     ) -> Result<(), sqlx::Error> {
@@ -52,7 +54,7 @@ impl File {
 
         sqlx::query(include_str!("./sql/insert_file.sql"))
             .bind(title)
-            .bind(path)
+            .bind(path.to_str())
             .bind(is_remote)
             .bind(is_encrypted)
             .bind(random_hash)
@@ -64,17 +66,23 @@ impl File {
         Ok(())
     }
 
-    pub async fn get_file_paths(database: &Database) -> Result<Vec<String>, sqlx::Error> {
+    pub async fn get_file_paths(database: &Database) -> Result<Vec<PathBuf>, sqlx::Error> {
         let files = sqlx::query_as::<_, (String,)>(include_str!("./sql/find_file_paths.sql"))
             .fetch_all(database)
             .await?;
 
-        Ok(files.iter().map(|path| path.0.to_owned()).collect())
+        let paths = files.iter().map(|path| path.0.to_owned());
+
+        Ok(paths
+            .map(|path_string| PathBuf::from(path_string))
+            .collect())
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use super::File;
     use crate::database::create_in_memory;
 
@@ -96,16 +104,24 @@ mod tests {
     async fn test_insert_unique() {
         let database = create_in_memory().await.unwrap();
 
-        assert!(
-            File::insert(&database, "foobar", "path/foo/bar", false, false)
-                .await
-                .is_ok()
-        );
+        assert!(File::insert(
+            &database,
+            "foobar",
+            &PathBuf::from("/path/to/foo/bar"),
+            false,
+            false
+        )
+        .await
+        .is_ok());
 
-        assert!(
-            File::insert(&database, "foobar", "path/foo/bar", false, false)
-                .await
-                .is_err()
-        );
+        assert!(File::insert(
+            &database,
+            "foobar",
+            &PathBuf::from("/path/to/foo/bar"),
+            false,
+            false
+        )
+        .await
+        .is_err());
     }
 }
