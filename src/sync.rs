@@ -14,9 +14,9 @@ pub enum SyncError {
 /// Return value is the amount of files that have been added to the database
 pub async fn sync_database_from_source_folder(
     database: &Database,
-    source_folder: &str,
+    source_folder: String,
 ) -> Result<usize, SyncError> {
-    let source_path = Path::new(source_folder);
+    let source_path = Path::new(&source_folder);
 
     if !source_path.exists() {
         return Err(SyncError::SourceFolderNotFound {
