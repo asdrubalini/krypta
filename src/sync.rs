@@ -1,4 +1,4 @@
-use tokio::task::JoinHandle;
+use tokio::task::{JoinError, JoinHandle};
 use walkdir::WalkDir;
 
 use crate::database::{models::File, Database};
@@ -9,12 +9,30 @@ pub enum SyncError {
     DatabaseError(sqlx::Error),
     SourceFolderNotFound(std::io::Error),
     FileMovedDuringSync(std::io::Error),
+    TaskError(JoinError),
 }
 
 #[derive(Debug)]
 pub struct SyncReport {
     pub processed_files: usize,
     pub error_count: usize,
+}
+
+/// This trait is used in order to strip the "local bits" from a PathBuf
+/// so that it can be safely inserted into the database without polluting it
+/// with host-specific folders
+trait CanonicalizeAndSkipPathBuf {
+    fn canonicalize_and_skip_n(&mut self, n: usize) -> Self;
+}
+
+impl CanonicalizeAndSkipPathBuf for PathBuf {
+    fn canonicalize_and_skip_n(&mut self, n: usize) -> Self {
+        self.canonicalize()
+            .unwrap()
+            .iter()
+            .skip(n)
+            .collect::<PathBuf>()
+    }
 }
 
 /// Adds missing fields into database according to source folder
@@ -29,7 +47,15 @@ pub async fn sync_database_from_source_folder(
 
     let full_source_path_length = full_source_path.iter().peekable().count();
 
-    // Find all files in source_path, ignoring folders
+    // Start fetching files' paths from database
+    let database_files_handle = {
+        let database = database.clone();
+        tokio::spawn(async move { File::get_file_paths(&database).await })
+    };
+
+    // - Find all files in `source_folder`, ignoring folders and without following links
+    // - Turn DirItem(s) into PathBuf and strip off the host-specific paths in order to
+    // have something that we can put into the database
     let local_files = WalkDir::new(source_folder)
         .follow_links(false)
         .into_iter()
@@ -37,18 +63,21 @@ pub async fn sync_database_from_source_folder(
         .filter(|e| match e.metadata() {
             Ok(metadata) => metadata.is_file(),
             Err(_) => true,
+        })
+        .map(|e| {
+            e.path()
+                .to_path_buf()
+                .canonicalize_and_skip_n(full_source_path_length)
         });
 
-    // Fetch file paths from database
-    let database_files = File::get_file_paths(database)
+    // Await for paths from database
+    let database_files = database_files_handle
         .await
+        .map_err(SyncError::TaskError)?
         .map_err(SyncError::DatabaseError)?;
 
     // Extract only files that needs to be added to the database
-    let files_to_sync = local_files.filter(|file| {
-        let local_file_name = file.path().to_string_lossy().to_string();
-        !database_files.contains(&local_file_name)
-    });
+    let files_to_sync = local_files.filter(|file_path| !database_files.contains(file_path));
 
     let mut handles: Vec<JoinHandle<Result<(), SyncError>>> = vec![];
 
@@ -56,23 +85,16 @@ pub async fn sync_database_from_source_folder(
     for file_to_sync in files_to_sync {
         let database = database.clone();
         let handle = tokio::spawn(async move {
-            let title = file_to_sync.file_name().to_string_lossy().to_string();
-
-            // Resolve path into absolute and strip the local bit keeping only the part after `source_folder`
-            // which will be stored into the database
-            let path = file_to_sync
-                .path()
-                .canonicalize()
-                .map_err(SyncError::FileMovedDuringSync)?
-                .iter()
-                .skip(full_source_path_length)
-                .collect::<PathBuf>()
+            // Title is the file's filename
+            let title = file_to_sync
+                .file_name()
+                .unwrap()
                 .to_string_lossy()
                 .to_string();
 
-            log::info!("Adding {} to the database", path);
+            log::info!("Adding {:?} to the database", file_to_sync);
 
-            File::insert(&database, &title, &path, false, false)
+            File::insert(&database, &title, &file_to_sync, false, false)
                 .await
                 .map_err(SyncError::DatabaseError)
         });
