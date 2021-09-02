@@ -19,7 +19,7 @@ pub struct Configuration {
 }
 
 impl Configuration {
-    pub fn new() -> Arc<Self> {
+    pub fn read_from_file() -> Arc<Self> {
         let config_path = env::var("CONFIG_FILE").expect("Cannot read CONFIG_FILE env");
         let config_raw = read_to_string(config_path).expect("Cannot read config to string");
 

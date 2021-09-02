@@ -17,6 +17,6 @@ async fn main() {
         .await
         .expect("Cannot open database");
 
-    let config = config::Configuration::new();
+    let config = config::Configuration::read_from_file();
     println!("{:#?}", config);
 }
