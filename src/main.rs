@@ -25,8 +25,14 @@ async fn main() {
     let command = cli::CliCommand::try_parse().unwrap();
 
     match command {
-        cli::CliCommand::Sync { path } => sync::sync_database_from_source_folder(&database, path)
-            .await
-            .unwrap(),
+        cli::CliCommand::Sync { path } => {
+            let report = {
+                let report = sync::sync_database_from_source_folder(&database, path)
+                    .await
+                    .unwrap();
+
+                println!("{:?}", report)
+            };
+        }
     };
 }
