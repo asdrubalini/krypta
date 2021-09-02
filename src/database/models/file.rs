@@ -63,6 +63,8 @@ impl File {
             .execute(database)
             .await?;
 
+        log::trace!("Done inserting {:?}", path);
+
         Ok(())
     }
 
