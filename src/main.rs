@@ -35,4 +35,6 @@ async fn main() {
             };
         }
     };
+
+    database.close().await;
 }
