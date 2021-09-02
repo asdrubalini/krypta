@@ -5,7 +5,7 @@ use crate::database::{models::File, Database};
 use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
-pub enum SyncErrorKind {
+pub enum SyncError {
     DatabaseError(sqlx::Error),
     SourceFolderNotFound { folder: String },
 }
@@ -15,11 +15,11 @@ pub enum SyncErrorKind {
 pub async fn sync_database_from_source_folder(
     database: &Database,
     source_folder: &str,
-) -> Result<usize, SyncErrorKind> {
+) -> Result<usize, SyncError> {
     let source_path = Path::new(source_folder);
 
     if !source_path.exists() {
-        return Err(SyncErrorKind::SourceFolderNotFound {
+        return Err(SyncError::SourceFolderNotFound {
             folder: source_folder.to_owned(),
         });
     }
@@ -35,10 +35,9 @@ pub async fn sync_database_from_source_folder(
         });
 
     // Fetch file paths from database
-    let database_files = match File::get_file_paths(database).await {
-        Ok(database_files) => database_files,
-        Err(err) => return Err(SyncErrorKind::DatabaseError(err)),
-    };
+    let database_files = File::get_file_paths(database)
+        .await
+        .map_err(SyncError::DatabaseError)?;
 
     // Extract only files that needs to be added to the database
     let files_to_sync = local_files.filter(|file| {
@@ -73,10 +72,7 @@ pub async fn sync_database_from_source_folder(
 
     // Wait for all tasks to terminate
     for handle in handles {
-        match handle.await.unwrap() {
-            Ok(_) => (),
-            Err(error) => return Err(SyncErrorKind::DatabaseError(error)),
-        }
+        handle.await.unwrap().map_err(SyncError::DatabaseError)?;
     }
 
     Ok(files_to_sync_count)
