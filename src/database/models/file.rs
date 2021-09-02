@@ -16,6 +16,13 @@ pub struct File {
     pub updated_at: DateTime<Utc>,
 }
 
+pub struct InsertableFile<'a> {
+    pub title: &'a str,
+    pub path: &'a PathBuf,
+    pub is_remote: bool,
+    pub is_encrypted: bool,
+}
+
 #[allow(dead_code)]
 impl File {
     /// Search files stored in database
@@ -42,21 +49,15 @@ impl File {
     }
 
     /// Insert a new file into the database
-    pub async fn insert(
-        database: &Database,
-        title: &str,
-        path: &PathBuf,
-        is_remote: bool,
-        is_encrypted: bool,
-    ) -> Result<(), sqlx::Error> {
+    pub async fn insert(database: &Database, file: InsertableFile<'_>) -> Result<(), sqlx::Error> {
         let now = chrono::Utc::now();
         let random_hash = File::pseudorandom_sha256_string();
 
         sqlx::query(include_str!("./sql/insert_file.sql"))
-            .bind(title)
-            .bind(path.to_str())
-            .bind(is_remote)
-            .bind(is_encrypted)
+            .bind(file.title)
+            .bind(file.path.to_str())
+            .bind(file.is_remote)
+            .bind(file.is_encrypted)
             .bind(random_hash)
             .bind(&now)
             .bind(&now)
@@ -64,6 +65,13 @@ impl File {
             .await?;
 
         Ok(())
+    }
+
+    pub async fn insert_many(
+        database: &Database,
+        files: Vec<InsertableFile<'_>>,
+    ) -> Result<usize, sqlx::Error> {
+        todo!()
     }
 
     pub async fn get_file_paths(database: &Database) -> Result<Vec<PathBuf>, sqlx::Error> {
@@ -84,7 +92,7 @@ mod tests {
     use std::path::PathBuf;
 
     use super::File;
-    use crate::database::create_in_memory;
+    use crate::database::{create_in_memory, models::file::InsertableFile};
 
     #[test]
     fn test_pseudorandom_sha256_string_is_valid_length_and_contains_valid_chars() {
@@ -104,24 +112,22 @@ mod tests {
     async fn test_insert_unique() {
         let database = create_in_memory().await.unwrap();
 
-        assert!(File::insert(
-            &database,
-            "foobar",
-            &PathBuf::from("/path/to/foo/bar"),
-            false,
-            false
-        )
-        .await
-        .is_ok());
+        let file1 = InsertableFile {
+            title: "foobar",
+            path: &PathBuf::from("/path/to/foo/bar"),
+            is_remote: false,
+            is_encrypted: false,
+        };
 
-        assert!(File::insert(
-            &database,
-            "foobar",
-            &PathBuf::from("/path/to/foo/bar"),
-            false,
-            false
-        )
-        .await
-        .is_err());
+        assert!(File::insert(&database, file1).await.is_ok());
+
+        let file2 = InsertableFile {
+            title: "foobar",
+            path: &PathBuf::from("/path/to/foo/bar"),
+            is_remote: false,
+            is_encrypted: false,
+        };
+
+        assert!(File::insert(&database, file2).await.is_err());
     }
 }

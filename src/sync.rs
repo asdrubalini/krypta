@@ -99,9 +99,11 @@ pub async fn sync_database_from_source_folder(
 
             log::trace!("Adding {:?} to the database", file_to_sync);
 
-            File::insert(&database, &title, &file_to_sync, false, false)
-                .await
-                .map_err(SyncError::DatabaseError)
+            // File::insert(&database, &title, &file_to_sync, false, false)
+            // .await
+            // .map_err(SyncError::DatabaseError)
+
+            return Ok(());
         });
 
         handles.push(handle);
