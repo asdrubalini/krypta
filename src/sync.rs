@@ -95,12 +95,7 @@ pub async fn sync_database_from_source_folder(
 
         let database = database.clone();
         let handle = tokio::spawn(async move {
-            // Title is the file's filename
-            let title = file_to_sync
-                .file_name()
-                .unwrap()
-                .to_string_lossy()
-                .to_string();
+            let title = file_to_sync.to_string_lossy().to_string();
 
             log::trace!("Adding {:?} to the database", file_to_sync);
 
@@ -111,8 +106,6 @@ pub async fn sync_database_from_source_folder(
 
         handles.push(handle);
     }
-
-    assert_eq!(handles.len(), sync_count);
 
     let files_to_sync_count = handles.len();
     let mut error_count = 0;
