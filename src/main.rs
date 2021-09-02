@@ -1,4 +1,5 @@
 #![allow(dead_code, unused_variables)]
+mod config;
 mod database;
 mod storage;
 mod sync;
@@ -15,4 +16,7 @@ async fn main() {
     let database = database::connect_or_create()
         .await
         .expect("Cannot open database");
+
+    let config = config::Configuration::new();
+    println!("{:#?}", config);
 }

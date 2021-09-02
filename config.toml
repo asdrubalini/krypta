@@ -1,0 +1,9 @@
+source_path = "./vault_source/"
+encrypted_path = "./vault_encrypted/"
+
+[endpoint]
+endpoint_url = "https://s3.us-west-000.backblazeb2.com"
+access_key = "0004a4071d1e1350000000003"
+region = "us-west-000"
+secret_key = "K000Rmju+zZNXAKa7mnj3rRGu5MLhuM"
+bucket_name = "storage-a58b66e8b5eac514be2d806d46ab993ef04fcd9baa"
