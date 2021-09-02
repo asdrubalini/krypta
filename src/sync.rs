@@ -116,6 +116,11 @@ pub async fn sync_database_from_source_folder(
 
         if res.is_err() {
             error_count += 1;
+
+            match res.err().unwrap() {
+                SyncError::DatabaseError(error) => println!("{:?}", error),
+                _ => (),
+            }
         }
     }
 
