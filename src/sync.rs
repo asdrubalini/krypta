@@ -2,10 +2,7 @@ use tokio::task::{JoinError, JoinHandle};
 use walkdir::WalkDir;
 
 use crate::database::{models::File, Database};
-use std::{
-    path::{Path, PathBuf},
-    time::Duration,
-};
+use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub enum SyncError {
@@ -90,8 +87,12 @@ pub async fn sync_database_from_source_folder(
 
     log::trace!("Start adding to database");
 
+    let mut sync_count = 0;
+
     // Finally add files to database
     for file_to_sync in files_to_sync {
+        sync_count += 1;
+
         let database = database.clone();
         let handle = tokio::spawn(async move {
             // Title is the file's filename
@@ -111,6 +112,8 @@ pub async fn sync_database_from_source_folder(
         handles.push(handle);
     }
 
+    assert_eq!(handles.len(), sync_count);
+
     let files_to_sync_count = handles.len();
     let mut error_count = 0;
 
@@ -122,9 +125,6 @@ pub async fn sync_database_from_source_folder(
             error_count += 1;
         }
     }
-
-    std::env::set_var("RUST_LOG", "trace");
-    tokio::time::sleep(Duration::from_secs(500)).await;
 
     Ok(SyncReport {
         processed_files: files_to_sync_count,
