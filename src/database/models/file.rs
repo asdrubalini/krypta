@@ -52,6 +52,8 @@ impl File {
         let now = chrono::Utc::now();
         let random_hash = File::pseudorandom_sha256_string();
 
+        println!("{:?}", path);
+
         sqlx::query(include_str!("./sql/insert_file.sql"))
             .bind(title)
             .bind(path.to_str())
