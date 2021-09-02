@@ -1,4 +1,4 @@
-use std::{env, fs::read_to_string};
+use std::{env, fs::read_to_string, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 
@@ -19,13 +19,13 @@ pub struct Configuration {
 }
 
 impl Configuration {
-    pub fn new() -> Self {
+    pub fn new() -> Arc<Self> {
         let config_path = env::var("CONFIG_FILE").expect("Cannot read CONFIG_FILE env");
         let config_raw = read_to_string(config_path).expect("Cannot read config to string");
 
         let config: Configuration =
             toml::from_str(&config_raw).expect("Cannot parse toml config file");
 
-        config
+        Arc::new(config)
     }
 }
