@@ -1,6 +1,6 @@
 use std::{env, path::Path, str::FromStr};
 
-use sqlx::{sqlite::SqliteConnectOptions, Executor, SqlitePool};
+use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Executor, SqlitePool};
 
 pub type Database = SqlitePool;
 
@@ -10,8 +10,10 @@ pub async fn connect_or_create() -> Result<Database, sqlx::Error> {
 
     let is_database_new = !Path::new(&database_path).exists();
 
-    let options = SqliteConnectOptions::from_str(&format!("sqlite:{}", &database_path))?
+    let mut options = SqliteConnectOptions::from_str(&format!("sqlite:{}", &database_path))?
         .create_if_missing(true);
+
+    options.disable_statement_logging();
 
     let connection = SqlitePool::connect_with(options).await?;
 
