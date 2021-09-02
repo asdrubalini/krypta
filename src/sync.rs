@@ -112,7 +112,7 @@ pub async fn sync_database_from_source_folder(
 
     // Wait for all tasks to terminate
     for handle in handles {
-        let res = handle.await;
+        let res = handle.await.unwrap();
 
         if res.is_err() {
             error_count += 1;
