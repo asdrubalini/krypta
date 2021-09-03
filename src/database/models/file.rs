@@ -1,8 +1,10 @@
-use std::path::PathBuf;
-
+use super::{Insertable, Searchable};
 use crate::database::Database;
+
+use async_trait::async_trait;
 use rand::Rng;
 use sqlx::types::chrono::{DateTime, Utc};
+use std::path::PathBuf;
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct File {
@@ -41,36 +43,26 @@ pub struct InsertableFile {
     pub is_encrypted: bool,
 }
 
-#[allow(dead_code)]
-impl File {
+#[async_trait]
+impl Searchable<File> for File {
     /// Search files stored in database
-    pub async fn search(database: &Database, query: &str) -> Result<Vec<File>, sqlx::Error> {
-        let files = sqlx::query_as::<_, File>(include_str!("./sql/query_file.sql"))
+    async fn search(database: &Database, query: &str) -> Result<Vec<File>, sqlx::Error> {
+        let files = sqlx::query_as::<_, File>(include_str!("./sql/file/search.sql"))
             .bind(format!("%{}%", query))
             .fetch_all(database)
             .await?;
 
         Ok(files)
     }
+}
 
-    /// Generate a pseudorandom sha256 hash
-    fn pseudorandom_sha256_string() -> String {
-        let mut generator = rand::thread_rng();
-
-        (0..32)
-            .into_iter()
-            .map(|_| {
-                let random_byte: u8 = generator.gen_range(0..255);
-                format!("{:02x}", random_byte)
-            })
-            .collect()
-    }
-
+#[async_trait]
+impl Insertable<InsertableFile> for File {
     /// Insert a new file into the database
-    pub async fn insert(database: &Database, file: InsertableFile) -> Result<(), sqlx::Error> {
+    async fn insert(database: &Database, file: InsertableFile) -> Result<(), sqlx::Error> {
         let file = File::from(&file);
 
-        sqlx::query(include_str!("./sql/insert_file.sql"))
+        sqlx::query(include_str!("./sql/file/insert.sql"))
             .bind(file.title)
             .bind(file.path)
             .bind(file.is_remote)
@@ -84,10 +76,7 @@ impl File {
         Ok(())
     }
 
-    pub async fn insert_many(
-        database: &Database,
-        files: &[InsertableFile],
-    ) -> Result<(), sqlx::Error> {
+    async fn insert_many(database: &Database, files: &[InsertableFile]) -> Result<(), sqlx::Error> {
         let mut transaction = database.begin().await?;
 
         for file in files {
@@ -95,7 +84,7 @@ impl File {
 
             log::trace!("{}", file.title);
 
-            sqlx::query(include_str!("./sql/insert_file.sql"))
+            sqlx::query(include_str!("./sql/file/insert.sql"))
                 .bind(file.title)
                 .bind(file.path)
                 .bind(file.is_remote)
@@ -111,9 +100,25 @@ impl File {
 
         Ok(())
     }
+}
+
+#[allow(dead_code)]
+impl File {
+    /// Generate a pseudorandom sha256 hash
+    fn pseudorandom_sha256_string() -> String {
+        let mut generator = rand::thread_rng();
+
+        (0..32)
+            .into_iter()
+            .map(|_| {
+                let random_byte: u8 = generator.gen_range(0..255);
+                format!("{:02x}", random_byte)
+            })
+            .collect()
+    }
 
     pub async fn get_file_paths(database: &Database) -> Result<Vec<PathBuf>, sqlx::Error> {
-        let files = sqlx::query_as::<_, (String,)>(include_str!("./sql/find_file_paths.sql"))
+        let files = sqlx::query_as::<_, (String,)>(include_str!("./sql/file/find_paths.sql"))
             .fetch_all(database)
             .await?;
 
@@ -128,7 +133,10 @@ mod tests {
     use std::path::PathBuf;
 
     use super::File;
-    use crate::database::{create_in_memory, models::file::InsertableFile};
+    use crate::database::{
+        create_in_memory,
+        models::{file::InsertableFile, Insertable},
+    };
 
     #[test]
     fn test_pseudorandom_sha256_string_is_valid_length_and_contains_valid_chars() {
