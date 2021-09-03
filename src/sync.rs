@@ -37,6 +37,21 @@ impl CanonicalizeAndSkipPathBuf for PathBuf {
     }
 }
 
+/// PathBuf that holds the path's file size
+struct SizedPathBuf {
+    pub path: PathBuf,
+    pub size: i64,
+}
+
+impl From<PathBuf> for SizedPathBuf {
+    fn from(path: PathBuf) -> Self {
+        let metadata = std::fs::metadata(&path).unwrap();
+        let size: i64 = metadata.len().try_into().unwrap_or(-1);
+
+        Self { path, size: size }
+    }
+}
+
 /// Adds missing fields into database according to source folder
 /// Return value is the amount of files that have been added to the database
 pub async fn sync_database_from_source_folder(
@@ -83,15 +98,17 @@ pub async fn sync_database_from_source_folder(
         .map_err(SyncError::DatabaseError)?;
 
     // Extract only files that needs to be added to the database
-    let paths_to_sync = local_paths.filter(|file_path| !database_paths.contains(file_path));
+    let paths_to_sync = local_paths
+        .filter(|file_path| !database_paths.contains(file_path))
+        .map(|file_path| SizedPathBuf::from(file_path));
 
     let files_to_insert = paths_to_sync
         .map(|path| InsertableFile {
-            title: path.to_string_lossy().to_string(),
-            path,
+            title: path.path.to_string_lossy().to_string(),
+            path: path.path,
             is_remote: false,
             is_encrypted: false,
-            size: 0,
+            size: path.size,
         })
         .collect::<Vec<InsertableFile>>();
 
