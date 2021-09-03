@@ -26,17 +26,24 @@ impl CanonicalizeAndSkipPathBuf for PathBuf {
 
 /// Holds all the informations that require fs action about a PathBuf
 struct OpenInfo {
-    pub size: u32,
+    pub path: PathBuf,
+    pub size: Option<u32>,
 }
 
 impl OpenInfo {
-    fn default() -> Self {
-        Self { size: 0 }
+    fn size_or_default(self) -> u32 {
+        self.size.unwrap_or(0)
     }
 }
 
-type OpenInfosInner = Vec<(PathBuf, Option<OpenInfo>)>;
+impl From<PathBuf> for OpenInfo {
+    fn from(path: PathBuf) -> Self {
+        Self { path, size: None }
+    }
+}
+
 /// Holds a collection of paths together with its OpenInfo, if any
+type OpenInfosInner = Vec<OpenInfo>;
 struct OpenInfos {
     inner: OpenInfosInner,
 }
@@ -44,23 +51,21 @@ struct OpenInfos {
 impl OpenInfos {
     /// Populate the missing OpenInfo(s) with fs access
     async fn populate_all(self, prefix: PathBuf) -> Self {
-        let mut populated_paths: OpenInfosInner = Vec::new();
+        let mut populated_paths: Vec<OpenInfo> = Vec::new();
 
-        for (path, open_info) in self.inner {
-            if open_info.is_some() {
-                populated_paths.push((path, open_info));
-                continue;
-            }
-
+        for open_info in self.inner {
             let mut full_path = prefix.clone();
-            full_path.push(&path);
+            full_path.push(&open_info.path);
 
             let file = tokio::fs::File::open(full_path).await.unwrap();
             let size: u32 = file.metadata().await.unwrap().len().try_into().unwrap();
 
-            let open_info = OpenInfo { size };
+            let open_info = OpenInfo {
+                path: open_info.path,
+                size: Some(size),
+            };
 
-            populated_paths.push((path, Some(open_info)));
+            populated_paths.push(open_info);
         }
 
         Self::from(populated_paths)
@@ -78,12 +83,12 @@ impl Into<Vec<InsertableFile>> for OpenInfos {
     fn into(self) -> Vec<InsertableFile> {
         self.inner
             .iter()
-            .map(|(path, open_info)| {
-                let size = open_info.as_ref().unwrap_or(&OpenInfo::default()).size;
+            .map(|open_info| {
+                let size = open_info.size_or_default();
 
                 InsertableFile {
-                    title: path.to_string_lossy().to_string(),
-                    path: path.to_owned(),
+                    title: open_info.path.to_string_lossy().to_string(),
+                    path: open_info.path.clone(),
                     is_remote: false,
                     is_encrypted: false,
                     size,
@@ -155,10 +160,10 @@ pub async fn sync_database_from_source_folder(
     let paths_to_sync = local_paths.filter(|file_path| !database_paths.contains(file_path));
 
     // Build the OpenInfos struct from all the files that need to be inserted into the database
-    // Then, call populate_all() in order to start filling the parameters that require fs acccess
+    // Then, call populate_all() in order to start to fill the parameters that require fs acccess
     let paths_to_sync_with_open_info = OpenInfos::from(
         paths_to_sync
-            .map(|path| (path, None))
+            .map(|path| OpenInfo::from(path))
             .collect::<OpenInfosInner>(),
     )
     .populate_all(full_source_path)
