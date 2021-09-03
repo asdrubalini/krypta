@@ -24,34 +24,39 @@ impl CanonicalizeAndSkipPathBuf for PathBuf {
     }
 }
 
-/// Holds all the informations that require fs action about a PathBuf
-struct OpenInfo {
+/// Holds all the information we have about a path
+struct PathInfo {
     pub path: PathBuf,
     pub size: Option<u32>,
 }
 
-impl OpenInfo {
+impl PathInfo {
+    /// Retrieve self.size or default value in case it is not available
     fn size_or_default(&self) -> u32 {
         self.size.unwrap_or(0)
     }
 }
 
-impl From<PathBuf> for OpenInfo {
+impl From<PathBuf> for PathInfo {
+    /// Build a PathInfo from a PathBuf, with empty fields
     fn from(path: PathBuf) -> Self {
         Self { path, size: None }
     }
 }
 
-/// Holds a collection of paths together with its OpenInfo, if any
-type OpenInfosInner = Vec<OpenInfo>;
-struct OpenInfos {
-    inner: OpenInfosInner,
+/// Holds a collection of paths together with their info, if available
+type PathInfosInner = Vec<PathInfo>;
+struct PathInfos {
+    inner: PathInfosInner,
 }
 
-impl OpenInfos {
-    /// Populate the missing OpenInfo(s) with fs access
+impl PathInfos {
+    /// Populate the missing PathInfo(s) with fs access
     async fn populate_all(self, prefix: PathBuf) -> Self {
-        let mut populated_paths: Vec<OpenInfo> = Vec::new();
+        let mut populated_paths: Vec<PathInfo> = Vec::new();
+
+        // TODO: don't allocate a new PathInfos here
+        // TODO: spawn tasks with a Semaphore and read file info async
 
         for open_info in self.inner {
             let mut full_path = prefix.clone();
@@ -60,7 +65,7 @@ impl OpenInfos {
             let file = tokio::fs::File::open(full_path).await.unwrap();
             let size: u32 = file.metadata().await.unwrap().len().try_into().unwrap();
 
-            let open_info = OpenInfo {
+            let open_info = PathInfo {
                 path: open_info.path,
                 size: Some(size),
             };
@@ -72,15 +77,16 @@ impl OpenInfos {
     }
 }
 
-impl From<OpenInfosInner> for OpenInfos {
-    fn from(inner: OpenInfosInner) -> Self {
+impl From<PathInfosInner> for PathInfos {
+    /// Build a PathInfos from its type alias, PathInfosInner
+    fn from(inner: PathInfosInner) -> Self {
         Self { inner }
     }
 }
 
-/// Convert OpenInfos into a vector of InsertableFile(s)
-impl From<OpenInfos> for Vec<InsertableFile> {
-    fn from(open_infos: OpenInfos) -> Self {
+/// Convert PathInfos into a vector of InsertableFile(s) files
+impl From<PathInfos> for Vec<InsertableFile> {
+    fn from(open_infos: PathInfos) -> Self {
         open_infos
             .inner
             .iter()
@@ -156,12 +162,12 @@ pub async fn sync_database_from_source_folder(
     // Extract only files that needs to be added to the database
     let paths_to_sync = local_paths.filter(|file_path| !database_paths.contains(file_path));
 
-    // Build the OpenInfos struct from all the files that need to be inserted into the database
+    // Build the PathInfos struct from all the files that need to be inserted into the database
     // Then, call populate_all() in order to start to fill the parameters that require fs acccess
-    let paths_to_sync_with_open_info = OpenInfos::from(
+    let paths_to_sync_with_open_info = PathInfos::from(
         paths_to_sync
-            .map(OpenInfo::from)
-            .collect::<OpenInfosInner>(),
+            .map(PathInfo::from)
+            .collect::<PathInfosInner>(),
     )
     .populate_all(full_source_path)
     .await;
