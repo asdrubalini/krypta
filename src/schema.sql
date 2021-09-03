@@ -36,4 +36,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS "file_title" ON "file" (
 CREATE UNIQUE INDEX IF NOT EXISTS "file_random_hash" ON "file" (
 	"random_hash"
 );
+CREATE UNIQUE INDEX IF NOT EXISTS "file_time" ON "file" (
+	"created_at",
+	"updated_at"
+);
 COMMIT;
