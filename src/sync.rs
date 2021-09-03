@@ -1,7 +1,10 @@
-use tokio::task::{JoinError, JoinHandle};
+use tokio::task::JoinError;
 use walkdir::WalkDir;
 
-use crate::database::{models::File, Database};
+use crate::database::{
+    models::{File, InsertableFile},
+    Database,
+};
 use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
@@ -15,7 +18,6 @@ pub enum SyncError {
 #[derive(Debug)]
 pub struct SyncReport {
     pub processed_files: usize,
-    pub error_count: usize,
 }
 
 /// This trait is used in order to strip the "local bits" from a PathBuf
@@ -83,51 +85,24 @@ pub async fn sync_database_from_source_folder(
     // Extract only files that needs to be added to the database
     let files_to_sync = local_files.filter(|file_path| !database_files.contains(file_path));
 
-    let mut handles: Vec<JoinHandle<Result<(), SyncError>>> = vec![];
+    let files = files_to_sync
+        .map(|path| InsertableFile {
+            title: path.to_string_lossy().to_string(),
+            path: path,
+            is_remote: false,
+            is_encrypted: false,
+        })
+        .collect::<Vec<InsertableFile>>();
 
     log::trace!("Start adding to database");
 
-    let mut sync_count = 0;
+    let result = File::insert_many(database, &files)
+        .await
+        .map_err(SyncError::DatabaseError)?;
 
-    // Finally add files to database
-    for file_to_sync in files_to_sync {
-        sync_count += 1;
-
-        let database = database.clone();
-        let handle = tokio::spawn(async move {
-            let title = file_to_sync.to_string_lossy().to_string();
-
-            log::trace!("Adding {:?} to the database", file_to_sync);
-
-            // File::insert(&database, &title, &file_to_sync, false, false)
-            // .await
-            // .map_err(SyncError::DatabaseError)
-
-            return Ok(());
-        });
-
-        handles.push(handle);
-    }
-
-    let files_to_sync_count = handles.len();
-    let mut error_count = 0;
-
-    // Wait for all tasks to terminate
-    for handle in handles {
-        let res = handle.await.unwrap();
-
-        if res.is_err() {
-            error_count += 1;
-
-            match res.err().unwrap() {
-                SyncError::DatabaseError(error) => println!("{:?}", error),
-                _ => (),
-            }
-        }
-    }
+    let files_to_sync_count = files.len();
 
     Ok(SyncReport {
         processed_files: files_to_sync_count,
-        error_count,
     })
 }

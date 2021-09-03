@@ -3,4 +3,4 @@ SELECT
 FROM 
   file
 WHERE 
-  file.title LIKE $1
+  file.title LIKE ?

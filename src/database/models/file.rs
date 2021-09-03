@@ -16,9 +16,27 @@ pub struct File {
     pub updated_at: DateTime<Utc>,
 }
 
-pub struct InsertableFile<'a> {
-    pub title: &'a str,
-    pub path: &'a PathBuf,
+impl From<&InsertableFile> for File {
+    fn from(file: &InsertableFile) -> Self {
+        let random_hash = File::pseudorandom_sha256_string();
+        let now = chrono::Utc::now();
+
+        File {
+            id: 0,
+            title: file.title.clone(),
+            path: file.path.to_string_lossy().to_string(),
+            is_remote: file.is_remote,
+            is_encrypted: file.is_encrypted,
+            random_hash: random_hash,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+}
+
+pub struct InsertableFile {
+    pub title: String,
+    pub path: PathBuf,
     pub is_remote: bool,
     pub is_encrypted: bool,
 }
@@ -49,18 +67,17 @@ impl File {
     }
 
     /// Insert a new file into the database
-    pub async fn insert(database: &Database, file: InsertableFile<'_>) -> Result<(), sqlx::Error> {
-        let now = chrono::Utc::now();
-        let random_hash = File::pseudorandom_sha256_string();
+    pub async fn insert(database: &Database, file: InsertableFile) -> Result<(), sqlx::Error> {
+        let file = File::from(&file);
 
         sqlx::query(include_str!("./sql/insert_file.sql"))
             .bind(file.title)
-            .bind(file.path.to_str())
+            .bind(file.path)
             .bind(file.is_remote)
             .bind(file.is_encrypted)
-            .bind(random_hash)
-            .bind(&now)
-            .bind(&now)
+            .bind(file.random_hash)
+            .bind(file.created_at)
+            .bind(file.updated_at)
             .execute(database)
             .await?;
 
@@ -69,9 +86,30 @@ impl File {
 
     pub async fn insert_many(
         database: &Database,
-        files: Vec<InsertableFile<'_>>,
-    ) -> Result<usize, sqlx::Error> {
-        todo!()
+        files: &Vec<InsertableFile>,
+    ) -> Result<(), sqlx::Error> {
+        let mut transaction = database.begin().await?;
+
+        for file in files {
+            let file = File::from(file);
+
+            log::trace!("{}", file.title);
+
+            sqlx::query(include_str!("./sql/insert_file.sql"))
+                .bind(file.title)
+                .bind(file.path)
+                .bind(file.is_remote)
+                .bind(file.is_encrypted)
+                .bind(file.random_hash)
+                .bind(file.created_at)
+                .bind(file.updated_at)
+                .execute(&mut transaction)
+                .await?;
+        }
+
+        transaction.commit().await?;
+
+        Ok(())
     }
 
     pub async fn get_file_paths(database: &Database) -> Result<Vec<PathBuf>, sqlx::Error> {
@@ -113,8 +151,8 @@ mod tests {
         let database = create_in_memory().await.unwrap();
 
         let file1 = InsertableFile {
-            title: "foobar",
-            path: &PathBuf::from("/path/to/foo/bar"),
+            title: "foobar".to_string(),
+            path: PathBuf::from("/path/to/foo/bar"),
             is_remote: false,
             is_encrypted: false,
         };
@@ -122,8 +160,8 @@ mod tests {
         assert!(File::insert(&database, file1).await.is_ok());
 
         let file2 = InsertableFile {
-            title: "foobar",
-            path: &PathBuf::from("/path/to/foo/bar"),
+            title: "foobar".to_string(),
+            path: PathBuf::from("/path/to/foo/bar"),
             is_remote: false,
             is_encrypted: false,
         };
