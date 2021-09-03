@@ -1,18 +1,11 @@
-use tokio::{
-    fs,
-    sync::Semaphore,
-    task::{JoinError, JoinHandle},
-};
+use tokio::task::JoinError;
 use walkdir::WalkDir;
 
 use crate::database::{
     models::{File, Insertable, InsertableFile},
     Database,
 };
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub enum SyncError {
@@ -44,8 +37,76 @@ impl CanonicalizeAndSkipPathBuf for PathBuf {
     }
 }
 
+/// Holds all the informations about a path that requires fs action
+struct OpenInfo {
+    pub size: u32,
+}
+
+impl OpenInfo {
+    fn default() -> Self {
+        Self { size: 0 }
+    }
+}
+
+type OpenInfosInner = Vec<(PathBuf, Option<OpenInfo>)>;
+/// Holds a collection of paths together with its OpenInfo, if any
+struct OpenInfos {
+    inner: OpenInfosInner,
+}
+
+impl OpenInfos {
+    /// Populate the missing OpenInfo(s) with fs access
+    async fn populate_all(self, prefix: PathBuf) -> Self {
+        let mut populated_paths: OpenInfosInner = Vec::new();
+
+        for (path, open_info) in self.inner {
+            if open_info.is_some() {
+                populated_paths.push((path, open_info));
+                continue;
+            }
+
+            let mut full_path = prefix.clone();
+            full_path.push(&path);
+
+            let file = tokio::fs::File::open(full_path).await.unwrap();
+            let size: u32 = file.metadata().await.unwrap().len().try_into().unwrap();
+
+            let open_info = OpenInfo { size };
+
+            populated_paths.push((path, Some(open_info)));
+        }
+
+        Self::from(populated_paths)
+    }
+}
+
+impl From<OpenInfosInner> for OpenInfos {
+    fn from(inner: OpenInfosInner) -> Self {
+        Self { inner }
+    }
+}
+
+/// Convert OpenInfos into a vector of InsertableFile(s)
+impl Into<Vec<InsertableFile>> for OpenInfos {
+    fn into(self) -> Vec<InsertableFile> {
+        self.inner
+            .iter()
+            .map(|(path, open_info)| {
+                let size = open_info.as_ref().unwrap_or(&OpenInfo::default()).size;
+
+                InsertableFile {
+                    title: path.to_string_lossy().to_string(),
+                    path: path.to_owned(),
+                    is_remote: false,
+                    is_encrypted: false,
+                    size,
+                }
+            })
+            .collect::<Vec<InsertableFile>>()
+    }
+}
+
 /// Adds missing fields into database according to source folder
-/// Return value is the amount of files that have been added to the database
 pub async fn sync_database_from_source_folder(
     database: &Database,
     source_folder: String,
@@ -92,40 +153,18 @@ pub async fn sync_database_from_source_folder(
     // Extract only files that needs to be added to the database
     let paths_to_sync = local_paths.filter(|file_path| !database_paths.contains(file_path));
 
-    let semaphore = Arc::new(Semaphore::new(64));
-    let mut handles: Vec<JoinHandle<InsertableFile>> = Vec::new();
+    // Build the OpenInfos struct from all the files that need to be inserted into the database
+    // Then, call populate_all() in order to start filling the parameters that require fs acccess
+    let paths_to_sync_with_open_info = OpenInfos::from(
+        paths_to_sync
+            .map(|path| (path, None))
+            .collect::<OpenInfosInner>(),
+    )
+    .populate_all(full_source_path)
+    .await;
 
-    for path_to_sync in paths_to_sync {
-        let mut full_source_path = full_source_path.clone();
-        let permit = semaphore.clone().acquire_owned().await.unwrap();
-
-        let handle = tokio::spawn(async move {
-            full_source_path.push(&path_to_sync);
-
-            let file = fs::File::open(full_source_path).await.unwrap();
-            let size: i64 = file.metadata().await.unwrap().len().try_into().unwrap();
-
-            let file = InsertableFile {
-                title: path_to_sync.to_string_lossy().to_string(),
-                path: path_to_sync,
-                is_remote: false,
-                is_encrypted: false,
-                size,
-            };
-
-            drop(permit);
-
-            file
-        });
-
-        handles.push(handle);
-    }
-
-    let mut files_to_insert = Vec::new();
-
-    for handle in handles {
-        files_to_insert.push(handle.await.unwrap());
-    }
+    // Finally build InsertableFile(s) from the just populated paths_to_sync_with_open_info
+    let files_to_insert: Vec<InsertableFile> = paths_to_sync_with_open_info.into();
 
     log::trace!("Start adding to database");
 
