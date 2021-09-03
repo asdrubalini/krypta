@@ -14,6 +14,7 @@ pub struct File {
     pub is_remote: bool,
     pub is_encrypted: bool,
     pub random_hash: String,
+    pub size: u32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -30,6 +31,7 @@ impl From<&InsertableFile> for File {
             is_remote: file.is_remote,
             is_encrypted: file.is_encrypted,
             random_hash,
+            size: file.size,
             created_at: now,
             updated_at: now,
         }
@@ -42,6 +44,7 @@ pub struct InsertableFile {
     pub path: PathBuf,
     pub is_remote: bool,
     pub is_encrypted: bool,
+    pub size: u32,
 }
 
 impl From<&File> for InsertableFile {
@@ -51,6 +54,7 @@ impl From<&File> for InsertableFile {
             path: PathBuf::from(file.path.clone()),
             is_remote: file.is_remote,
             is_encrypted: file.is_encrypted,
+            size: file.size,
         }
     }
 }
@@ -92,6 +96,7 @@ impl Insertable<InsertableFile> for File {
             .bind(file.is_remote)
             .bind(file.is_encrypted)
             .bind(file.random_hash)
+            .bind(file.size)
             .bind(file.created_at)
             .bind(file.updated_at)
             .execute(database)
@@ -114,6 +119,7 @@ impl Insertable<InsertableFile> for File {
                 .bind(file.is_remote)
                 .bind(file.is_encrypted)
                 .bind(file.random_hash)
+                .bind(file.size)
                 .bind(file.created_at)
                 .bind(file.updated_at)
                 .execute(&mut transaction)
@@ -185,6 +191,7 @@ mod tests {
             path: PathBuf::from("/path/to/foo/bar"),
             is_remote: false,
             is_encrypted: false,
+            size: 0,
         };
 
         assert!(File::insert(&database, file1).await.is_ok());
@@ -194,6 +201,7 @@ mod tests {
             path: PathBuf::from("/path/to/foo/bar"),
             is_remote: false,
             is_encrypted: false,
+            size: 0,
         };
 
         assert!(File::insert(&database, file2).await.is_err());
@@ -208,6 +216,7 @@ mod tests {
             path: PathBuf::from("/path/to/foo/bar"),
             is_remote: false,
             is_encrypted: false,
+            size: 0,
         };
 
         assert!(File::insert(&database, insert_file.clone()).await.is_ok());
@@ -235,6 +244,7 @@ mod tests {
                 path: PathBuf::from(format!("/path/to/foo/bar/{}", i)),
                 is_remote: false,
                 is_encrypted: false,
+                size: 0,
             })
             .collect::<Vec<InsertableFile>>();
 
