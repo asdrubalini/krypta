@@ -6,7 +6,6 @@ mod storage;
 mod sync;
 
 use dotenv::dotenv;
-use pretty_env_logger;
 
 #[tokio::main]
 async fn main() {
