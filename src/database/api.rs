@@ -46,11 +46,27 @@ pub async fn load_schema(database: &Database) {
 
 #[cfg(test)]
 mod tests {
-    use super::create_in_memory;
+    use std::{env, fs::remove_file, path::Path};
+
+    use super::{connect_or_create, create_in_memory};
 
     #[tokio::test]
     async fn test_create_sqlite_connection_in_memory() {
         let database = create_in_memory().await;
         assert!(database.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_connect_and_create() {
+        let tmp_file = "/tmp/database.db";
+        env::set_var("DATABASE_FILE", tmp_file);
+
+        remove_file(tmp_file).unwrap_or(());
+
+        let database = connect_or_create().await;
+        assert!(database.is_ok());
+        assert!(Path::new(tmp_file).is_file());
+
+        remove_file(tmp_file).unwrap_or(());
     }
 }
