@@ -31,7 +31,7 @@ struct OpenInfo {
 }
 
 impl OpenInfo {
-    fn size_or_default(self) -> u32 {
+    fn size_or_default(&self) -> u32 {
         self.size.unwrap_or(0)
     }
 }
@@ -83,16 +83,12 @@ impl Into<Vec<InsertableFile>> for OpenInfos {
     fn into(self) -> Vec<InsertableFile> {
         self.inner
             .iter()
-            .map(|open_info| {
-                let size = open_info.size_or_default();
-
-                InsertableFile {
-                    title: open_info.path.to_string_lossy().to_string(),
-                    path: open_info.path.clone(),
-                    is_remote: false,
-                    is_encrypted: false,
-                    size,
-                }
+            .map(|open_info| InsertableFile {
+                title: open_info.path.to_string_lossy().to_string(),
+                path: open_info.path.clone(),
+                is_remote: false,
+                is_encrypted: false,
+                size: open_info.size_or_default(),
             })
             .collect::<Vec<InsertableFile>>()
     }
