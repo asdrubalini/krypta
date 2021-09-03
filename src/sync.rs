@@ -1,11 +1,18 @@
-use tokio::task::JoinError;
+use tokio::{
+    fs,
+    sync::Semaphore,
+    task::{JoinError, JoinHandle},
+};
 use walkdir::WalkDir;
 
 use crate::database::{
     models::{File, Insertable, InsertableFile},
     Database,
 };
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 #[derive(Debug)]
 pub enum SyncError {
@@ -85,15 +92,40 @@ pub async fn sync_database_from_source_folder(
     // Extract only files that needs to be added to the database
     let paths_to_sync = local_paths.filter(|file_path| !database_paths.contains(file_path));
 
-    let files_to_insert = paths_to_sync
-        .map(|path| InsertableFile {
-            title: path.to_string_lossy().to_string(),
-            path,
-            is_remote: false,
-            is_encrypted: false,
-            size: 0,
-        })
-        .collect::<Vec<InsertableFile>>();
+    let semaphore = Arc::new(Semaphore::new(64));
+    let mut handles: Vec<JoinHandle<InsertableFile>> = Vec::new();
+
+    for path_to_sync in paths_to_sync {
+        let mut full_source_path = full_source_path.clone();
+        let permit = semaphore.clone().acquire_owned().await.unwrap();
+
+        let handle = tokio::spawn(async move {
+            full_source_path.push(&path_to_sync);
+
+            let file = fs::File::open(full_source_path).await.unwrap();
+            let size: i64 = file.metadata().await.unwrap().len().try_into().unwrap();
+
+            let file = InsertableFile {
+                title: path_to_sync.to_string_lossy().to_string(),
+                path: path_to_sync,
+                is_remote: false,
+                is_encrypted: false,
+                size,
+            };
+
+            drop(permit);
+
+            file
+        });
+
+        handles.push(handle);
+    }
+
+    let mut files_to_insert = Vec::new();
+
+    for handle in handles {
+        files_to_insert.push(handle.await.unwrap());
+    }
 
     log::trace!("Start adding to database");
 
