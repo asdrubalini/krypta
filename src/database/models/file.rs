@@ -1,4 +1,4 @@
-use super::{Insertable, Searchable};
+use super::{Fetchable, Insertable, Searchable};
 use crate::database::Database;
 
 use async_trait::async_trait;
@@ -6,7 +6,7 @@ use rand::Rng;
 use sqlx::types::chrono::{DateTime, Utc};
 use std::path::PathBuf;
 
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug, Clone, sqlx::FromRow)]
 pub struct File {
     pub id: i64,
     pub title: String,
@@ -36,11 +36,35 @@ impl From<&InsertableFile> for File {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct InsertableFile {
     pub title: String,
     pub path: PathBuf,
     pub is_remote: bool,
     pub is_encrypted: bool,
+}
+
+impl From<&File> for InsertableFile {
+    fn from(file: &File) -> Self {
+        InsertableFile {
+            title: file.title.clone(),
+            path: PathBuf::from(file.path.clone()),
+            is_remote: file.is_remote,
+            is_encrypted: file.is_encrypted,
+        }
+    }
+}
+
+#[async_trait]
+impl Fetchable<File> for File {
+    /// Fetch all records from database
+    async fn fetch_all(database: &Database) -> Result<Vec<File>, sqlx::Error> {
+        let files = sqlx::query_as::<_, File>(include_str!("./sql/file/fetch_all.sql"))
+            .fetch_all(database)
+            .await?;
+
+        Ok(files)
+    }
 }
 
 #[async_trait]
@@ -135,7 +159,7 @@ mod tests {
     use super::File;
     use crate::database::{
         create_in_memory,
-        models::{file::InsertableFile, Insertable},
+        models::{file::InsertableFile, Fetchable, Insertable},
     };
 
     #[test]
@@ -173,5 +197,54 @@ mod tests {
         };
 
         assert!(File::insert(&database, file2).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_insert_and_fetch() {
+        let database = create_in_memory().await.unwrap();
+
+        let insert_file = InsertableFile {
+            title: "foobar".to_string(),
+            path: PathBuf::from("/path/to/foo/bar"),
+            is_remote: false,
+            is_encrypted: false,
+        };
+
+        assert!(File::insert(&database, insert_file.clone()).await.is_ok());
+
+        let files = File::fetch_all(&database).await;
+
+        assert!(files.is_ok());
+
+        let files = files.unwrap();
+
+        assert_eq!(files.len(), 1);
+
+        let fetched_file = InsertableFile::from(files.get(0).unwrap());
+
+        assert_eq!(insert_file, fetched_file);
+    }
+
+    #[tokio::test]
+    async fn test_insert_many() {
+        let database = create_in_memory().await.unwrap();
+
+        let insert_files = (0..128)
+            .map(|i| InsertableFile {
+                title: format!("foobar_{}", i),
+                path: PathBuf::from(format!("/path/to/foo/bar/{}", i)),
+                is_remote: false,
+                is_encrypted: false,
+            })
+            .collect::<Vec<InsertableFile>>();
+
+        let result = File::insert_many(&database, &insert_files).await;
+        assert!(result.is_ok());
+        let files = File::fetch_all(&database).await;
+        assert!(files.is_ok());
+
+        let files = files.unwrap();
+
+        assert_eq!(files.len(), 128);
     }
 }

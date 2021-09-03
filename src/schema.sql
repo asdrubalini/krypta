@@ -41,6 +41,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS "file_random_hash" ON "file" ("random_hash");
 
 CREATE UNIQUE INDEX IF NOT EXISTS "file_time" ON "file" ("created_at", "updated_at");
 
-CREATE UNIQUE INDEX IF NOT EXISTS "file_remote_encrypted_flags" ON "file" ("is_remote", "is_encrypted");
+CREATE INDEX IF NOT EXISTS "file_remote_encrypted_flags" ON "file" ("is_remote", "is_encrypted");
 
 COMMIT;
