@@ -79,9 +79,10 @@ impl From<OpenInfosInner> for OpenInfos {
 }
 
 /// Convert OpenInfos into a vector of InsertableFile(s)
-impl Into<Vec<InsertableFile>> for OpenInfos {
-    fn into(self) -> Vec<InsertableFile> {
-        self.inner
+impl From<OpenInfos> for Vec<InsertableFile> {
+    fn from(open_infos: OpenInfos) -> Self {
+        open_infos
+            .inner
             .iter()
             .map(|open_info| InsertableFile {
                 title: open_info.path.to_string_lossy().to_string(),
@@ -159,7 +160,7 @@ pub async fn sync_database_from_source_folder(
     // Then, call populate_all() in order to start to fill the parameters that require fs acccess
     let paths_to_sync_with_open_info = OpenInfos::from(
         paths_to_sync
-            .map(|path| OpenInfo::from(path))
+            .map(OpenInfo::from)
             .collect::<OpenInfosInner>(),
     )
     .populate_all(full_source_path)
