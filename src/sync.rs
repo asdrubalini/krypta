@@ -28,6 +28,7 @@ impl CanonicalizeAndSkipPathBuf for PathBuf {
 }
 
 /// Holds all the information we have about a path
+#[derive(Clone)]
 struct PathInfo {
     pub path: PathBuf,
     pub size: Option<u32>,
@@ -37,6 +38,26 @@ impl PathInfo {
     /// Retrieve self.size or default value in case it is not available
     fn size_or_default(&self) -> u32 {
         self.size.unwrap_or(0)
+    }
+
+    /// Try fs access and get new Self version with updated fields where possible
+    async fn try_update_size(&mut self, full_path: PathBuf) -> Option<()> {
+        if self.size.is_some() {
+            return None;
+        }
+
+        let file = tokio::fs::File::open(full_path).await.ok()?;
+        let size: u32 = file
+            .metadata()
+            .await
+            .ok()?
+            .len()
+            .try_into()
+            .unwrap_or(u32::MAX);
+
+        self.size = Some(size);
+
+        Some(())
     }
 }
 
@@ -54,10 +75,8 @@ struct PathInfos {
 }
 
 impl PathInfos {
-    /// Populate the missing PathInfo(s) with fs access
+    /// Populate the empty PathInfo(s)
     async fn populate_all(self, prefix: PathBuf) -> Self {
-        // TODO: don't allocate a new PathInfos here
-
         // Use a semaphore in order not to exceed os's max file open count
         let semaphore = Arc::new(Semaphore::new(128));
         let mut handles = Vec::new();
@@ -69,13 +88,8 @@ impl PathInfos {
             let handle = tokio::spawn(async move {
                 full_path.push(&path_info.path);
 
-                let file = tokio::fs::File::open(full_path).await.unwrap();
-                let size: u32 = file.metadata().await.unwrap().len().try_into().unwrap();
-
-                let path_info = PathInfo {
-                    path: path_info.path,
-                    size: Some(size),
-                };
+                let mut path_info = path_info.clone();
+                path_info.try_update_size(full_path).await;
 
                 drop(permit);
 
@@ -85,14 +99,14 @@ impl PathInfos {
             handles.push(handle);
         }
 
-        let mut populated_paths = Vec::new();
+        let mut inner = Vec::new();
 
         // Wait for all tasks
         for handle in handles {
-            populated_paths.push(handle.await.unwrap());
+            inner.push(handle.await.unwrap());
         }
 
-        Self::from(populated_paths)
+        Self { inner }
     }
 }
 
@@ -182,14 +196,16 @@ pub async fn sync_database_from_source_folder(
     let paths_to_sync = local_paths.filter(|file_path| !database_paths.contains(file_path));
 
     // Build the PathInfos struct from all the files that need to be inserted into the database
-    // Then, call populate_all() in order to start to fill the parameters that require fs acccess
     let paths_to_sync_with_path_info = PathInfos::from(
         paths_to_sync
             .map(PathInfo::from)
             .collect::<PathInfosInner>(),
-    )
-    .populate_all(full_source_path)
-    .await;
+    );
+
+    // Call populate_all() in order to start to fill the parameters
+    let paths_to_sync_with_path_info = paths_to_sync_with_path_info
+        .populate_all(full_source_path)
+        .await;
 
     // Finally build InsertableFile(s) from the just populated paths_to_sync_with_path_info
     let files_to_insert: Vec<InsertableFile> = paths_to_sync_with_path_info.into();
