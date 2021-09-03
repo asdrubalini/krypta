@@ -1,4 +1,4 @@
-use std::{env, path::Path, str::FromStr, time::Duration};
+use std::{env, path::Path, str::FromStr};
 
 use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Executor, SqlitePool};
 
@@ -11,8 +11,7 @@ pub async fn connect_or_create() -> Result<Database, sqlx::Error> {
     let is_database_new = !Path::new(&database_path).exists();
 
     let mut options = SqliteConnectOptions::from_str(&format!("sqlite:{}", &database_path))?
-        .create_if_missing(true)
-        .busy_timeout(Duration::from_secs(3600));
+        .create_if_missing(true);
 
     options.disable_statement_logging();
 
