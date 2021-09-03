@@ -14,7 +14,7 @@ pub struct File {
     pub is_remote: bool,
     pub is_encrypted: bool,
     pub random_hash: String,
-    pub size: i64,
+    pub size: u32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -44,7 +44,7 @@ pub struct InsertableFile {
     pub path: PathBuf,
     pub is_remote: bool,
     pub is_encrypted: bool,
-    pub size: i64,
+    pub size: u32,
 }
 
 impl From<&File> for InsertableFile {
