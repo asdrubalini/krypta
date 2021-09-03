@@ -51,7 +51,7 @@ pub async fn sync_database_from_source_folder(
 
     log::trace!("Start fetching paths from database");
     // Start fetching files' paths from database
-    let database_files_handle = {
+    let database_paths_handle = {
         let database = database.clone();
         tokio::spawn(async move { File::get_file_paths(&database).await })
     };
@@ -60,7 +60,7 @@ pub async fn sync_database_from_source_folder(
     // - Find all files in `source_folder`, ignoring folders and without following links
     // - Turn DirItem(s) into PathBuf and strip off the host-specific paths in order to
     // have something that we can put into the database
-    let local_files = WalkDir::new(source_folder)
+    let local_paths = WalkDir::new(source_folder)
         .follow_links(false)
         .into_iter()
         .filter_map(|e| e.ok())
@@ -77,15 +77,15 @@ pub async fn sync_database_from_source_folder(
     log::trace!("Done with finding local files");
 
     // Await for paths from database
-    let database_files = database_files_handle
+    let database_paths = database_paths_handle
         .await
         .map_err(SyncError::TaskError)?
         .map_err(SyncError::DatabaseError)?;
 
     // Extract only files that needs to be added to the database
-    let files_to_sync = local_files.filter(|file_path| !database_files.contains(file_path));
+    let paths_to_sync = local_paths.filter(|file_path| !database_paths.contains(file_path));
 
-    let files = files_to_sync
+    let files_to_insert = paths_to_sync
         .map(|path| InsertableFile {
             title: path.to_string_lossy().to_string(),
             path,
@@ -97,13 +97,11 @@ pub async fn sync_database_from_source_folder(
 
     log::trace!("Start adding to database");
 
-    let result = File::insert_many(database, &files)
+    let result = File::insert_many(database, &files_to_insert)
         .await
         .map_err(SyncError::DatabaseError)?;
 
-    let files_to_sync_count = files.len();
+    let processed_files = files_to_insert.len();
 
-    Ok(SyncReport {
-        processed_files: files_to_sync_count,
-    })
+    Ok(SyncReport { processed_files })
 }
