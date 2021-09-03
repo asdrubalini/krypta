@@ -7,19 +7,6 @@ use crate::database::{
 };
 use std::path::{Path, PathBuf};
 
-#[derive(Debug)]
-pub enum SyncError {
-    DatabaseError(sqlx::Error),
-    SourceFolderNotFound(std::io::Error),
-    FileMovedDuringSync(std::io::Error),
-    TaskError(JoinError),
-}
-
-#[derive(Debug)]
-pub struct SyncReport {
-    pub processed_files: usize,
-}
-
 /// This trait is used in order to strip the "local bits" from a PathBuf
 /// so that it can be safely inserted into the database without polluting it
 /// with host-specific folders
@@ -37,7 +24,7 @@ impl CanonicalizeAndSkipPathBuf for PathBuf {
     }
 }
 
-/// Holds all the informations about a path that requires fs action
+/// Holds all the informations that require fs action about a PathBuf
 struct OpenInfo {
     pub size: u32,
 }
@@ -104,6 +91,20 @@ impl Into<Vec<InsertableFile>> for OpenInfos {
             })
             .collect::<Vec<InsertableFile>>()
     }
+}
+
+#[derive(Debug)]
+pub enum SyncError {
+    DatabaseError(sqlx::Error),
+    SourceFolderNotFound(std::io::Error),
+    FileMovedDuringSync(std::io::Error),
+    TaskError(JoinError),
+}
+
+/// Final report of sync job, thrown if no fatal errors are encountered
+#[derive(Debug)]
+pub struct SyncReport {
+    pub processed_files: usize,
 }
 
 /// Adds missing fields into database according to source folder
