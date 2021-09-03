@@ -1,11 +1,14 @@
-use tokio::task::JoinError;
+use tokio::{sync::Semaphore, task::JoinError};
 use walkdir::WalkDir;
 
 use crate::database::{
     models::{File, Insertable, InsertableFile},
     Database,
 };
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 /// This trait is used in order to strip the "local bits" from a PathBuf
 /// so that it can be safely inserted into the database without polluting it
@@ -53,24 +56,40 @@ struct PathInfos {
 impl PathInfos {
     /// Populate the missing PathInfo(s) with fs access
     async fn populate_all(self, prefix: PathBuf) -> Self {
-        let mut populated_paths: Vec<PathInfo> = Vec::new();
-
         // TODO: don't allocate a new PathInfos here
-        // TODO: spawn tasks with a Semaphore and read file info async
 
-        for open_info in self.inner {
+        // Use a semaphore in order not to exceed os's max file open count
+        let semaphore = Arc::new(Semaphore::new(128));
+        let mut handles = Vec::new();
+
+        for path_info in self.inner {
+            let permit = semaphore.clone().acquire_owned().await.unwrap();
             let mut full_path = prefix.clone();
-            full_path.push(&open_info.path);
 
-            let file = tokio::fs::File::open(full_path).await.unwrap();
-            let size: u32 = file.metadata().await.unwrap().len().try_into().unwrap();
+            let handle = tokio::spawn(async move {
+                full_path.push(&path_info.path);
 
-            let open_info = PathInfo {
-                path: open_info.path,
-                size: Some(size),
-            };
+                let file = tokio::fs::File::open(full_path).await.unwrap();
+                let size: u32 = file.metadata().await.unwrap().len().try_into().unwrap();
 
-            populated_paths.push(open_info);
+                let path_info = PathInfo {
+                    path: path_info.path,
+                    size: Some(size),
+                };
+
+                drop(permit);
+
+                path_info
+            });
+
+            handles.push(handle);
+        }
+
+        let mut populated_paths = Vec::new();
+
+        // Wait for all tasks
+        for handle in handles {
+            populated_paths.push(handle.await.unwrap());
         }
 
         Self::from(populated_paths)
@@ -86,16 +105,16 @@ impl From<PathInfosInner> for PathInfos {
 
 /// Convert PathInfos into a vector of InsertableFile(s) files
 impl From<PathInfos> for Vec<InsertableFile> {
-    fn from(open_infos: PathInfos) -> Self {
-        open_infos
+    fn from(path_infos: PathInfos) -> Self {
+        path_infos
             .inner
             .iter()
-            .map(|open_info| InsertableFile {
-                title: open_info.path.to_string_lossy().to_string(),
-                path: open_info.path.clone(),
+            .map(|path_info| InsertableFile {
+                title: path_info.path.to_string_lossy().to_string(),
+                path: path_info.path.clone(),
                 is_remote: false,
                 is_encrypted: false,
-                size: open_info.size_or_default(),
+                size: path_info.size_or_default(),
             })
             .collect::<Vec<InsertableFile>>()
     }
@@ -164,7 +183,7 @@ pub async fn sync_database_from_source_folder(
 
     // Build the PathInfos struct from all the files that need to be inserted into the database
     // Then, call populate_all() in order to start to fill the parameters that require fs acccess
-    let paths_to_sync_with_open_info = PathInfos::from(
+    let paths_to_sync_with_path_info = PathInfos::from(
         paths_to_sync
             .map(PathInfo::from)
             .collect::<PathInfosInner>(),
@@ -172,8 +191,8 @@ pub async fn sync_database_from_source_folder(
     .populate_all(full_source_path)
     .await;
 
-    // Finally build InsertableFile(s) from the just populated paths_to_sync_with_open_info
-    let files_to_insert: Vec<InsertableFile> = paths_to_sync_with_open_info.into();
+    // Finally build InsertableFile(s) from the just populated paths_to_sync_with_path_info
+    let files_to_insert: Vec<InsertableFile> = paths_to_sync_with_path_info.into();
 
     log::trace!("Start adding to database");
 
