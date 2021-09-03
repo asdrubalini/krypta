@@ -88,7 +88,7 @@ pub async fn sync_database_from_source_folder(
     let files = files_to_sync
         .map(|path| InsertableFile {
             title: path.to_string_lossy().to_string(),
-            path: path,
+            path,
             is_remote: false,
             is_encrypted: false,
         })

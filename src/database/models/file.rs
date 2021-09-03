@@ -27,7 +27,7 @@ impl From<&InsertableFile> for File {
             path: file.path.to_string_lossy().to_string(),
             is_remote: file.is_remote,
             is_encrypted: file.is_encrypted,
-            random_hash: random_hash,
+            random_hash,
             created_at: now,
             updated_at: now,
         }
@@ -86,7 +86,7 @@ impl File {
 
     pub async fn insert_many(
         database: &Database,
-        files: &Vec<InsertableFile>,
+        files: &[InsertableFile],
     ) -> Result<(), sqlx::Error> {
         let mut transaction = database.begin().await?;
 
@@ -119,9 +119,7 @@ impl File {
 
         let paths = files.iter().map(|path| path.0.to_owned());
 
-        Ok(paths
-            .map(|path_string| PathBuf::from(path_string))
-            .collect())
+        Ok(paths.map(PathBuf::from).collect())
     }
 }
 
