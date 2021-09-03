@@ -1,8 +1,8 @@
-use tokio::{sync::Semaphore, task::JoinError};
+use tokio::{fs::File, sync::Semaphore, task::JoinError};
 use walkdir::WalkDir;
 
 use crate::database::{
-    models::{File, Insertable, InsertableFile},
+    models::{self, Insertable, InsertableFile},
     Database,
 };
 use std::{
@@ -27,7 +27,7 @@ impl CanonicalizeAndSkipPathBuf for PathBuf {
     }
 }
 
-/// Holds all the information we have about a path
+/// Holds all the information we have about a path and its details
 #[derive(Clone)]
 struct PathInfo {
     pub path: PathBuf,
@@ -35,18 +35,18 @@ struct PathInfo {
 }
 
 impl PathInfo {
-    /// Retrieve self.size or default value in case it is not available
+    /// Retrieve self.size or get default value in case it is not available
     fn size_or_default(&self) -> u32 {
         self.size.unwrap_or(0)
     }
 
-    /// Try fs access and get new Self version with updated fields where possible
+    /// Try fs access and update self.size with path's file size if possible
     async fn try_update_size(&mut self, full_path: PathBuf) -> Option<()> {
         if self.size.is_some() {
             return None;
         }
 
-        let file = tokio::fs::File::open(full_path).await.ok()?;
+        let file = File::open(full_path).await.ok()?;
         let size: u32 = file
             .metadata()
             .await
@@ -75,8 +75,8 @@ struct PathInfos {
 }
 
 impl PathInfos {
-    /// Populate the empty PathInfo(s)
-    async fn populate_all(self, prefix: PathBuf) -> Self {
+    /// Try to populate the empty fields in PathInfo(s), returning a new copy
+    async fn try_populate_all(self, prefix: PathBuf) -> Self {
         // Use a semaphore in order not to exceed os's max file open count
         let semaphore = Arc::new(Semaphore::new(128));
         let mut handles = Vec::new();
@@ -99,6 +99,7 @@ impl PathInfos {
             handles.push(handle);
         }
 
+        // New inner that will be populated with updated details
         let mut inner = Vec::new();
 
         // Wait for all tasks
@@ -138,7 +139,6 @@ impl From<PathInfos> for Vec<InsertableFile> {
 pub enum SyncError {
     DatabaseError(sqlx::Error),
     SourceFolderNotFound(std::io::Error),
-    FileMovedDuringSync(std::io::Error),
     TaskError(JoinError),
 }
 
@@ -157,13 +157,14 @@ pub async fn sync_database_from_source_folder(
     let full_source_path = std::fs::canonicalize(Path::new(&source_folder))
         .map_err(SyncError::SourceFolderNotFound)?;
 
+    // /path/to/foo/bar -> 4
     let full_source_path_length = full_source_path.iter().peekable().count();
 
     log::trace!("Start fetching paths from database");
-    // Start fetching files' paths from database
+    // Start fetching files' paths we know from database
     let database_paths_handle = {
         let database = database.clone();
-        tokio::spawn(async move { File::get_file_paths(&database).await })
+        tokio::spawn(async move { models::File::get_file_paths(&database).await })
     };
 
     log::trace!("Start finding local files");
@@ -195,16 +196,16 @@ pub async fn sync_database_from_source_folder(
     // Extract only files that needs to be added to the database
     let paths_to_sync = local_paths.filter(|file_path| !database_paths.contains(file_path));
 
-    // Build the PathInfos struct from all the files that need to be inserted into the database
+    // Build the PathInfos struct from all the files we need to insert into the database
     let paths_to_sync_with_path_info = PathInfos::from(
         paths_to_sync
             .map(PathInfo::from)
             .collect::<PathInfosInner>(),
     );
 
-    // Call populate_all() in order to start to fill the parameters
+    // Call try_populate_all() in order to start trying to fill the missing parameters
     let paths_to_sync_with_path_info = paths_to_sync_with_path_info
-        .populate_all(full_source_path)
+        .try_populate_all(full_source_path)
         .await;
 
     // Finally build InsertableFile(s) from the just populated paths_to_sync_with_path_info
@@ -212,7 +213,8 @@ pub async fn sync_database_from_source_folder(
 
     log::trace!("Start adding to database");
 
-    let result = File::insert_many(database, &files_to_insert)
+    // Use the InsertableFile(s) we just got with the database api
+    models::File::insert_many(database, &files_to_insert)
         .await
         .map_err(SyncError::DatabaseError)?;
 
