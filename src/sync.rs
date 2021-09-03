@@ -91,6 +91,7 @@ pub async fn sync_database_from_source_folder(
             path,
             is_remote: false,
             is_encrypted: false,
+            size: 0,
         })
         .collect::<Vec<InsertableFile>>();
 
