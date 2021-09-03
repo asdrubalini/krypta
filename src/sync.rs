@@ -2,7 +2,7 @@ use tokio::task::JoinError;
 use walkdir::WalkDir;
 
 use crate::database::{
-    models::{File, InsertableFile},
+    models::{File, Insertable, InsertableFile},
     Database,
 };
 use std::path::{Path, PathBuf};
