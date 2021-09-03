@@ -1,13 +1,14 @@
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
+
 use tokio::{fs::File, sync::Semaphore, task::JoinError};
 use walkdir::WalkDir;
 
 use crate::database::{
     models::{self, Insertable, InsertableFile},
     Database,
-};
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
 };
 
 /// This trait is used in order to strip the "local bits" from a PathBuf

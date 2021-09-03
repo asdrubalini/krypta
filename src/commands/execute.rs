@@ -1,8 +1,14 @@
+use std::sync::Arc;
+
+use crate::{config::Configuration, database::Database};
 use clap::{App, Arg};
+
+use super::{status, sync};
 
 #[derive(Debug)]
 pub enum CliCommand {
     Sync { path: String },
+    Status,
 }
 
 impl CliCommand {
@@ -14,10 +20,16 @@ impl CliCommand {
             .arg(
                 Arg::with_name("sync")
                     .help("sync a folder into the database")
-                    .short("s")
                     .long("sync")
                     .takes_value(true)
                     .value_name("path"),
+            )
+            .arg(
+                Arg::with_name("status")
+                    .help("get database status")
+                    .short("s")
+                    .long("status")
+                    .takes_value(false),
             )
             .get_matches();
 
@@ -26,8 +38,17 @@ impl CliCommand {
             return Some(CliCommand::Sync {
                 path: path.to_owned(),
             });
+        } else if matches.is_present("status") {
+            return Some(CliCommand::Status);
         }
 
         None
+    }
+
+    pub async fn execute(self, config: Arc<Configuration>, database: &Database) {
+        match self {
+            CliCommand::Sync { path } => sync::execute(database, path).await,
+            CliCommand::Status => status::execute(database).await,
+        };
     }
 }

@@ -1,5 +1,5 @@
 #![allow(dead_code, unused_variables)]
-mod cli;
+mod commands;
 mod config;
 mod database;
 mod storage;
@@ -21,19 +21,10 @@ async fn main() {
     let config = config::Configuration::read_from_file();
 
     // Parse CLI arguments
-    let command = cli::CliCommand::try_parse().unwrap();
-
-    match command {
-        cli::CliCommand::Sync { path } => {
-            let report = {
-                let report = sync::sync_database_from_source_folder(&database, path)
-                    .await
-                    .unwrap();
-
-                println!("{:?}", report)
-            };
-        }
-    };
+    let command = commands::CliCommand::try_parse()
+        .unwrap()
+        .execute(config.clone(), &database)
+        .await;
 
     database.close().await;
 }

@@ -1,10 +1,11 @@
-use super::{Fetchable, Insertable, Searchable};
-use crate::database::Database;
+use std::path::PathBuf;
 
 use async_trait::async_trait;
 use rand::Rng;
 use sqlx::types::chrono::{DateTime, Utc};
-use std::path::PathBuf;
+
+use super::{Fetchable, Insertable, Searchable};
+use crate::database::Database;
 
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct File {
