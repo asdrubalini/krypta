@@ -1,6 +1,6 @@
-SELECT 
+SELECT
   *
-FROM 
+FROM
   file
-WHERE 
+WHERE
   file.title LIKE ?
