@@ -168,7 +168,7 @@ impl File {
     }
 
     pub async fn archive_size(database: &Database) -> Result<u64, sqlx::Error> {
-        let files = sqlx::query_as::<_, (Vec<u8>,)>(include_str!("./sql/file/archive_size.sql"))
+        let files = sqlx::query_as::<_, (Vec<u8>,)>(include_str!("./sql/file/size.sql"))
             .fetch_all(database)
             .await?;
 
@@ -178,6 +178,14 @@ impl File {
             .sum();
 
         Ok(size)
+    }
+
+    pub async fn count(database: &Database) -> Result<u32, sqlx::Error> {
+        let files = sqlx::query_as::<_, (u32,)>(include_str!("./sql/file/count.sql"))
+            .fetch_one(database)
+            .await?;
+
+        Ok(files.0)
     }
 }
 
