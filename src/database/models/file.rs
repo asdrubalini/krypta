@@ -1,10 +1,11 @@
-use super::{Fetchable, Insertable, Searchable};
-use crate::database::Database;
+use std::path::PathBuf;
 
 use async_trait::async_trait;
 use rand::Rng;
 use sqlx::types::chrono::{DateTime, Utc};
-use std::path::PathBuf;
+
+use super::{Fetchable, Insertable, Searchable};
+use crate::database::Database;
 
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct File {
@@ -156,6 +157,14 @@ impl File {
 
         Ok(paths.map(PathBuf::from).collect())
     }
+
+    pub async fn archive_size(database: &Database) -> Result<u32, sqlx::Error> {
+        let files = sqlx::query_as::<_, (u32,)>(include_str!("./sql/file/archive_size.sql"))
+            .fetch_one(database)
+            .await?;
+
+        Ok(files.0)
+    }
 }
 
 #[cfg(test)]
@@ -256,5 +265,29 @@ mod tests {
         let files = files.unwrap();
 
         assert_eq!(files.len(), 128);
+    }
+
+    #[tokio::test]
+    async fn test_archive_size() {
+        let database = create_in_memory().await.unwrap();
+
+        let insert_files = (0..128)
+            .map(|i| InsertableFile {
+                title: format!("foobar_{}", i),
+                path: PathBuf::from(format!("/path/to/foo/bar/{}", i)),
+                is_remote: false,
+                is_encrypted: false,
+                size: 64,
+            })
+            .collect::<Vec<InsertableFile>>();
+
+        let result = File::insert_many(&database, &insert_files).await;
+        assert!(result.is_ok());
+        let archive_size = File::archive_size(&database).await;
+        assert!(archive_size.is_ok());
+
+        let archive_size = archive_size.unwrap();
+
+        assert_eq!(archive_size, 64 * 128);
     }
 }
