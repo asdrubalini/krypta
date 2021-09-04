@@ -32,12 +32,12 @@ impl CanonicalizeAndSkipPathBuf for PathBuf {
 #[derive(Clone)]
 struct PathInfo {
     pub path: PathBuf,
-    pub size: Option<u32>,
+    pub size: Option<u64>,
 }
 
 impl PathInfo {
     /// Retrieve self.size or get default value in case it is not available
-    fn size_or_default(&self) -> u32 {
+    fn size_or_default(&self) -> u64 {
         self.size.unwrap_or(0)
     }
 
@@ -48,13 +48,7 @@ impl PathInfo {
         }
 
         let file = File::open(full_path).await.ok()?;
-        let size: u32 = file
-            .metadata()
-            .await
-            .ok()?
-            .len()
-            .try_into()
-            .unwrap_or(u32::MAX);
+        let size: u64 = file.metadata().await.ok()?.len();
 
         self.size = Some(size);
 

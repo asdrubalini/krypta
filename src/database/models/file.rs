@@ -2,21 +2,49 @@ use std::path::PathBuf;
 
 use async_trait::async_trait;
 use rand::Rng;
-use sqlx::types::chrono::{DateTime, Utc};
+use sqlx::{
+    sqlite::SqliteRow,
+    types::chrono::{DateTime, Utc},
+    FromRow, Row,
+};
 
 use super::{Fetchable, Insertable, Searchable};
-use crate::database::Database;
+use crate::database::{BigIntAsBlob, Database};
 
-#[derive(Debug, Clone, sqlx::FromRow, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct File {
     pub title: String,
     pub path: String,
     pub is_remote: bool,
     pub is_encrypted: bool,
     pub random_hash: String,
-    pub size: u32,
+    pub size: u64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+impl<'r> FromRow<'r, SqliteRow> for File {
+    fn from_row(row: &'r SqliteRow) -> Result<Self, sqlx::Error> {
+        let title = row.try_get("title")?;
+        let path = row.try_get("path")?;
+        let is_remote = row.try_get("is_remote")?;
+        let is_encrypted = row.try_get("is_encrypted")?;
+        let random_hash = row.try_get("random_hash")?;
+        let size: Vec<u8> = row.try_get("size")?;
+        let created_at = row.try_get("created_at")?;
+        let updated_at = row.try_get("updated_at")?;
+
+        Ok(File {
+            title,
+            path,
+            is_remote,
+            is_encrypted,
+            random_hash,
+            size: 0,
+            created_at,
+            updated_at,
+        })
+    }
 }
 
 impl File {
@@ -26,7 +54,7 @@ impl File {
         path: PathBuf,
         is_remote: bool,
         is_encrypted: bool,
-        size: u32,
+        size: u64,
     ) -> Self {
         let random_hash = File::pseudorandom_sha256_string();
         let now = chrono::Utc::now();
@@ -37,7 +65,7 @@ impl File {
             is_remote: is_remote,
             is_encrypted: is_encrypted,
             random_hash,
-            size: size,
+            size,
             created_at: now,
             updated_at: now,
         }
@@ -79,7 +107,7 @@ impl Insertable<File> for File {
             .bind(file.is_remote)
             .bind(file.is_encrypted)
             .bind(file.random_hash)
-            .bind(file.size)
+            .bind(BigIntAsBlob::from_u64(&file.size))
             .bind(file.created_at)
             .bind(file.updated_at)
             .execute(database)
@@ -101,7 +129,7 @@ impl Insertable<File> for File {
                 .bind(file.is_remote)
                 .bind(file.is_encrypted)
                 .bind(file.random_hash)
-                .bind(file.size)
+                .bind(BigIntAsBlob::from_u64(&file.size))
                 .bind(file.created_at)
                 .bind(file.updated_at)
                 .execute(&mut transaction)
@@ -123,7 +151,7 @@ impl File {
         (0..32)
             .into_iter()
             .map(|_| {
-                let random_byte: u8 = generator.gen_range(0..255);
+                let random_byte: u8 = generator.gen_range(0..=255);
                 format!("{:02x}", random_byte)
             })
             .collect()
@@ -139,12 +167,13 @@ impl File {
         Ok(paths.map(PathBuf::from).collect())
     }
 
-    pub async fn archive_size(database: &Database) -> Result<u32, sqlx::Error> {
-        let files = sqlx::query_as::<_, (u32,)>(include_str!("./sql/file/archive_size.sql"))
+    pub async fn archive_size(database: &Database) -> Result<u64, sqlx::Error> {
+        let files = sqlx::query_as::<_, (Vec<u8>,)>(include_str!("./sql/file/archive_size.sql"))
             .fetch_one(database)
             .await?;
 
-        Ok(files.0)
+        let size = BigIntAsBlob::from_bytes(&files.0);
+        Ok(size)
     }
 }
 
@@ -274,5 +303,31 @@ mod tests {
         let archive_size = archive_size.unwrap();
 
         assert_eq!(archive_size, 64 * 128);
+    }
+
+    #[tokio::test]
+    async fn test_enormous_archive_size() {
+        let database = create_in_memory().await.unwrap();
+
+        let insert_files = (0..128)
+            .map(|i| {
+                File::new(
+                    format!("foobar_{}", i),
+                    PathBuf::from(format!("/path/to/foo/bar/{}", i)),
+                    false,
+                    false,
+                    1_u64.pow(10), // 10 GB
+                )
+            })
+            .collect::<Vec<File>>();
+
+        let result = File::insert_many(&database, &insert_files).await;
+        assert!(result.is_ok());
+        let archive_size = File::archive_size(&database).await;
+        assert!(archive_size.is_ok());
+
+        let archive_size = archive_size.unwrap();
+
+        assert_eq!(archive_size, 128 * 1_u64.pow(10));
     }
 }

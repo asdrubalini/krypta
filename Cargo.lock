@@ -2240,6 +2240,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "byte-unit",
+ "byteorder",
  "chrono",
  "clap",
  "dotenv",
