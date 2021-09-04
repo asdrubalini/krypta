@@ -7,7 +7,7 @@ use tokio::{fs::File, sync::Semaphore, task::JoinError};
 use walkdir::WalkDir;
 
 use crate::database::{
-    models::{self, Insertable, InsertableFile},
+    models::{self, Insertable},
     Database,
 };
 
@@ -119,20 +119,22 @@ impl From<PathInfosInner> for PathInfos {
     }
 }
 
-/// Convert PathInfos into a vector of InsertableFile(s) files
-impl From<PathInfos> for Vec<InsertableFile> {
+/// Convert PathInfos into a vector of File(s)
+impl From<PathInfos> for Vec<models::File> {
     fn from(path_infos: PathInfos) -> Self {
         path_infos
             .inner
             .iter()
-            .map(|path_info| InsertableFile {
-                title: path_info.path.to_string_lossy().to_string(),
-                path: path_info.path.clone(),
-                is_remote: false,
-                is_encrypted: false,
-                size: path_info.size_or_default(),
+            .map(|path_info| {
+                models::File::new(
+                    path_info.path.to_string_lossy().to_string(),
+                    path_info.path.clone(),
+                    false,
+                    false,
+                    path_info.size_or_default(),
+                )
             })
-            .collect::<Vec<InsertableFile>>()
+            .collect::<Vec<models::File>>()
     }
 }
 
@@ -209,12 +211,12 @@ pub async fn sync_database_from_source_folder(
         .try_populate_all(full_source_path)
         .await;
 
-    // Finally build InsertableFile(s) from the just populated paths_to_sync_with_path_info
-    let files_to_insert: Vec<InsertableFile> = paths_to_sync_with_path_info.into();
+    // Finally build File(s) from the just populated paths_to_sync_with_path_info
+    let files_to_insert: Vec<models::File> = paths_to_sync_with_path_info.into();
 
     log::trace!("Start adding to database");
 
-    // Use the InsertableFile(s) we just got with the database api
+    // Use the File(s) we just got with the database api
     models::File::insert_many(database, &files_to_insert)
         .await
         .map_err(SyncError::DatabaseError)?;

@@ -7,9 +7,8 @@ use sqlx::types::chrono::{DateTime, Utc};
 use super::{Fetchable, Insertable, Searchable};
 use crate::database::Database;
 
-#[derive(Debug, Clone, sqlx::FromRow)]
+#[derive(Debug, Clone, sqlx::FromRow, PartialEq, Eq)]
 pub struct File {
-    pub id: i64,
     pub title: String,
     pub path: String,
     pub is_remote: bool,
@@ -20,42 +19,27 @@ pub struct File {
     pub updated_at: DateTime<Utc>,
 }
 
-impl From<&InsertableFile> for File {
-    fn from(file: &InsertableFile) -> Self {
+impl File {
+    /// Build a new `File`
+    pub fn new(
+        title: String,
+        path: PathBuf,
+        is_remote: bool,
+        is_encrypted: bool,
+        size: u32,
+    ) -> Self {
         let random_hash = File::pseudorandom_sha256_string();
         let now = chrono::Utc::now();
 
         File {
-            id: 0,
-            title: file.title.clone(),
-            path: file.path.to_string_lossy().to_string(),
-            is_remote: file.is_remote,
-            is_encrypted: file.is_encrypted,
+            title: title,
+            path: path.to_string_lossy().to_string(),
+            is_remote: is_remote,
+            is_encrypted: is_encrypted,
             random_hash,
-            size: file.size,
+            size: size,
             created_at: now,
             updated_at: now,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct InsertableFile {
-    pub title: String,
-    pub path: PathBuf,
-    pub is_remote: bool,
-    pub is_encrypted: bool,
-    pub size: u32,
-}
-
-impl From<&File> for InsertableFile {
-    fn from(file: &File) -> Self {
-        InsertableFile {
-            title: file.title.clone(),
-            path: PathBuf::from(file.path.clone()),
-            is_remote: file.is_remote,
-            is_encrypted: file.is_encrypted,
-            size: file.size,
         }
     }
 }
@@ -86,11 +70,9 @@ impl Searchable<File> for File {
 }
 
 #[async_trait]
-impl Insertable<InsertableFile> for File {
+impl Insertable<File> for File {
     /// Insert a new file into the database
-    async fn insert(database: &Database, file: InsertableFile) -> Result<(), sqlx::Error> {
-        let file = File::from(&file);
-
+    async fn insert(database: &Database, file: File) -> Result<(), sqlx::Error> {
         sqlx::query(include_str!("./sql/file/insert.sql"))
             .bind(file.title)
             .bind(file.path)
@@ -106,12 +88,11 @@ impl Insertable<InsertableFile> for File {
         Ok(())
     }
 
-    async fn insert_many(database: &Database, files: &[InsertableFile]) -> Result<(), sqlx::Error> {
+    async fn insert_many(database: &Database, files: &[File]) -> Result<(), sqlx::Error> {
         let mut transaction = database.begin().await?;
 
         for file in files {
-            let file = File::from(file);
-
+            let file = file.clone();
             log::trace!("{}", file.title);
 
             sqlx::query(include_str!("./sql/file/insert.sql"))
@@ -174,7 +155,7 @@ mod tests {
     use super::File;
     use crate::database::{
         create_in_memory,
-        models::{file::InsertableFile, Fetchable, Insertable},
+        models::{Fetchable, Insertable},
     };
 
     #[test]
@@ -195,23 +176,23 @@ mod tests {
     async fn test_insert_unique() {
         let database = create_in_memory().await.unwrap();
 
-        let file1 = InsertableFile {
-            title: "foobar".to_string(),
-            path: PathBuf::from("/path/to/foo/bar"),
-            is_remote: false,
-            is_encrypted: false,
-            size: 0,
-        };
+        let file1 = File::new(
+            "foobar".to_string(),
+            PathBuf::from("/path/to/foo7bar"),
+            false,
+            false,
+            0,
+        );
 
         assert!(File::insert(&database, file1).await.is_ok());
 
-        let file2 = InsertableFile {
-            title: "foobar".to_string(),
-            path: PathBuf::from("/path/to/foo/bar"),
-            is_remote: false,
-            is_encrypted: false,
-            size: 0,
-        };
+        let file2 = File::new(
+            "foobar".to_string(),
+            PathBuf::from("/path/to/foo7bar"),
+            false,
+            false,
+            0,
+        );
 
         assert!(File::insert(&database, file2).await.is_err());
     }
@@ -220,13 +201,13 @@ mod tests {
     async fn test_insert_and_fetch() {
         let database = create_in_memory().await.unwrap();
 
-        let insert_file = InsertableFile {
-            title: "foobar".to_string(),
-            path: PathBuf::from("/path/to/foo/bar"),
-            is_remote: false,
-            is_encrypted: false,
-            size: 0,
-        };
+        let insert_file = File::new(
+            "foobar".to_string(),
+            PathBuf::from("/path/to/foo7bar"),
+            false,
+            false,
+            0,
+        );
 
         assert!(File::insert(&database, insert_file.clone()).await.is_ok());
 
@@ -238,7 +219,7 @@ mod tests {
 
         assert_eq!(files.len(), 1);
 
-        let fetched_file = InsertableFile::from(files.get(0).unwrap());
+        let fetched_file = files.get(0).unwrap().to_owned();
 
         assert_eq!(insert_file, fetched_file);
     }
@@ -248,14 +229,16 @@ mod tests {
         let database = create_in_memory().await.unwrap();
 
         let insert_files = (0..128)
-            .map(|i| InsertableFile {
-                title: format!("foobar_{}", i),
-                path: PathBuf::from(format!("/path/to/foo/bar/{}", i)),
-                is_remote: false,
-                is_encrypted: false,
-                size: 0,
+            .map(|i| {
+                File::new(
+                    format!("foobar_{}", i),
+                    PathBuf::from(format!("/path/to/foo/bar/{}", i)),
+                    false,
+                    false,
+                    0,
+                )
             })
-            .collect::<Vec<InsertableFile>>();
+            .collect::<Vec<File>>();
 
         let result = File::insert_many(&database, &insert_files).await;
         assert!(result.is_ok());
@@ -272,14 +255,16 @@ mod tests {
         let database = create_in_memory().await.unwrap();
 
         let insert_files = (0..128)
-            .map(|i| InsertableFile {
-                title: format!("foobar_{}", i),
-                path: PathBuf::from(format!("/path/to/foo/bar/{}", i)),
-                is_remote: false,
-                is_encrypted: false,
-                size: 64,
+            .map(|i| {
+                File::new(
+                    format!("foobar_{}", i),
+                    PathBuf::from(format!("/path/to/foo/bar/{}", i)),
+                    false,
+                    false,
+                    64,
+                )
             })
-            .collect::<Vec<InsertableFile>>();
+            .collect::<Vec<File>>();
 
         let result = File::insert_many(&database, &insert_files).await;
         assert!(result.is_ok());
