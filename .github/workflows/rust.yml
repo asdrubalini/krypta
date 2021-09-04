@@ -18,7 +18,7 @@ jobs:
 
       - uses: actions-rs/toolchain@v1
         with:
-          override: true
+          profile: minimal
           toolchain: stable
 
       - uses: Swatinem/rust-cache@v1
