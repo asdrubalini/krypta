@@ -169,10 +169,14 @@ impl File {
 
     pub async fn archive_size(database: &Database) -> Result<u64, sqlx::Error> {
         let files = sqlx::query_as::<_, (Vec<u8>,)>(include_str!("./sql/file/archive_size.sql"))
-            .fetch_one(database)
+            .fetch_all(database)
             .await?;
 
-        let size = BigIntAsBlob::from_bytes(&files.0);
+        let size = files
+            .iter()
+            .map(|size| BigIntAsBlob::from_bytes(&size.0))
+            .sum();
+
         Ok(size)
     }
 }
