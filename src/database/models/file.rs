@@ -288,7 +288,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_archive_size() {
+    async fn test_archive_size_and_count() {
         let database = create_in_memory().await.unwrap();
 
         let file = File::new(
@@ -329,5 +329,31 @@ mod tests {
         let archive_size = archive_size.unwrap();
 
         assert_eq!(archive_size, 128 * 1_u64.pow(10));
+
+        let archive_count = File::count(&database).await.unwrap();
+        assert_eq!(archive_count, 128);
+    }
+
+    #[tokio::test]
+    async fn test_enormous_file_insert_and_count() {
+        let database = create_in_memory().await.unwrap();
+
+        let insert_files = (0..8192)
+            .map(|i| {
+                File::new(
+                    format!("foobar_{}", i),
+                    PathBuf::from(format!("/path/to/foo/bar/{}", i)),
+                    false,
+                    false,
+                    0,
+                )
+            })
+            .collect::<Vec<File>>();
+
+        let result = File::insert_many(&database, &insert_files).await;
+        result.unwrap();
+
+        let archive_count = File::count(&database).await.unwrap();
+        assert_eq!(archive_count, 8192);
     }
 }
