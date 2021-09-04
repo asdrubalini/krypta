@@ -40,7 +40,7 @@ impl<'r> FromRow<'r, SqliteRow> for File {
             is_remote,
             is_encrypted,
             random_hash,
-            size: 0,
+            size: BigIntAsBlob::from_bytes(&size),
             created_at,
             updated_at,
         })
