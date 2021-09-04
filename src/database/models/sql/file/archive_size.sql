@@ -1,4 +1,4 @@
 select
-    sum(file.size)
+    file.size
 from
     file;

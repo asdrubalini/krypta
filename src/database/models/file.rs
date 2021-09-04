@@ -242,11 +242,9 @@ mod tests {
             0,
         );
 
-        assert!(File::insert(&database, insert_file.clone()).await.is_ok());
+        File::insert(&database, insert_file.clone()).await.unwrap();
 
         let files = File::fetch_all(&database).await;
-
-        assert!(files.is_ok());
 
         let files = files.unwrap();
 
@@ -274,10 +272,8 @@ mod tests {
             .collect::<Vec<File>>();
 
         let result = File::insert_many(&database, &insert_files).await;
-        assert!(result.is_ok());
+        result.unwrap();
         let files = File::fetch_all(&database).await;
-        assert!(files.is_ok());
-
         let files = files.unwrap();
 
         assert_eq!(files.len(), 128);
@@ -287,26 +283,20 @@ mod tests {
     async fn test_archive_size() {
         let database = create_in_memory().await.unwrap();
 
-        let insert_files = (0..128)
-            .map(|i| {
-                File::new(
-                    format!("foobar_{}", i),
-                    PathBuf::from(format!("/path/to/foo/bar/{}", i)),
-                    false,
-                    false,
-                    64,
-                )
-            })
-            .collect::<Vec<File>>();
+        let file = File::new(
+            format!("foobar"),
+            PathBuf::from("/path/to/foo/bar"),
+            false,
+            false,
+            64,
+        );
 
-        let result = File::insert_many(&database, &insert_files).await;
-        assert!(result.is_ok());
+        let result = File::insert(&database, file).await;
+        result.unwrap();
         let archive_size = File::archive_size(&database).await;
-        assert!(archive_size.is_ok());
-
         let archive_size = archive_size.unwrap();
 
-        assert_eq!(archive_size, 64 * 128);
+        assert_eq!(archive_size, 64);
     }
 
     #[tokio::test]
@@ -326,10 +316,8 @@ mod tests {
             .collect::<Vec<File>>();
 
         let result = File::insert_many(&database, &insert_files).await;
-        assert!(result.is_ok());
+        result.unwrap();
         let archive_size = File::archive_size(&database).await;
-        assert!(archive_size.is_ok());
-
         let archive_size = archive_size.unwrap();
 
         assert_eq!(archive_size, 128 * 1_u64.pow(10));
