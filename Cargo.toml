@@ -1,7 +1,7 @@
 [package]
 name = "vault-manager"
 version = "0.1.0"
-edition = "2021"
+edition = "2018"
 
 [dependencies]
 tokio = { version = "1", features = [ "full" ] }
@@ -25,3 +25,4 @@ clap = "2.33"
 
 async-trait = "0.1"
 byte-unit = "4"
+byteorder = "1"

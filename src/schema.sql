@@ -18,10 +18,15 @@ CREATE TABLE IF NOT EXISTS "file" (
 	"is_remote" INTEGER NOT NULL,
 	"is_encrypted" INTEGER NOT NULL,
 	"random_hash" TEXT NOT NULL UNIQUE,
-	"size" INTEGER NOT NULL,
+	"size" BLOB NOT NULL,
 	"created_at" TEXT NOT NULL,
 	"updated_at" TEXT NOT NULL,
 	PRIMARY KEY("id" AUTOINCREMENT)
+);
+
+CREATE TABLE IF NOT EXISTS "vault_info" (
+	"name" TEXT NOT NULL,
+	"total_size" BLOB NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS "endpoint" (
