@@ -60,10 +60,10 @@ impl File {
         let now = chrono::Utc::now();
 
         File {
-            title: title,
+            title,
             path: path.to_string_lossy().to_string(),
-            is_remote: is_remote,
-            is_encrypted: is_encrypted,
+            is_remote,
+            is_encrypted,
             random_hash,
             size,
             created_at: now,
