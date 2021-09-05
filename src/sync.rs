@@ -148,7 +148,7 @@ pub async fn sync_database_from_source_folder(
     };
 
     log::trace!("Start finding local files");
-    let local_paths = utils::path_finder::find_paths(&full_source_path);
+    let local_paths = utils::path_finder::find_paths_relative(&full_source_path);
 
     log::trace!("Done with finding local files");
 
