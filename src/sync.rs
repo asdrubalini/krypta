@@ -52,7 +52,7 @@ impl From<&PathBuf> for PathInfo {
 
 /// Holds a collection of paths together with their info, if available
 struct PathInfos {
-    inner: Vec<PathInfo>,
+    paths: Vec<PathInfo>,
 }
 
 impl PathInfos {
@@ -62,7 +62,7 @@ impl PathInfos {
         let semaphore = Arc::new(Semaphore::new(128));
         let mut handles = Vec::new();
 
-        for path_info in self.inner {
+        for path_info in self.paths {
             let permit = semaphore.clone().acquire_owned().await.unwrap();
             let mut full_path = prefix.clone();
 
@@ -80,27 +80,23 @@ impl PathInfos {
             handles.push(handle);
         }
 
-        // New inner that will be populated with updated details
-        let mut inner = Vec::new();
+        // New paths Vec that will be populated with updated details
+        let mut paths = Vec::new();
 
         // Wait for all tasks
         for handle in handles {
-            inner.push(handle.await.unwrap());
+            paths.push(handle.await.unwrap());
         }
 
-        Self { inner }
+        Self { paths }
     }
 }
 
 impl FromIterator<PathInfo> for PathInfos {
-    fn from_iter<T: IntoIterator<Item = PathInfo>>(iter: T) -> Self {
-        let mut inner: Vec<PathInfo> = Vec::new();
+    fn from_iter<T: IntoIterator<Item = PathInfo>>(paths_iter: T) -> Self {
+        let paths: Vec<PathInfo> = paths_iter.into_iter().collect();
 
-        for item in iter {
-            inner.push(item);
-        }
-
-        Self { inner }
+        Self { paths }
     }
 }
 
@@ -108,7 +104,7 @@ impl FromIterator<PathInfo> for PathInfos {
 impl From<PathInfos> for Vec<models::File> {
     fn from(path_infos: PathInfos) -> Self {
         path_infos
-            .inner
+            .paths
             .iter()
             .map(|path_info| {
                 models::File::new(
@@ -139,10 +135,10 @@ pub struct SyncReport {
 /// Adds missing fields into database according to source folder
 pub async fn sync_database_from_source_folder(
     database: &Database,
-    source_folder: String,
+    source_path: String,
 ) -> Result<SyncReport, SyncError> {
     // Transform relative path into a full one
-    let full_source_path = std::fs::canonicalize(Path::new(&source_folder))
+    let full_source_path = std::fs::canonicalize(Path::new(&source_path))
         .map_err(SyncError::SourceFolderNotFound)?;
 
     log::trace!("Start fetching paths from database");
@@ -187,4 +183,42 @@ pub async fn sync_database_from_source_folder(
     let processed_files = files_to_insert.len();
 
     Ok(SyncReport { processed_files })
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs::{create_dir_all, remove_dir_all, File};
+
+    use crate::database::{create_in_memory, models::Fetchable};
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_database_sync() {
+        let source_path = Path::new("/tmp/test_dir/foo/bar/");
+        let files_count = 256;
+
+        let database = create_in_memory().await.unwrap();
+        create_dir_all(source_path).unwrap();
+
+        for i in 0..files_count {
+            let mut filename = PathBuf::from(source_path);
+            filename.push(format!("file_{}", i));
+
+            File::create(filename).unwrap();
+        }
+
+        let report = sync_database_from_source_folder(&database, source_path.to_string_lossy().to_string()).await.unwrap();
+
+        assert_eq!(report.processed_files, files_count);
+
+        let files = models::File::fetch_all(&database).await.unwrap();
+        assert_eq!(files.len(), files_count);
+
+        for file in files {
+            assert!(file.path.starts_with("file_"));
+        }
+
+        remove_dir_all(source_path).unwrap();
+    }
 }
