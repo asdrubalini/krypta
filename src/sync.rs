@@ -4,29 +4,12 @@ use std::{
 };
 
 use tokio::{fs::File, sync::Semaphore, task::JoinError};
-use walkdir::WalkDir;
 
 use crate::database::{
     models::{self, Insertable},
     Database,
 };
-
-/// This trait is used in order to strip the "local bits" from a PathBuf
-/// so that it can be safely inserted into the database without polluting it
-/// with host-specific folders
-trait CanonicalizeAndSkipPathBuf {
-    fn canonicalize_and_skip_n(&mut self, n: usize) -> Self;
-}
-
-impl CanonicalizeAndSkipPathBuf for PathBuf {
-    fn canonicalize_and_skip_n(&mut self, n: usize) -> Self {
-        self.canonicalize()
-            .unwrap()
-            .iter()
-            .skip(n)
-            .collect::<PathBuf>()
-    }
-}
+use crate::utils;
 
 /// Holds all the information we have about a path and its details
 #[derive(Clone)]
@@ -56,10 +39,13 @@ impl PathInfo {
     }
 }
 
-impl From<PathBuf> for PathInfo {
+impl From<&PathBuf> for PathInfo {
     /// Build a PathInfo from a PathBuf, with empty fields
-    fn from(path: PathBuf) -> Self {
-        Self { path, size: None }
+    fn from(path: &PathBuf) -> Self {
+        Self {
+            path: path.to_owned(),
+            size: None,
+        }
     }
 }
 
@@ -154,9 +140,6 @@ pub async fn sync_database_from_source_folder(
     let full_source_path = std::fs::canonicalize(Path::new(&source_folder))
         .map_err(SyncError::SourceFolderNotFound)?;
 
-    // /path/to/foo/bar -> 4
-    let full_source_path_length = full_source_path.iter().peekable().count();
-
     log::trace!("Start fetching paths from database");
     // Start fetching files' paths we know from database
     let database_paths_handle = {
@@ -165,22 +148,7 @@ pub async fn sync_database_from_source_folder(
     };
 
     log::trace!("Start finding local files");
-    // - Find all files in `source_folder`, ignoring folders and without following links
-    // - Turn DirItem(s) into PathBuf and strip off the host-specific paths in order to
-    // have something that we can put into the database
-    let local_paths = WalkDir::new(source_folder)
-        .follow_links(false)
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| match e.metadata() {
-            Ok(metadata) => metadata.is_file(),
-            Err(_) => true,
-        })
-        .map(|e| {
-            e.path()
-                .to_path_buf()
-                .canonicalize_and_skip_n(full_source_path_length)
-        });
+    let local_paths = utils::path_finder::find_paths_relative(&full_source_path);
 
     log::trace!("Done with finding local files");
 
@@ -191,22 +159,20 @@ pub async fn sync_database_from_source_folder(
         .map_err(SyncError::DatabaseError)?;
 
     // Extract only files that needs to be added to the database
-    let paths_to_sync = local_paths.filter(|file_path| !database_paths.contains(file_path));
-
-    // Build the PathInfos struct from all the files we need to insert into the database
-    let paths_to_sync_with_path_info = PathInfos::from(
-        paths_to_sync
+    // Then build the PathInfo structs
+    let paths_to_sync = PathInfos::from(
+        local_paths
+            .iter()
+            .filter(|file_path| !database_paths.contains(file_path))
             .map(PathInfo::from)
             .collect::<PathInfosInner>(),
     );
 
     // Call try_populate_all() in order to start trying to fill the missing parameters
-    let paths_to_sync_with_path_info = paths_to_sync_with_path_info
-        .try_populate_all(full_source_path)
-        .await;
+    let paths_to_sync = paths_to_sync.try_populate_all(full_source_path).await;
 
     // Finally build File(s) from the just populated paths_to_sync_with_path_info
-    let files_to_insert: Vec<models::File> = paths_to_sync_with_path_info.into();
+    let files_to_insert: Vec<models::File> = paths_to_sync.into();
 
     log::trace!("Start adding to database");
 
