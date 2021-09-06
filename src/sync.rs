@@ -1,4 +1,5 @@
 use std::{
+    iter::FromIterator,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -50,9 +51,8 @@ impl From<&PathBuf> for PathInfo {
 }
 
 /// Holds a collection of paths together with their info, if available
-type PathInfosInner = Vec<PathInfo>;
 struct PathInfos {
-    inner: PathInfosInner,
+    inner: Vec<PathInfo>,
 }
 
 impl PathInfos {
@@ -92,9 +92,14 @@ impl PathInfos {
     }
 }
 
-impl From<PathInfosInner> for PathInfos {
-    /// Build a PathInfos from its type alias, PathInfosInner
-    fn from(inner: PathInfosInner) -> Self {
+impl FromIterator<PathInfo> for PathInfos {
+    fn from_iter<T: IntoIterator<Item = PathInfo>>(iter: T) -> Self {
+        let mut inner: Vec<PathInfo> = Vec::new();
+
+        for item in iter {
+            inner.push(item);
+        }
+
         Self { inner }
     }
 }
@@ -160,13 +165,11 @@ pub async fn sync_database_from_source_folder(
 
     // Extract only files that needs to be added to the database
     // Then build the PathInfo structs
-    let paths_to_sync = PathInfos::from(
-        local_paths
-            .iter()
-            .filter(|file_path| !database_paths.contains(file_path))
-            .map(PathInfo::from)
-            .collect::<PathInfosInner>(),
-    );
+    let paths_to_sync: PathInfos = local_paths
+        .iter()
+        .filter(|file_path| !database_paths.contains(file_path))
+        .map(PathInfo::from)
+        .collect();
 
     // Call try_populate_all() in order to start trying to fill the missing parameters
     let paths_to_sync = paths_to_sync.try_populate_all(full_source_path).await;
