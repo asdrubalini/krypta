@@ -6,7 +6,7 @@ use crate::database::{
     models::{self, Insertable},
     Database,
 };
-use crate::utils::{path, relative_path_finder::find_paths_relative};
+use crate::utils::{path, path_finder::find_paths_relative};
 
 #[derive(Debug)]
 pub enum SyncError {
