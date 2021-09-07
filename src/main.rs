@@ -1,9 +1,9 @@
 #![allow(dead_code, unused_variables)]
+mod actions;
 mod commands;
 mod config;
 mod database;
 mod storage;
-mod sync;
 mod utils;
 
 use dotenv::dotenv;
