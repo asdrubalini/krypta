@@ -77,6 +77,13 @@ pub async fn sync_database_from_source_path(
     Ok(SyncReport { processed_files })
 }
 
+pub async fn sync_encrypted_path_from_database(
+    database: &Database,
+    encrypted_path: &PathBuf,
+) -> Result<SyncReport, SyncError> {
+    todo!()
+}
+
 #[cfg(test)]
 mod tests {
     use std::{

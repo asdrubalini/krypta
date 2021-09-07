@@ -1,13 +1,28 @@
 use std::path::PathBuf;
 
-use crate::actions::sync::sync_database_from_source_path;
+use crate::actions::sync::{sync_database_from_source_path, sync_encrypted_path_from_database};
+use crate::config::Configuration;
 use crate::database::Database;
 
-pub async fn execute(database: &Database, path: String) {
-    let source_path = PathBuf::from(path);
-    let result = sync_database_from_source_path(database, &source_path)
-        .await
-        .expect("Fatal while executing command");
+pub async fn execute(database: &Database, config: &Configuration) {
+    let source_path = PathBuf::from(&config.source_path);
+    let encrypted_path = PathBuf::from(&config.encrypted_path);
 
-    println!("{:#?}", result);
+    let database_sync_report = sync_database_from_source_path(database, &source_path)
+        .await
+        .expect("Fatal while doing database sync");
+
+    println!(
+        "Added {} new files to the database",
+        database_sync_report.processed_files
+    );
+
+    let encrypted_path_report = sync_encrypted_path_from_database(database, &encrypted_path)
+        .await
+        .expect("Fatal while doing encrypted path sync");
+
+    println!(
+        "Added {} new files to the encrypted path",
+        encrypted_path_report.processed_files
+    );
 }

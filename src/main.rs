@@ -24,7 +24,7 @@ async fn main() {
     // Parse CLI arguments
     let command = commands::CliCommand::try_parse()
         .unwrap()
-        .execute(config.clone(), &database)
+        .execute(config.to_owned(), &database)
         .await;
 
     database.close().await;

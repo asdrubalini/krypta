@@ -7,7 +7,7 @@ use super::{status, sync};
 
 #[derive(Debug)]
 pub enum CliCommand {
-    Sync { path: String },
+    Sync,
     Status,
 }
 
@@ -20,9 +20,7 @@ impl CliCommand {
             .arg(
                 Arg::with_name("sync")
                     .help("sync a folder into the database")
-                    .long("sync")
-                    .takes_value(true)
-                    .value_name("path"),
+                    .long("sync"),
             )
             .arg(
                 Arg::with_name("status")
@@ -34,10 +32,7 @@ impl CliCommand {
             .get_matches();
 
         if matches.is_present("sync") {
-            let path = matches.value_of("sync").unwrap();
-            return Some(CliCommand::Sync {
-                path: path.to_owned(),
-            });
+            return Some(CliCommand::Sync);
         } else if matches.is_present("status") {
             return Some(CliCommand::Status);
         }
@@ -46,8 +41,10 @@ impl CliCommand {
     }
 
     pub async fn execute(self, config: Arc<Configuration>, database: &Database) {
+        let config = config.as_ref();
+
         match self {
-            CliCommand::Sync { path } => sync::execute(database, path).await,
+            CliCommand::Sync => sync::execute(database, config).await,
             CliCommand::Status => status::execute(database).await,
         };
     }
