@@ -6,7 +6,7 @@ use crate::database::{
     models::{self, Insertable},
     Database,
 };
-use crate::utils::{path, path_finder::find_paths_relative};
+use crate::utils::{path_finder::find_paths_relative, path_info};
 
 #[derive(Debug)]
 pub enum SyncError {
@@ -50,10 +50,10 @@ pub async fn sync_database_from_source_folder(
 
     // Extract only files that needs to be added to the database
     // Then build the PathInfo structs
-    let paths_to_sync: path::PathInfos = local_paths
+    let paths_to_sync: path_info::PathInfos = local_paths
         .iter()
         .filter(|file_path| !database_paths.contains(file_path))
-        .map(path::PathInfo::from)
+        .map(path_info::PathInfo::from)
         .collect();
 
     // Call try_populate_all() in order to start trying to fill the missing parameters

@@ -2,8 +2,6 @@ use std::{iter::FromIterator, path::PathBuf, sync::Arc};
 
 use tokio::{fs::File, sync::Semaphore};
 
-use crate::database::models;
-
 /// Holds all the information we have about a path and its details
 #[derive(Clone)]
 pub struct PathInfo {
@@ -13,7 +11,7 @@ pub struct PathInfo {
 
 impl PathInfo {
     /// Retrieve self.size or get default value in case it is not available
-    fn size_or_default(&self) -> u64 {
+    pub fn size_or_default(&self) -> u64 {
         self.size.unwrap_or(0)
     }
 
@@ -44,7 +42,7 @@ impl From<&PathBuf> for PathInfo {
 
 /// Holds a collection of paths together with their info, if available
 pub struct PathInfos {
-    paths: Vec<PathInfo>,
+    pub paths: Vec<PathInfo>,
 }
 
 impl PathInfos {
@@ -89,24 +87,5 @@ impl FromIterator<PathInfo> for PathInfos {
         let paths: Vec<PathInfo> = paths_iter.into_iter().collect();
 
         Self { paths }
-    }
-}
-
-/// Convert PathInfos into a vector of File(s)
-impl From<PathInfos> for Vec<models::File> {
-    fn from(path_infos: PathInfos) -> Self {
-        path_infos
-            .paths
-            .iter()
-            .map(|path_info| {
-                models::File::new(
-                    path_info.path.to_string_lossy().to_string(),
-                    path_info.path.clone(),
-                    false,
-                    false,
-                    path_info.size_or_default(),
-                )
-            })
-            .collect::<Vec<models::File>>()
     }
 }

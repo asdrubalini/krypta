@@ -9,7 +9,10 @@ use sqlx::{
 };
 
 use super::{Fetchable, Insertable, Searchable};
-use crate::database::{BigIntAsBlob, Database};
+use crate::{
+    database::{BigIntAsBlob, Database},
+    utils::path_info::PathInfos,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct File {
@@ -186,6 +189,25 @@ impl File {
             .await?;
 
         Ok(files.0)
+    }
+}
+
+/// Convert PathInfos into a vector of File(s)
+impl From<PathInfos> for Vec<File> {
+    fn from(path_infos: PathInfos) -> Self {
+        path_infos
+            .paths
+            .iter()
+            .map(|path_info| {
+                File::new(
+                    path_info.path.to_string_lossy().to_string(),
+                    path_info.path.clone(),
+                    false,
+                    false,
+                    path_info.size_or_default(),
+                )
+            })
+            .collect::<Vec<File>>()
     }
 }
 
