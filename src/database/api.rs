@@ -11,6 +11,7 @@ pub async fn connect_or_create() -> Result<Database, sqlx::Error> {
     let is_database_new = !Path::new(&database_path).exists();
 
     let mut options = SqliteConnectOptions::from_str(&format!("sqlite:{}", &database_path))?
+        .auto_vacuum(sqlx::sqlite::SqliteAutoVacuum::Full)
         .create_if_missing(true);
 
     options.disable_statement_logging();
