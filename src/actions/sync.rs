@@ -6,7 +6,7 @@ use crate::database::{
     models::{self, Insertable},
     Database,
 };
-use crate::utils::{path, path_finder};
+use crate::utils::{path, relative_path_finder::find_paths_relative};
 
 #[derive(Debug)]
 pub enum SyncError {
@@ -38,7 +38,7 @@ pub async fn sync_database_from_source_folder(
     };
 
     log::trace!("Start finding local files");
-    let local_paths = path_finder::find_paths_relative(&full_source_path);
+    let local_paths = find_paths_relative(&full_source_path);
 
     log::trace!("Done with finding local files");
 

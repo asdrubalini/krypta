@@ -1,2 +1,2 @@
 pub mod path;
-pub mod path_finder;
+pub mod relative_path_finder;
