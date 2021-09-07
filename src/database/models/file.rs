@@ -11,7 +11,7 @@ use sqlx::{
 use super::{Fetchable, Insertable, Searchable};
 use crate::{
     database::{BigIntAsBlob, Database},
-    utils::path_info::PathInfos,
+    utils::path_info::{PathInfo, PathInfos},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -198,16 +198,21 @@ impl From<PathInfos> for Vec<File> {
         path_infos
             .paths
             .iter()
-            .map(|path_info| {
-                File::new(
-                    path_info.path.to_string_lossy().to_string(),
-                    path_info.path.clone(),
-                    false,
-                    false,
-                    path_info.size_or_default(),
-                )
-            })
+            .map(File::from)
             .collect::<Vec<File>>()
+    }
+}
+
+/// Convert &PathInfo into a File
+impl From<&PathInfo> for File {
+    fn from(path_info: &PathInfo) -> Self {
+        File::new(
+            path_info.path.to_string_lossy().to_string(),
+            path_info.path.clone(),
+            false,
+            false,
+            path_info.size_or_default(),
+        )
     }
 }
 

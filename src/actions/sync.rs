@@ -2,11 +2,14 @@ use std::path::Path;
 
 use tokio::task::JoinError;
 
-use crate::database::{
-    models::{self, Insertable},
-    Database,
+use crate::utils::path_finder::find_paths_relative;
+use crate::{
+    database::{
+        models::{self, Insertable},
+        Database,
+    },
+    utils::path_info::{PathInfo, PathInfos},
 };
-use crate::utils::{path_finder::find_paths_relative, path_info};
 
 #[derive(Debug)]
 pub enum SyncError {
@@ -50,16 +53,16 @@ pub async fn sync_database_from_source_folder(
 
     // Extract only files that needs to be added to the database
     // Then build the PathInfo structs
-    let paths_to_sync: path_info::PathInfos = local_paths
+    let paths_to_sync: PathInfos = local_paths
         .iter()
         .filter(|file_path| !database_paths.contains(file_path))
-        .map(path_info::PathInfo::from)
+        .map(PathInfo::from)
         .collect();
 
     // Call try_populate_all() in order to start trying to fill the missing parameters
     let paths_to_sync = paths_to_sync.try_populate_all(full_source_path).await;
 
-    // Finally build File(s) from the just populated paths_to_sync_with_path_info
+    // Finally build File(s) from the just populated paths
     let files_to_insert: Vec<models::File> = paths_to_sync.into();
 
     log::trace!("Start adding to database");
