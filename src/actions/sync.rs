@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::PathBuf;
 
 use tokio::task::JoinError;
 
@@ -25,13 +25,13 @@ pub struct SyncReport {
 }
 
 /// Adds missing fields into database according to source folder
-pub async fn sync_database_from_source_folder(
+pub async fn sync_database_from_source_path(
     database: &Database,
-    source_path: String,
+    source_path: &PathBuf,
 ) -> Result<SyncReport, SyncError> {
     // Transform relative path into a full one
     let full_source_path =
-        std::fs::canonicalize(Path::new(&source_path)).map_err(SyncError::SourceFolderNotFound)?;
+        std::fs::canonicalize(source_path).map_err(SyncError::SourceFolderNotFound)?;
 
     log::trace!("Start fetching paths from database");
     // Start fetching files' paths we know from database
@@ -90,23 +90,22 @@ mod tests {
 
     #[tokio::test]
     async fn test_database_sync() {
-        let source_path = Path::new("/tmp/test_dir/foo/bar/");
+        let source_path = PathBuf::from("/tmp/test_dir/foo/bar/");
         let files_count = 256;
 
         let database = create_in_memory().await.unwrap();
-        create_dir_all(source_path).unwrap();
+        create_dir_all(&source_path).unwrap();
 
         for i in 0..files_count {
-            let mut filename = PathBuf::from(source_path);
+            let mut filename = source_path.clone();
             filename.push(format!("file_{}", i));
 
             File::create(filename).unwrap();
         }
 
-        let report =
-            sync_database_from_source_folder(&database, source_path.to_string_lossy().to_string())
-                .await
-                .unwrap();
+        let report = sync_database_from_source_path(&database, &source_path)
+            .await
+            .unwrap();
 
         assert_eq!(report.processed_files, files_count);
 
