@@ -47,7 +47,8 @@ impl FileDecryptor<'_> {
 
         // Source file reader
         let mut reader_input = BufReader::new(file_input);
-        let mut buffer_input = BytesMut::with_capacity(BUFFER_SIZE);
+        let mut buffer_input = BytesMut::with_capacity(BUFFER_SIZE + 17);
+        // TODO: use bigger buffer here and slice when doing decryption
 
         // Destination file writer
         let mut writer_output = BufWriter::new(file_output);
@@ -66,16 +67,20 @@ impl FileDecryptor<'_> {
 
         // Read -> Decrypt -> Write loop
         while let Ok(size) = reader_input.read_buf(&mut buffer_input).await {
-            if size == 0 {
+            // Loop until both amount of data red into buffer is zero and the buffer is empty
+            if size == 0 && buffer_input.len() == 0 {
                 break;
             }
 
-            // Encrypt
-            // let (result, _tag) = decryption_stream
-            // .pull(&buffer_input, None)
-            // .map_err(|_| CryptoError::SodiumOxideError)?;
+            // Continue reading until either the buffer is full or the amount of data red is zero
+            if buffer_input.len() < buffer_input.capacity() && size > 0 {
+                continue;
+            }
 
-            let (result, _tag) = decryption_stream.pull(&buffer_input, None).unwrap();
+            // Decrypt
+            let (result, _tag) = decryption_stream
+                .pull(&buffer_input, None)
+                .map_err(|_| CryptoError::SodiumOxideError)?;
 
             // Write to output buffer
             writer_output
@@ -86,7 +91,11 @@ impl FileDecryptor<'_> {
             buffer_input.clear();
         }
 
-        writer_output.flush().await.unwrap();
+        writer_output
+            .flush()
+            .await
+            .map_err(CryptoError::FileWriteError)?;
+
         Ok(())
     }
 }

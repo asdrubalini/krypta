@@ -80,7 +80,11 @@ impl FileEncryptor<'_> {
             buffer_input.clear();
         }
 
-        writer_output.flush().await.unwrap();
+        writer_output
+            .flush()
+            .await
+            .map_err(CryptoError::FileWriteError)?;
+
         Ok(())
     }
 }
