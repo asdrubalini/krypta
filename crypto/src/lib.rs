@@ -1,8 +1,39 @@
+#![allow(dead_code, unused_variables)]
+
+pub mod bulk;
 pub mod error;
-pub mod file;
-pub mod files;
+pub mod single;
+pub mod types;
 
 const BUFFER_SIZE: usize = 16384;
+
+// #[cfg(test)]
+// mod tests {
+// use std::path::Path;
+
+// use crate::{bulk::encryption::BulkFileEncrypt, single::encryption::SingleFileEncryptor};
+
+// #[tokio::main]
+// async fn test() {
+// println!("ciao");
+
+// let mappings = (0..32)
+// .map(|i| {
+// SingleFileEncryptor::new(
+// &Path::new("/source"),
+// &Path::new("/destination"),
+// &[0; 32],
+// )
+// .unwrap()
+// })
+// .collect::<Vec<SingleFileEncryptor>>();
+
+// let instance = BulkFileEncrypt::new(mappings);
+// let report = instance.encrypt().await;
+
+// println!("{:#?}", report);
+// }
+// }
 
 // #[cfg(test)]
 // mod tests {

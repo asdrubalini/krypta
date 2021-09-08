@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::{
     error::{CryptoError, CryptoResult},
@@ -12,23 +12,23 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
 };
 
-pub struct SingleFileDecryptor<'a> {
-    source_path: &'a Path,
-    destination_path: &'a Path,
+pub struct SingleFileDecryptor {
+    source_path: PathBuf,
+    destination_path: PathBuf,
     key: Key,
 }
 
-impl SingleFileDecryptor<'_> {
-    pub fn new<'a>(
-        source_path: &'a Path,
-        destination_path: &'a Path,
+impl SingleFileDecryptor {
+    pub fn new(
+        source_path: &Path,
+        destination_path: &Path,
         key: &[u8; 32],
-    ) -> CryptoResult<SingleFileDecryptor<'a>> {
+    ) -> CryptoResult<SingleFileDecryptor> {
         let key = Key::from_slice(key).ok_or(CryptoError::InvalidKeyLength)?;
 
         Ok(SingleFileDecryptor {
-            source_path,
-            destination_path,
+            source_path: source_path.to_path_buf(),
+            destination_path: destination_path.to_path_buf(),
             key,
         })
     }

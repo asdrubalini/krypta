@@ -435,6 +435,7 @@ name = "crypto"
 version = "0.1.0"
 dependencies = [
  "bytes 1.1.0",
+ "num_cpus",
  "sodiumoxide",
  "tokio 1.11.0",
 ]
