@@ -1,11 +1,13 @@
 [package]
 name = "crypto"
+description = "Handle concurrent file encryption and decryption using libsodium"
 version = "0.1.0"
 edition = "2018"
 
 [dependencies]
 sodiumoxide = "0.2"
-tokio = { version = "1", features = [ "full" ] }
+tokio = { version = "1", features = [ "fs", "io-util" ] }
 bytes = "1"
-file_diff = "1"
 
+[dev-dependencies]
+file_diff = "1"

@@ -5,6 +5,7 @@ edition = "2018"
 
 [dependencies]
 crypto = { path = "./crypto" }
+metadata-fs = { path = "./metadata-fs" }
 
 tokio = { version = "1", features = [ "full" ] }
 sqlx = { version = "0.5", features = [ "sqlite", "runtime-tokio-rustls", "chrono" ] }
