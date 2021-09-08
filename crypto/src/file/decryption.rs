@@ -12,21 +12,21 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
 };
 
-pub struct FileDecryptor<'a> {
+pub struct SingleFileDecryptor<'a> {
     source_path: &'a Path,
     destination_path: &'a Path,
     key: Key,
 }
 
-impl FileDecryptor<'_> {
+impl SingleFileDecryptor<'_> {
     pub fn new<'a>(
         source_path: &'a Path,
         destination_path: &'a Path,
         key: &[u8; 32],
-    ) -> CryptoResult<FileDecryptor<'a>> {
+    ) -> CryptoResult<SingleFileDecryptor<'a>> {
         let key = Key::from_slice(key).ok_or(CryptoError::InvalidKeyLength)?;
 
-        Ok(FileDecryptor {
+        Ok(SingleFileDecryptor {
             source_path,
             destination_path,
             key,
@@ -62,7 +62,8 @@ impl FileDecryptor<'_> {
         let header = Header::from_slice(&header_buf).unwrap();
         let key = self.key;
 
-        let mut decryption_stream = Stream::init_pull(&header, &key).unwrap();
+        let mut decryption_stream =
+            Stream::init_pull(&header, &key).map_err(|_| CryptoError::SodiumOxideError)?;
 
         // Read -> Decrypt -> Write loop
         while let Ok(size) = reader_input.read_buf(&mut buffer_input).await {

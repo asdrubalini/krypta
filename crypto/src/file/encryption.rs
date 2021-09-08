@@ -12,21 +12,21 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
 };
 
-pub struct FileEncryptor<'a> {
+pub struct SingleFileEncryptor<'a> {
     source_path: &'a Path,
     destination_path: &'a Path,
     key: Key,
 }
 
-impl FileEncryptor<'_> {
+impl SingleFileEncryptor<'_> {
     pub fn new<'a>(
         source_path: &'a Path,
         destination_path: &'a Path,
         key: &[u8; 32],
-    ) -> CryptoResult<FileEncryptor<'a>> {
+    ) -> CryptoResult<SingleFileEncryptor<'a>> {
         let key = Key::from_slice(key).ok_or(CryptoError::InvalidKeyLength)?;
 
-        Ok(FileEncryptor {
+        Ok(SingleFileEncryptor {
             source_path,
             destination_path,
             key,
@@ -35,7 +35,8 @@ impl FileEncryptor<'_> {
 
     /// Try to encrypt a file as specified in struct
     pub async fn try_encrypt(self) -> CryptoResult<()> {
-        let (mut encryption_stream, header) = Stream::init_push(&self.key).unwrap();
+        let (mut encryption_stream, header) =
+            Stream::init_push(&self.key).map_err(|_| CryptoError::SodiumOxideError)?;
 
         // The file we are trying to encrypt
         let file_input = File::open(&self.source_path)
