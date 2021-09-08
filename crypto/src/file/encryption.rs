@@ -62,8 +62,14 @@ impl FileEncryptor<'_> {
 
         // Read -> Encrypt -> Write loop
         while let Ok(size) = reader_input.read_buf(&mut buffer_input).await {
-            if size == 0 {
+            // Loop until both amount of data red into buffer is zero and the buffer is empty
+            if size == 0 && buffer_input.len() == 0 {
                 break;
+            }
+
+            // Continue reading until either the buffer is full or the amount of data red is zero
+            if buffer_input.len() < buffer_input.capacity() && size > 0 {
+                continue;
             }
 
             // Encrypt

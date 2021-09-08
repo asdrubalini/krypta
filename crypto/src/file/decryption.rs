@@ -48,7 +48,6 @@ impl FileDecryptor<'_> {
         // Source file reader
         let mut reader_input = BufReader::new(file_input);
         let mut buffer_input = BytesMut::with_capacity(BUFFER_SIZE + ABYTES);
-        // TODO: use bigger buffer here and slice when doing decryption
 
         // Destination file writer
         let mut writer_output = BufWriter::new(file_output);
