@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::{
     error::{CryptoError, CryptoResult},
@@ -12,30 +12,32 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
 };
 
-pub struct FileEncryptor<'a> {
-    source_path: &'a Path,
-    destination_path: &'a Path,
+#[derive(Debug, Clone)]
+pub struct SingleFileEncryptor {
+    source_path: PathBuf,
+    destination_path: PathBuf,
     key: Key,
 }
 
-impl FileEncryptor<'_> {
+impl SingleFileEncryptor {
     pub fn new<'a>(
-        source_path: &'a Path,
-        destination_path: &'a Path,
+        source_path: &Path,
+        destination_path: &Path,
         key: &[u8; 32],
-    ) -> CryptoResult<FileEncryptor<'a>> {
+    ) -> CryptoResult<SingleFileEncryptor> {
         let key = Key::from_slice(key).ok_or(CryptoError::InvalidKeyLength)?;
 
-        Ok(FileEncryptor {
-            source_path,
-            destination_path,
+        Ok(SingleFileEncryptor {
+            source_path: source_path.to_path_buf(),
+            destination_path: destination_path.to_path_buf(),
             key,
         })
     }
 
     /// Try to encrypt a file as specified in struct
     pub async fn try_encrypt(self) -> CryptoResult<()> {
-        let (mut encryption_stream, header) = Stream::init_push(&self.key).unwrap();
+        let (mut encryption_stream, header) =
+            Stream::init_push(&self.key).map_err(|_| CryptoError::SodiumOxideError)?;
 
         // The file we are trying to encrypt
         let file_input = File::open(&self.source_path)
