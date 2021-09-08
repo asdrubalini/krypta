@@ -435,7 +435,9 @@ name = "crypto"
 version = "0.1.0"
 dependencies = [
  "bytes 1.1.0",
+ "file_diff",
  "num_cpus",
+ "rand",
  "sodiumoxide",
  "tokio 1.11.0",
 ]
@@ -555,6 +557,12 @@ checksum = "b394ed3d285a429378d3b384b9eb1285267e7df4b166df24b7a6939a04dc392e"
 dependencies = [
  "instant",
 ]
+
+[[package]]
+name = "file_diff"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "31a7a908b8f32538a2143e59a6e4e2508988832d5d4d6f7c156b3cbc762643a5"
 
 [[package]]
 name = "fnv"
@@ -2300,10 +2308,8 @@ dependencies = [
  "byteorder",
  "chrono",
  "clap",
- "crypto",
  "dotenv",
  "log",
- "metadata-fs",
  "pretty_env_logger",
  "rand",
  "rust-s3",
