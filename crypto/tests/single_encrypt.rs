@@ -65,10 +65,7 @@ async fn small_file_zero_key() {
         8192,
         100_000,
         250_000,
-        1_000_000,
-        10_000_000,
-        50_000_000,
-        500_000_000,
+        1_000_000
     ];
 
     for length in tests_file_size {
