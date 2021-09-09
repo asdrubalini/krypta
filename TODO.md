@@ -1,2 +1,5 @@
-- Split into separate and independent crates
-- Rewrite path_finder util
+- Bring some true TUI
+- Write a lot more tests
+- Swap old PathInfo with the newer Metadata from `metadata-fs` crate
+- Implement tags and show them on the TUI
+- Implement proper upload mechanism with S3 based API
