@@ -83,37 +83,3 @@ impl MetadataCollection {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use std::{
-        fs::{create_dir_all, remove_dir_all, File},
-        io::Write,
-        path::Path,
-    };
-
-    use super::*;
-
-    #[tokio::test]
-    async fn test_metadata_size() {
-        let source_path = Path::new("/tmp/test_dir/metadata/foo/bar/");
-        create_dir_all(source_path).unwrap();
-
-        for i in 0..256 {
-            let mut filename = PathBuf::from(source_path);
-            filename.push(format!("file_{}", i));
-
-            let mut f = File::create(filename).unwrap();
-            f.write_all(&[0, 1, 2]).unwrap();
-        }
-
-        let path_finder = PathFinder::with_source_path(source_path);
-        let metadatas = MetadataCollection::from_path_finder(path_finder).await;
-
-        for metadata in metadatas.metadatas {
-            assert_eq!(metadata.size, Some(3));
-        }
-
-        remove_dir_all(source_path).unwrap();
-    }
-}

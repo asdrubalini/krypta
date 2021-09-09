@@ -64,31 +64,3 @@ impl PathFinder {
         self.paths = filtered_paths;
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use std::fs::{create_dir_all, remove_dir_all, File};
-
-    use super::*;
-
-    #[test]
-    fn test_path_finder() {
-        let source_path = Path::new("/tmp/test_dir/path_finder/foo/bar/");
-        create_dir_all(source_path).unwrap();
-
-        for i in 0..256 {
-            let mut filename = PathBuf::from(source_path);
-            filename.push(format!("file_{}", i));
-
-            File::create(filename).unwrap();
-        }
-
-        let path_finder = PathFinder::with_source_path(source_path);
-
-        for path in path_finder.paths {
-            assert!(path.to_string_lossy().to_string().starts_with("file_"));
-        }
-
-        remove_dir_all(source_path).unwrap();
-    }
-}
