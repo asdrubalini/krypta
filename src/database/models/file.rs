@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use async_trait::async_trait;
+use metadata_fs::Metadata;
 use rand::Rng;
 use sqlx::{
     sqlite::SqliteRow,
@@ -9,10 +10,7 @@ use sqlx::{
 };
 
 use super::{Fetchable, Insertable, Searchable};
-use crate::{
-    database::{BigIntAsBlob, Database},
-    utils::path_info::{PathInfo, PathInfos},
-};
+use crate::database::{BigIntAsBlob, Database};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct File {
@@ -192,26 +190,15 @@ impl File {
     }
 }
 
-/// Convert PathInfos into a vector of File(s)
-impl From<PathInfos> for Vec<File> {
-    fn from(path_infos: PathInfos) -> Self {
-        path_infos
-            .paths
-            .iter()
-            .map(File::from)
-            .collect::<Vec<File>>()
-    }
-}
-
-/// Convert &PathInfo into a File
-impl From<&PathInfo> for File {
-    fn from(path_info: &PathInfo) -> Self {
+/// Convert &Metadata into a File
+impl From<&Metadata> for File {
+    fn from(metadata: &Metadata) -> Self {
         File::new(
-            path_info.path.to_string_lossy().to_string(),
-            path_info.path.clone(),
+            metadata.path.to_string_lossy().to_string(),
+            metadata.path.clone(),
             false,
             false,
-            path_info.size_or_default(),
+            metadata.size_or_default(),
         )
     }
 }

@@ -1,6 +1,7 @@
 #![allow(dead_code, unused_variables)]
 
 mod metadata;
+pub use metadata::{Metadata, MetadataCollection};
 
 mod path_finder;
 pub use path_finder::PathFinder;

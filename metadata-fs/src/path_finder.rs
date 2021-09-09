@@ -51,6 +51,18 @@ impl PathFinder {
             paths,
         }
     }
+
+    /// Filter paths based on `path_to_filter`, mutating the struct
+    pub fn filter_paths(&mut self, paths_to_filter: &[PathBuf]) {
+        let filtered_paths = self
+            .paths
+            .iter()
+            .filter(|path| !paths_to_filter.contains(path))
+            .map(|path| path.to_owned())
+            .collect::<Vec<PathBuf>>();
+
+        self.paths = filtered_paths;
+    }
 }
 
 #[cfg(test)]

@@ -2298,6 +2298,7 @@ dependencies = [
  "clap",
  "dotenv",
  "log",
+ "metadata-fs",
  "pretty_env_logger",
  "rand",
  "rust-s3",

@@ -7,7 +7,7 @@ use crate::{PathFinder, MAX_CONCURRENT_FILE_OPERATIONS};
 #[derive(Clone, Debug)]
 pub struct Metadata {
     // The actual Path
-    path: PathBuf,
+    pub path: PathBuf,
     // Optional file size, if found
     pub size: Option<u64>,
 }
@@ -44,12 +44,12 @@ impl Metadata {
 
 pub struct MetadataCollection {
     absolute_source_path: PathBuf,
-    metadatas: Vec<Metadata>,
+    pub metadatas: Vec<Metadata>,
 }
 
 impl MetadataCollection {
     /// Build MetadataCollection instance from a PathFinder instance populating some fields
-    async fn from_path_finder(path_finder: PathFinder) -> Self {
+    pub async fn from_path_finder(path_finder: PathFinder) -> Self {
         let absolute_source_path = path_finder.absolute_source_path.clone();
 
         let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_FILE_OPERATIONS));

@@ -1,14 +1,11 @@
 use std::path::PathBuf;
 
+use metadata_fs::{MetadataCollection, PathFinder};
 use tokio::task::JoinError;
 
-use crate::utils::path_finder::find_paths_relative;
-use crate::{
-    database::{
-        models::{self, Insertable},
-        Database,
-    },
-    utils::path_info::{PathInfo, PathInfos},
+use crate::database::{
+    models::{self, Insertable},
+    Database,
 };
 
 #[derive(Debug)]
@@ -30,7 +27,7 @@ pub async fn sync_database_from_source_path(
     source_path: &PathBuf,
 ) -> Result<SyncReport, SyncError> {
     // Transform relative path into a full one
-    let full_source_path =
+    let absolute_source_path =
         std::fs::canonicalize(source_path).map_err(SyncError::SourceFolderNotFound)?;
 
     log::trace!("Start fetching paths from database");
@@ -41,7 +38,8 @@ pub async fn sync_database_from_source_path(
     };
 
     log::trace!("Start finding local files");
-    let local_paths = find_paths_relative(&full_source_path);
+    // let local_paths = find_paths_relative(&full_source_path);
+    let mut path_finder = PathFinder::with_source_path(&absolute_source_path);
 
     log::trace!("Done with finding local files");
 
@@ -51,19 +49,18 @@ pub async fn sync_database_from_source_path(
         .map_err(SyncError::TaskError)?
         .map_err(SyncError::DatabaseError)?;
 
-    // Extract only files that needs to be added to the database
-    // Then build the PathInfo structs
-    let paths_to_sync: PathInfos = local_paths
+    // Filter out only files that needs to be added to the database
+    path_finder.filter_paths(&database_paths);
+
+    // Build a MetadataCollection from PathFinder
+    let paths_with_metadata = MetadataCollection::from_path_finder(path_finder).await;
+
+    // Finally build File(s) from MetadataCollection
+    let files_to_insert: Vec<models::File> = paths_with_metadata
+        .metadatas
         .iter()
-        .filter(|file_path| !database_paths.contains(file_path))
-        .map(PathInfo::from)
+        .map(|metadata| models::File::from(metadata))
         .collect();
-
-    // Call try_populate_all() in order to start trying to fill the missing parameters
-    let paths_to_sync = paths_to_sync.try_populate_all(full_source_path).await;
-
-    // Finally build File(s) from the just populated paths
-    let files_to_insert: Vec<models::File> = paths_to_sync.into();
 
     log::trace!("Start adding to database");
 

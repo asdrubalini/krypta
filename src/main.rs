@@ -4,7 +4,6 @@ mod commands;
 mod config;
 mod database;
 mod storage;
-mod utils;
 
 use dotenv::dotenv;
 
