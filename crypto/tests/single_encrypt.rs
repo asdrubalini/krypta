@@ -4,7 +4,8 @@ use std::{
     path::Path,
 };
 
-use crypto::single::{decryption::SingleFileDecryptor, encryption::SingleFileEncryptor};
+use crypto::file::single::{SingleFileDecryptor, SingleFileEncryptor};
+
 use file_diff::diff;
 use rand::Rng;
 
@@ -51,21 +52,7 @@ async fn small_file_zero_key() {
     create_dir(TESTS_PATH).unwrap();
 
     let tests_file_size = vec![
-        0,
-        1,
-        2,
-        3,
-        8,
-        9,
-        200,
-        256,
-        512,
-        893,
-        1024,
-        8192,
-        100_000,
-        250_000,
-        1_000_000
+        0, 1, 2, 3, 8, 9, 200, 256, 512, 893, 1024, 8192, 100_000, 250_000, 1_000_000,
     ];
 
     for length in tests_file_size {

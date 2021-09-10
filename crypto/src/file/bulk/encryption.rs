@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use tokio::sync::Semaphore;
 
-use crate::{single::encryption::SingleFileEncryptor, types::Report};
+use crate::file::single::SingleFileEncryptor;
+use crate::types::Report;
 
 #[derive(Debug)]
 pub struct BulkFileEncrypt {
