@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use tokio::sync::Semaphore;
 
-use crate::file::single::SingleFileEncryptor;
-use crate::file::traits::SingleCrypt;
+use crate::crypt::single::SingleFileEncryptor;
+use crate::crypt::traits::SingleCrypt;
 use crate::types::Report;
 
 #[derive(Debug)]

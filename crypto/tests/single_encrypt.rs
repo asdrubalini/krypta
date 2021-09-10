@@ -4,8 +4,8 @@ use std::{
     path::Path,
 };
 
-use crypto::file::single::{SingleFileDecryptor, SingleFileEncryptor};
-use crypto::file::traits::SingleCrypt;
+use crypto::crypt::single::{SingleFileDecryptor, SingleFileEncryptor};
+use crypto::crypt::traits::SingleCrypt;
 
 use file_diff::diff;
 use rand::Rng;

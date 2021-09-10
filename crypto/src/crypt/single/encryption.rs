@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
+    crypt::traits::SingleCrypt,
     error::{CryptoError, CryptoResult},
-    file::traits::SingleCrypt,
     BUFFER_SIZE,
 };
 
