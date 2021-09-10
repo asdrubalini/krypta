@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tokio::sync::Semaphore;
 
 use crate::crypt::single::SingleFileDecryptor;
-use crate::crypt::traits::SingleCrypt;
+use crate::crypt::traits::SingleCryptable;
 use crate::types::Report;
 
 #[derive(Debug)]

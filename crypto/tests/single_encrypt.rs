@@ -5,7 +5,7 @@ use std::{
 };
 
 use crypto::crypt::single::{SingleFileDecryptor, SingleFileEncryptor};
-use crypto::crypt::traits::SingleCrypt;
+use crypto::crypt::traits::SingleCryptable;
 
 use file_diff::diff;
 use rand::Rng;

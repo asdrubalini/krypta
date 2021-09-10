@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    crypt::traits::SingleCrypt,
+    crypt::traits::SingleCryptable,
     error::{CryptoError, CryptoResult},
     BUFFER_SIZE,
 };
@@ -22,7 +22,7 @@ pub struct SingleFileEncryptor {
 }
 
 #[async_trait]
-impl SingleCrypt for SingleFileEncryptor {
+impl SingleCryptable for SingleFileEncryptor {
     fn try_new(
         source_path: &Path,
         destination_path: &Path,
