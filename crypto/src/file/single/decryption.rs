@@ -2,9 +2,11 @@ use std::path::{Path, PathBuf};
 
 use crate::{
     error::{CryptoError, CryptoResult},
+    file::traits::SingleCrypt,
     BUFFER_SIZE,
 };
 
+use async_trait::async_trait;
 use bytes::BytesMut;
 use sodiumoxide::crypto::secretstream::{Header, Key, Stream, ABYTES, HEADERBYTES};
 use tokio::{
@@ -12,14 +14,16 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
 };
 
+#[derive(Debug)]
 pub struct SingleFileDecryptor {
     source_path: PathBuf,
     destination_path: PathBuf,
     key: Key,
 }
 
-impl SingleFileDecryptor {
-    pub fn new(
+#[async_trait]
+impl SingleCrypt for SingleFileDecryptor {
+    fn try_new(
         source_path: &Path,
         destination_path: &Path,
         key: &[u8; 32],
@@ -34,7 +38,7 @@ impl SingleFileDecryptor {
     }
 
     /// Try to decrypt a file as specified in struct
-    pub async fn try_decrypt(self) -> CryptoResult<()> {
+    async fn start(self) -> CryptoResult<()> {
         // The file we are trying to decrypt
         let file_input = File::open(&self.source_path)
             .await

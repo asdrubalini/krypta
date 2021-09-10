@@ -5,6 +5,7 @@ use std::{
 };
 
 use crypto::file::single::{SingleFileDecryptor, SingleFileEncryptor};
+use crypto::file::traits::SingleCrypt;
 
 use file_diff::diff;
 use rand::Rng;
@@ -19,14 +20,14 @@ async fn encrypt_decrypt_with_key(key: &[u8; 32]) {
     let encrypted_path = Path::new(ENCRYPTED_FILE);
     let plaintext_recovered_path = Path::new(PLAINTEXT_RECOVERED_FILE);
 
-    let encryptor = SingleFileEncryptor::new(plaintext_path, encrypted_path, key).unwrap();
+    let encryptor = SingleFileEncryptor::try_new(plaintext_path, encrypted_path, key).unwrap();
 
-    encryptor.try_encrypt().await.unwrap();
+    encryptor.start().await.unwrap();
 
     let decryptor =
-        SingleFileDecryptor::new(encrypted_path, plaintext_recovered_path, key).unwrap();
+        SingleFileDecryptor::try_new(encrypted_path, plaintext_recovered_path, key).unwrap();
 
-    decryptor.try_decrypt().await.unwrap();
+    decryptor.start().await.unwrap();
 
     assert!(diff(PLAINTEXT_FILE, PLAINTEXT_RECOVERED_FILE));
 

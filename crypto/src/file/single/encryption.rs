@@ -2,9 +2,11 @@ use std::path::{Path, PathBuf};
 
 use crate::{
     error::{CryptoError, CryptoResult},
+    file::traits::SingleCrypt,
     BUFFER_SIZE,
 };
 
+use async_trait::async_trait;
 use bytes::BytesMut;
 use sodiumoxide::crypto::secretstream::{Key, Stream, Tag};
 use tokio::{
@@ -19,8 +21,9 @@ pub struct SingleFileEncryptor {
     key: Key,
 }
 
-impl SingleFileEncryptor {
-    pub fn new<'a>(
+#[async_trait]
+impl SingleCrypt for SingleFileEncryptor {
+    fn try_new(
         source_path: &Path,
         destination_path: &Path,
         key: &[u8; 32],
@@ -35,7 +38,7 @@ impl SingleFileEncryptor {
     }
 
     /// Try to encrypt a file as specified in struct
-    pub async fn try_encrypt(self) -> CryptoResult<()> {
+    async fn start(self) -> CryptoResult<()> {
         let (mut encryption_stream, header) =
             Stream::init_push(&self.key).map_err(|_| CryptoError::SodiumOxideError)?;
 

@@ -9,6 +9,7 @@ sodiumoxide = "0.2"
 tokio = { version = "1", features = [ "fs", "io-util", "macros", "sync", "rt", "rt-multi-thread" ] }
 bytes = "1"
 num_cpus = "1.13"
+async-trait = "0.1"
 
 [dev-dependencies]
 file_diff = "1"
