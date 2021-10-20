@@ -74,6 +74,7 @@ pub async fn sync_database_from_source_path(
     Ok(SyncReport { processed_files })
 }
 
+/// Add missing files in the encrypted path, encrypting them first
 pub async fn sync_encrypted_path_from_database(
     database: &Database,
     encrypted_path: &PathBuf,
