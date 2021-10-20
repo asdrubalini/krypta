@@ -1,71 +1,71 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
+    crypt::traits::SingleCryptable,
     error::{CryptoError, CryptoResult},
     BUFFER_SIZE,
 };
 
+use async_trait::async_trait;
 use bytes::BytesMut;
-use sodiumoxide::crypto::secretstream::{Header, Key, Stream, ABYTES, HEADERBYTES};
+use sodiumoxide::crypto::secretstream::{Key, Stream, Tag};
 use tokio::{
     fs::File,
     io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
 };
 
-pub struct SingleFileDecryptor {
+#[derive(Debug, Clone)]
+pub struct SingleFileEncryptor {
     source_path: PathBuf,
     destination_path: PathBuf,
     key: Key,
 }
 
-impl SingleFileDecryptor {
-    pub fn new(
+#[async_trait]
+impl SingleCryptable for SingleFileEncryptor {
+    fn try_new(
         source_path: &Path,
         destination_path: &Path,
         key: &[u8; 32],
-    ) -> CryptoResult<SingleFileDecryptor> {
+    ) -> CryptoResult<SingleFileEncryptor> {
         let key = Key::from_slice(key).ok_or(CryptoError::InvalidKeyLength)?;
 
-        Ok(SingleFileDecryptor {
+        Ok(SingleFileEncryptor {
             source_path: source_path.to_path_buf(),
             destination_path: destination_path.to_path_buf(),
             key,
         })
     }
 
-    /// Try to decrypt a file as specified in struct
-    pub async fn try_decrypt(self) -> CryptoResult<()> {
-        // The file we are trying to decrypt
+    /// Try to encrypt a file as specified in struct
+    async fn start(self) -> CryptoResult<()> {
+        let (mut encryption_stream, header) =
+            Stream::init_push(&self.key).map_err(|_| CryptoError::SodiumOxideError)?;
+
+        // The file we are trying to encrypt
         let file_input = File::open(&self.source_path)
             .await
             .map_err(CryptoError::SourceFileNotFound)?;
 
-        // The decrypted file
+        // The encrypted file
         let file_output = File::create(&self.destination_path)
             .await
             .map_err(CryptoError::CannotCreateDestinationFile)?;
 
         // Source file reader
         let mut reader_input = BufReader::new(file_input);
-        let mut buffer_input = BytesMut::with_capacity(BUFFER_SIZE + ABYTES);
+        let mut buffer_input = BytesMut::with_capacity(BUFFER_SIZE);
 
         // Destination file writer
         let mut writer_output = BufWriter::new(file_output);
 
-        // Read Header from file
-        let mut header_buf = [0u8; HEADERBYTES];
-        reader_input
-            .read_exact(&mut header_buf)
+        // Write header to file
+        writer_output
+            .write_all(&header.0)
             .await
-            .map_err(CryptoError::FileReadError)?;
+            .map_err(CryptoError::FileWriteError)?;
 
-        let header = Header::from_slice(&header_buf).unwrap();
-        let key = self.key;
-
-        let mut decryption_stream =
-            Stream::init_pull(&header, &key).map_err(|_| CryptoError::SodiumOxideError)?;
-
-        // Read -> Decrypt -> Write loop
+        // Read -> Encrypt -> Write loop
         while let Ok(size) = reader_input.read_buf(&mut buffer_input).await {
             // Loop until both amount of data red into buffer is zero and the buffer is empty
             if size == 0 && buffer_input.len() == 0 {
@@ -77,9 +77,9 @@ impl SingleFileDecryptor {
                 continue;
             }
 
-            // Decrypt
-            let (result, _tag) = decryption_stream
-                .pull(&buffer_input, None)
+            // Encrypt
+            let result = encryption_stream
+                .push(&buffer_input, None, Tag::Message)
                 .map_err(|_| CryptoError::SodiumOxideError)?;
 
             // Write to output buffer

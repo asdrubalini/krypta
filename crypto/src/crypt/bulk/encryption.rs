@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use tokio::sync::Semaphore;
 
-use crate::{single::encryption::SingleFileEncryptor, types::Report};
+use crate::crypt::single::SingleFileEncryptor;
+use crate::crypt::traits::SingleCryptable;
+use crate::types::Report;
 
 #[derive(Debug)]
 pub struct BulkFileEncrypt {
@@ -10,8 +12,8 @@ pub struct BulkFileEncrypt {
 }
 
 impl BulkFileEncrypt {
-    pub fn new(encryptors: Vec<SingleFileEncryptor>) -> BulkFileEncrypt {
-        BulkFileEncrypt { encryptors }
+    pub fn new(encryptors: Vec<SingleFileEncryptor>) -> Self {
+        Self { encryptors }
     }
 
     pub async fn encrypt(self) -> Report {
@@ -24,7 +26,7 @@ impl BulkFileEncrypt {
             let permit = semaphore.clone().acquire_owned().await.unwrap();
 
             let handle = tokio::spawn(async move {
-                let result = SingleFileEncryptor::try_encrypt(encryptor).await;
+                let result = SingleFileEncryptor::start(encryptor).await;
 
                 drop(permit);
                 result
