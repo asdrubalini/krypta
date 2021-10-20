@@ -434,6 +434,7 @@ dependencies = [
 name = "crypto"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "bytes 1.1.0",
  "file_diff",
  "num_cpus",
