@@ -1,5 +1,3 @@
-#![allow(dead_code, unused_variables)]
-
 pub mod crypt;
 pub mod hash;
 

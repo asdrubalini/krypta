@@ -1,6 +1,5 @@
 use std::{
-    fs::{create_dir, remove_dir, remove_file, File},
-    io::Write,
+    fs::{create_dir, remove_dir, remove_file},
     path::Path,
 };
 
@@ -8,7 +7,8 @@ use crypto::crypt::single::{SingleFileDecryptor, SingleFileEncryptor};
 use crypto::crypt::traits::SingleCryptable;
 
 use file_diff::diff;
-use rand::Rng;
+
+mod common;
 
 const TESTS_PATH: &str = "./crypt_small_file/";
 const PLAINTEXT_FILE: &str = "./crypt_small_file/plaintext";
@@ -36,17 +36,6 @@ async fn encrypt_decrypt_with_key(key: &[u8; 32]) {
     remove_file(PLAINTEXT_RECOVERED_FILE).unwrap();
 }
 
-fn generate_random_plaintext_file(length: usize) {
-    let mut plaintext_file = File::create(PLAINTEXT_FILE).unwrap();
-    let random_bytes: Vec<u8> = (0..length).map(|_| rand::random::<u8>()).collect();
-
-    plaintext_file.write_all(&random_bytes).unwrap();
-    plaintext_file.flush().unwrap();
-}
-
-fn generate_random_key() -> [u8; 32] {
-    rand::thread_rng().gen::<[u8; 32]>()
-}
 
 #[tokio::test]
 async fn small_file_zero_key() {
@@ -58,8 +47,8 @@ async fn small_file_zero_key() {
 
     for length in tests_file_size {
         println!("Testing with plaintext len = {}", length);
-        generate_random_plaintext_file(length);
-        encrypt_decrypt_with_key(&generate_random_key()).await;
+        common::generate_random_plaintext_file(length);
+        encrypt_decrypt_with_key(&common::generate_random_key()).await;
     }
 
     remove_dir(TESTS_PATH).unwrap();

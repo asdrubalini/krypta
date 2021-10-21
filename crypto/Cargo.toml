@@ -2,7 +2,7 @@
 name = "crypto"
 description = "Handle concurrent file encryption and decryption using libsodium"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 sodiumoxide = "0.2"
@@ -10,6 +10,7 @@ tokio = { version = "1", features = [ "fs", "io-util", "macros", "sync", "rt", "
 bytes = "1"
 num_cpus = "1.13"
 async-trait = "0.1"
+sha2 = "0.9"
 
 [dev-dependencies]
 file_diff = "1"

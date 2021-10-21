@@ -1,8 +1,17 @@
-pub struct Sha256Hash<'a> {
-    hash: &'a [u8; 32]
+#[derive(Default)]
+pub struct Sha256Hash {
+    hash: [u8; 32],
 }
 
-impl<'a> Sha256Hash<'a> {
+impl From<&[u8]> for Sha256Hash {
+    fn from(slice: &[u8]) -> Self {
+        let mut hash = Self::default();
+        hash.hash.copy_from_slice(slice);
+        hash
+    }
+}
+
+impl Sha256Hash {
     /// Convert self as an hex string
     pub fn as_hex(&self) -> String {
         self.hash.iter().map(|n| format!("{:02x}", n)).collect()

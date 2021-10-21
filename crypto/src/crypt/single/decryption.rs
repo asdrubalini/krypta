@@ -42,7 +42,7 @@ impl SingleCryptable for SingleFileDecryptor {
         // The file we are trying to decrypt
         let file_input = File::open(&self.source_path)
             .await
-            .map_err(CryptoError::SourceFileNotFound)?;
+            .or(Err(CryptoError::SourceFileNotFound(self.source_path)))?;
 
         // The decrypted file
         let file_output = File::create(&self.destination_path)
