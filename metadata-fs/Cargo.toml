@@ -2,7 +2,7 @@
 name = "metadata-fs"
 description = "Find paths in fs and compute their metadata"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 tokio = { version = "1", features = [ "fs", "sync", "rt", "macros" ] }
