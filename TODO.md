@@ -7,6 +7,9 @@
 - Use file encryption from implementationw
 - Stable cli interface that can add, remove and search files
 
+# Long term TODOs
+- Revisit all async traits and remove the #[async_trait] macro
+
 # Minor TODOs
 - Bring some true TUI
 - Write a lot more tests
