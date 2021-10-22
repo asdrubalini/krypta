@@ -45,7 +45,7 @@ impl SingleCryptable for SingleFileEncryptor {
         // The file we are trying to encrypt
         let file_input = File::open(&self.source_path)
             .await
-            .or(Err(CryptoError::SourceFileNotFound(self.source_path)))?;
+            .map_err(|_| CryptoError::SourceFileNotFound(self.source_path))?;
 
         // The encrypted file
         let file_output = File::create(&self.destination_path)

@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    error::CryptoError,
+    error::{CryptoError, CryptoResult},
     hash::{traits::SingleHashable, types::Sha256Hash},
     BUFFER_SIZE,
 };
@@ -21,7 +21,7 @@ pub struct SingleSha256 {
 
 #[async_trait]
 impl SingleHashable<Sha256Hash> for SingleSha256 {
-    fn try_new(source_path: &Path) -> crate::error::CryptoResult<Self> {
+    fn try_new(source_path: &Path) -> CryptoResult<Self> {
         let source_path_buf = source_path.to_path_buf();
 
         // Error out if source path does not exists or if is a directory
@@ -36,7 +36,7 @@ impl SingleHashable<Sha256Hash> for SingleSha256 {
         })
     }
 
-    async fn start(self) -> crate::error::CryptoResult<Sha256Hash> {
+    async fn start(self) -> CryptoResult<Sha256Hash> {
         let file_input = File::open(&self.source_path)
             .await
             .or(Err(CryptoError::SourceFileNotFound(self.source_path)))?;
