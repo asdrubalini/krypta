@@ -5,6 +5,10 @@ use crypto::crypt::traits::SingleCryptable;
 
 use file_diff::diff;
 
+use crate::common::{
+    clean_test_path, generate_random_key, generate_random_plaintext_file, init_test_path,
+};
+
 mod common;
 
 const TESTS_PATH: &str = "./crypt_small_file_tests/";
@@ -35,7 +39,7 @@ async fn encrypt_decrypt_with_key(key: &[u8; 32]) {
 
 #[tokio::test]
 async fn small_file_zero_key() {
-    common::init_test_path(TESTS_PATH);
+    init_test_path(TESTS_PATH);
 
     let tests_file_size = vec![
         0, 1, 2, 3, 8, 9, 200, 256, 512, 893, 1024, 8192, 100_000, 250_000, 1_000_000,
@@ -43,9 +47,9 @@ async fn small_file_zero_key() {
 
     for length in tests_file_size {
         println!("Testing with plaintext len = {}", length);
-        common::generate_random_plaintext_file(PLAINTEXT_FILE, length);
-        encrypt_decrypt_with_key(&common::generate_random_key()).await;
+        generate_random_plaintext_file(PLAINTEXT_FILE, length);
+        encrypt_decrypt_with_key(&generate_random_key()).await;
     }
 
-    common::clean_test_path(TESTS_PATH);
+    clean_test_path(TESTS_PATH);
 }
