@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    crypt::traits::SingleCryptable,
     error::{CryptoError, CryptoResult},
+    traits::Computable,
     BUFFER_SIZE,
 };
 
@@ -15,30 +15,34 @@ use tokio::{
 };
 
 #[derive(Debug)]
-pub struct SingleFileDecryptor {
+pub struct FileDecryptor {
     source_path: PathBuf,
     destination_path: PathBuf,
     key: Key,
 }
 
-#[async_trait]
-impl SingleCryptable for SingleFileDecryptor {
+impl FileDecryptor {
     fn try_new(
         source_path: &Path,
         destination_path: &Path,
         key: &[u8; 32],
-    ) -> CryptoResult<SingleFileDecryptor> {
+    ) -> CryptoResult<FileDecryptor> {
         let key = Key::from_slice(key).ok_or(CryptoError::InvalidKeyLength)?;
 
-        Ok(SingleFileDecryptor {
+        Ok(FileDecryptor {
             source_path: source_path.to_path_buf(),
             destination_path: destination_path.to_path_buf(),
             key,
         })
     }
+}
+
+#[async_trait]
+impl Computable for FileDecryptor {
+    type Output = ();
 
     /// Try to decrypt a file as specified in struct
-    async fn start(self) -> CryptoResult<()> {
+    async fn start(self) -> CryptoResult<Self::Output> {
         // The file we are trying to decrypt
         let file_input = File::open(&self.source_path)
             .await
@@ -72,7 +76,7 @@ impl SingleCryptable for SingleFileDecryptor {
         // Read -> Decrypt -> Write loop
         while let Ok(size) = reader_input.read_buf(&mut buffer_input).await {
             // Loop until both amount of data red into buffer is zero and the buffer is empty
-            if size == 0 && buffer_input.len() == 0 {
+            if size == 0 && buffer_input.is_empty() {
                 break;
             }
 

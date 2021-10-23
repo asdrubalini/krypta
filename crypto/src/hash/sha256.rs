@@ -1,8 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
+    concurrent::ConcurrentComputable,
     error::{CryptoError, CryptoResult},
-    hash::{traits::SingleHashable, types::Sha256Hash},
+    traits::Computable,
     BUFFER_SIZE,
 };
 
@@ -14,13 +15,35 @@ use tokio::{
     io::{AsyncReadExt, BufReader},
 };
 
+/// Represents a Sha256 hash
+#[derive(Default)]
+pub struct Sha256Hash {
+    hash: [u8; 32],
+}
+
+impl From<&[u8]> for Sha256Hash {
+    /// Sha256 hash from bytes
+    fn from(slice: &[u8]) -> Self {
+        let mut hash = Self::default();
+        hash.hash.copy_from_slice(slice);
+        hash
+    }
+}
+
+impl Sha256Hash {
+    /// Convert self as an hex string
+    pub fn as_hex(&self) -> String {
+        self.hash.iter().map(|n| format!("{:02x}", n)).collect()
+    }
+}
+
 #[derive(Debug, Clone)]
-pub struct SingleSha256 {
+pub struct Sha256FileHasher {
     source_path: PathBuf,
 }
 
-#[async_trait]
-impl SingleHashable<Sha256Hash> for SingleSha256 {
+impl Sha256FileHasher {
+    /// Build a new SingleSha256 instance with file's source_path
     fn try_new(source_path: &Path) -> CryptoResult<Self> {
         let source_path_buf = source_path.to_path_buf();
 
@@ -35,8 +58,13 @@ impl SingleHashable<Sha256Hash> for SingleSha256 {
             source_path: source_path_buf,
         })
     }
+}
 
-    async fn start(self) -> CryptoResult<Sha256Hash> {
+#[async_trait]
+impl Computable for Sha256FileHasher {
+    type Output = Sha256Hash;
+
+    async fn start(self) -> CryptoResult<Self::Output> {
         let file_input = File::open(&self.source_path)
             .await
             .or(Err(CryptoError::SourceFileNotFound(self.source_path)))?;
@@ -50,7 +78,7 @@ impl SingleHashable<Sha256Hash> for SingleSha256 {
         // Hash loop
         while let Ok(size) = reader_input.read_buf(&mut buffer_input).await {
             // Loop until both amount of data red into buffer is zero and the buffer is empty
-            if size == 0 && buffer_input.len() == 0 {
+            if size == 0 && buffer_input.is_empty() {
                 break;
             }
 
@@ -64,6 +92,39 @@ impl SingleHashable<Sha256Hash> for SingleSha256 {
         }
 
         let hash: Sha256Hash = hasher.finalize().as_slice().into();
+
         Ok(hash)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Sha256ConcurrentFileHasher {
+    hashers: Vec<Sha256FileHasher>,
+}
+
+impl Sha256ConcurrentFileHasher {
+    pub fn try_new(source_paths: &[&Path]) -> CryptoResult<Self> {
+        let mut hashers = Vec::new();
+
+        for source_path in source_paths {
+            hashers.push(Sha256FileHasher::try_new(source_path)?);
+        }
+
+        Ok(Self { hashers: hashers })
+    }
+}
+
+impl ConcurrentComputable for Sha256ConcurrentFileHasher {
+    type Computables = Sha256FileHasher;
+    type Output = Sha256Hash;
+
+    fn computables(&self) -> Vec<Self::Computables> {
+        todo!()
+    }
+
+    fn computable_result_to_output(
+        result: CryptoResult<<Self::Computables as Computable>::Output>,
+    ) -> Self::Output {
+        todo!()
     }
 }

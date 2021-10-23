@@ -1,4 +1,5 @@
-pub mod bulk;
-pub mod single;
+mod decryption;
+mod encryption;
 
-pub mod traits;
+pub use decryption::FileDecryptor;
+pub use encryption::FileEncryptor;

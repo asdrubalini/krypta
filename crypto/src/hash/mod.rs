@@ -1,5 +1,3 @@
-pub mod bulk;
-pub mod single;
+mod sha256;
 
-pub mod traits;
-pub mod types;
+pub use sha256::Sha256FileHasher;
