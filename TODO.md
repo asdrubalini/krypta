@@ -1,8 +1,5 @@
 # Major TODOs
-- Working implementation of SHA-256 file hasing both in single and bulk mode + tests
 - Evaluate Anyhow
-- Accept AsRef<Path> on api
-- Use a generic Bulkable implementation in crypto in order to implement bulk actions
 - Mechanism than can detect file changes based on file's date and time modification (and then fallback to SHA-256)
 - Add file's fs last modification time in database schema
 - Add file's SHA-256 in database schema
