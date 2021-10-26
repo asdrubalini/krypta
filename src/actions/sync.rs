@@ -62,6 +62,8 @@ pub async fn sync_database_from_source_path(
         .map(|metadata| models::File::from(metadata))
         .collect();
 
+    // TODO: compute hashes and start adding to file
+
     log::trace!("Start adding to database");
 
     // Use the File(s) we just got with the database api

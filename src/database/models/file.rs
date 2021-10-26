@@ -19,6 +19,7 @@ pub struct File {
     pub is_remote: bool,
     pub is_encrypted: bool,
     pub random_hash: String,
+    pub contents_hash: Option<String>,
     pub size: u64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -31,6 +32,7 @@ impl<'r> FromRow<'r, SqliteRow> for File {
         let is_remote = row.try_get("is_remote")?;
         let is_encrypted = row.try_get("is_encrypted")?;
         let random_hash = row.try_get("random_hash")?;
+        let contents_hash = row.try_get("contents_hash")?;
         let size: Vec<u8> = row.try_get("size")?;
         let created_at = row.try_get("created_at")?;
         let updated_at = row.try_get("updated_at")?;
@@ -41,6 +43,7 @@ impl<'r> FromRow<'r, SqliteRow> for File {
             is_remote,
             is_encrypted,
             random_hash,
+            contents_hash,
             size: BigIntAsBlob::from_bytes(&size),
             created_at,
             updated_at,
@@ -55,6 +58,7 @@ impl File {
         path: PathBuf,
         is_remote: bool,
         is_encrypted: bool,
+        contents_hash: Option<String>,
         size: u64,
     ) -> Self {
         let random_hash = File::pseudorandom_sha256_string();
@@ -66,6 +70,7 @@ impl File {
             is_remote,
             is_encrypted,
             random_hash,
+            contents_hash,
             size,
             created_at: now,
             updated_at: now,
@@ -108,6 +113,7 @@ impl Insertable<File> for File {
             .bind(file.is_remote)
             .bind(file.is_encrypted)
             .bind(file.random_hash)
+            .bind(file.contents_hash.expect("File's contents_hash is None"))
             .bind(BigIntAsBlob::from_u64(&file.size))
             .bind(file.created_at)
             .bind(file.updated_at)
@@ -130,6 +136,7 @@ impl Insertable<File> for File {
                 .bind(file.is_remote)
                 .bind(file.is_encrypted)
                 .bind(file.random_hash)
+                .bind(file.contents_hash.expect("File's contents_hash is None"))
                 .bind(BigIntAsBlob::from_u64(&file.size))
                 .bind(file.created_at)
                 .bind(file.updated_at)
@@ -188,6 +195,10 @@ impl File {
 
         Ok(files.0)
     }
+
+    pub fn set_contents_hash(&mut self, hash: String) {
+        self.contents_hash = Some(hash);
+    }
 }
 
 /// Convert &Metadata into a File
@@ -198,6 +209,7 @@ impl From<&Metadata> for File {
             metadata.path.clone(),
             false,
             false,
+            None,
             metadata.size_or_default(),
         )
     }
@@ -236,6 +248,7 @@ mod tests {
             PathBuf::from("/path/to/foo7bar"),
             false,
             false,
+            Some("asdas".to_string()),
             0,
         );
 
@@ -246,6 +259,7 @@ mod tests {
             PathBuf::from("/path/to/foo7bar"),
             false,
             false,
+            Some("bfsdfb".to_string()),
             0,
         );
 
@@ -258,9 +272,10 @@ mod tests {
 
         let insert_file = File::new(
             "foobar".to_string(),
-            PathBuf::from("/path/to/foo7bar"),
+            PathBuf::from("/path/to/foo/bar"),
             false,
             false,
+            Some("sdadfb".to_string()),
             0,
         );
 
@@ -288,6 +303,7 @@ mod tests {
                     PathBuf::from(format!("/path/to/foo/bar/{}", i)),
                     false,
                     false,
+                    Some(format!("test_hash_placeholder_{}", i)),
                     0,
                 )
             })
@@ -310,6 +326,7 @@ mod tests {
             PathBuf::from("/path/to/foo/bar"),
             false,
             false,
+            Some("test_hash_placeholder".to_string()),
             64,
         );
 
@@ -332,6 +349,7 @@ mod tests {
                     PathBuf::from(format!("/path/to/foo/bar/{}", i)),
                     false,
                     false,
+                    Some(format!("test_hash_placeholder_{}", i)),
                     1_u64.pow(10), // 10 GB
                 )
             })
@@ -359,6 +377,7 @@ mod tests {
                     PathBuf::from(format!("/path/to/foo/bar/{}", i)),
                     false,
                     false,
+                    Some(format!("test_hash_placeholder_{}", i)),
                     0,
                 )
             })
@@ -369,5 +388,22 @@ mod tests {
 
         let archive_count = File::count(&database).await.unwrap();
         assert_eq!(archive_count, 8192);
+    }
+
+    #[tokio::test]
+    #[should_panic]
+    async fn test_insert_file_with_none_contents_hash() {
+        let database = create_in_memory().await.unwrap();
+
+        let file1 = File::new(
+            "foobar".to_string(),
+            PathBuf::from("/path/to/foo/bar"),
+            false,
+            false,
+            None,
+            0,
+        );
+
+        File::insert(&database, file1).await.unwrap();
     }
 }
