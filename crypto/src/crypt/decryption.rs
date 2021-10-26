@@ -22,16 +22,16 @@ pub struct FileDecryptor {
 }
 
 impl FileDecryptor {
-    fn try_new(
-        source_path: &Path,
-        destination_path: &Path,
+    fn try_new<P: AsRef<Path>>(
+        source_path: P,
+        destination_path: P,
         key: &[u8; 32],
     ) -> CryptoResult<FileDecryptor> {
         let key = Key::from_slice(key).ok_or(CryptoError::InvalidKeyLength)?;
 
         Ok(FileDecryptor {
-            source_path: source_path.to_path_buf(),
-            destination_path: destination_path.to_path_buf(),
+            source_path: source_path.as_ref().to_path_buf(),
+            destination_path: destination_path.as_ref().to_path_buf(),
             key,
         })
     }

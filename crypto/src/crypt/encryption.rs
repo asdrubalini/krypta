@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use crate::{
     error::{CryptoError, CryptoResult},
-    traits::Computable,
+    traits::{Computable, ConcurrentComputable},
     BUFFER_SIZE,
 };
 
@@ -22,16 +22,16 @@ pub struct FileEncryptor {
 }
 
 impl FileEncryptor {
-    fn try_new(
-        source_path: &Path,
-        destination_path: &Path,
+    fn try_new<P: AsRef<Path>>(
+        source_path: P,
+        destination_path: P,
         key: &[u8; 32],
     ) -> CryptoResult<FileEncryptor> {
         let key = Key::from_slice(key).ok_or(CryptoError::InvalidKeyLength)?;
 
         Ok(FileEncryptor {
-            source_path: source_path.to_path_buf(),
-            destination_path: destination_path.to_path_buf(),
+            source_path: source_path.as_ref().to_path_buf(),
+            destination_path: destination_path.as_ref().to_path_buf(),
             key,
         })
     }
@@ -101,5 +101,37 @@ impl Computable for FileEncryptor {
             .map_err(CryptoError::FileWriteError)?;
 
         Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct FileConcurrentEncryptor {
+    encryptors: Vec<FileEncryptor>,
+}
+
+impl FileConcurrentEncryptor {
+    pub fn try_new<P: AsRef<Path>>(source_paths: &[P]) -> CryptoResult<Self> {
+        let mut encryptors = Vec::new();
+
+        // for source_path in source_paths {
+        // encryptors.push(FileEncryptor::try_new(source_path)?);
+        // }
+
+        Ok(Self { encryptors })
+    }
+}
+
+impl ConcurrentComputable for FileConcurrentEncryptor {
+    type Computables = FileEncryptor;
+    type Output = ();
+
+    fn computables(&self) -> Vec<Self::Computables> {
+        self.encryptors.clone()
+    }
+
+    fn computable_result_to_output(
+        result: CryptoResult<<Self::Computables as Computable>::Output>,
+    ) -> Self::Output {
+        ()
     }
 }
