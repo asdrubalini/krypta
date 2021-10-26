@@ -2,7 +2,6 @@ use std::fs::{create_dir, remove_dir_all, File};
 use std::io::Write;
 use std::path::PathBuf;
 
-use bytes::BytesMut;
 use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};
 
