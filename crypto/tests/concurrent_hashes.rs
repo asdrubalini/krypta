@@ -8,17 +8,6 @@ mod common;
 
 const TESTS_PATH: &str = "./hashes_tests/";
 
-// async fn plaintext_hash(content: &str) -> String {
-// generate_plaintext_with_content(PLAINTEXT_FILE, content.to_string());
-
-// let hasher = Sha256FileHasher::try_new(Path::new(PLAINTEXT_FILE)).unwrap();
-// let hash = hasher.start().await.unwrap();
-
-// remove_file(PLAINTEXT_FILE).unwrap();
-
-// hash.as_hex()
-// }
-
 #[tokio::test]
 async fn empty_equal_files() {
     init_test_path(TESTS_PATH);
