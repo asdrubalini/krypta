@@ -123,7 +123,7 @@ impl FileConcurrentEncryptor {
 
 impl ConcurrentComputable for FileConcurrentEncryptor {
     type Computables = FileEncryptor;
-    type Output = ();
+    type Output = bool;
 
     fn computables(&self) -> Vec<Self::Computables> {
         self.encryptors.clone()
@@ -132,6 +132,6 @@ impl ConcurrentComputable for FileConcurrentEncryptor {
     fn computable_result_to_output(
         result: CryptoResult<<Self::Computables as Computable>::Output>,
     ) -> Self::Output {
-        ()
+        result.is_ok()
     }
 }

@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use crate::{
     error::{CryptoError, CryptoResult},
-    traits::Computable,
+    traits::{Computable, ConcurrentComputable},
     BUFFER_SIZE,
 };
 
@@ -14,7 +14,7 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FileDecryptor {
     source_path: PathBuf,
     destination_path: PathBuf,
@@ -105,5 +105,37 @@ impl Computable for FileDecryptor {
             .map_err(CryptoError::FileWriteError)?;
 
         Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct FileConcurrentDecryptor {
+    decryptors: Vec<FileDecryptor>,
+}
+
+impl FileConcurrentDecryptor {
+    pub fn try_new<P: AsRef<Path>>(source_paths: &[P]) -> CryptoResult<Self> {
+        let mut decryptors = Vec::new();
+
+        // for source_path in source_paths {
+        // encryptors.push(FileEncryptor::try_new(source_path)?);
+        // }
+
+        Ok(Self { decryptors })
+    }
+}
+
+impl ConcurrentComputable for FileConcurrentDecryptor {
+    type Computables = FileDecryptor;
+    type Output = bool;
+
+    fn computables(&self) -> Vec<Self::Computables> {
+        self.decryptors.clone()
+    }
+
+    fn computable_result_to_output(
+        result: CryptoResult<<Self::Computables as Computable>::Output>,
+    ) -> Self::Output {
+        result.is_ok()
     }
 }
