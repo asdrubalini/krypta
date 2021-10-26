@@ -1,5 +1,6 @@
 use std::{path::PathBuf, sync::Arc};
 
+use chrono::{DateTime, Utc};
 use tokio::{fs::File, sync::Semaphore};
 
 use crate::{PathFinder, MAX_CONCURRENT_FILE_OPERATIONS};
@@ -10,6 +11,8 @@ pub struct Metadata {
     pub path: PathBuf,
     // Optional file size, if found
     pub size: Option<u64>,
+    // Optional modified_at, if found
+    pub modified_at: Option<DateTime<Utc>>,
 }
 
 impl From<&PathBuf> for Metadata {
@@ -17,6 +20,7 @@ impl From<&PathBuf> for Metadata {
         Self {
             path: path.clone(),
             size: None,
+            modified_at: None,
         }
     }
 }
@@ -27,18 +31,32 @@ impl Metadata {
         self.size.unwrap_or(0)
     }
 
-    /// Try fs access and update self.size with path's file size if possible
-    async fn try_update_size(&mut self, absolute_source_path: PathBuf) -> Option<()> {
-        if self.size.is_some() {
-            return None;
+    /// Retrieve self.modified_at or get default value in case it is not available
+    pub fn modified_at_or_default(&self) -> DateTime<Utc> {
+        self.modified_at.unwrap_or(Utc::now())
+    }
+
+    /// Try fs access and update fields if needed
+    async fn try_update_fields(&mut self, absolute_source_path: PathBuf) -> anyhow::Result<()> {
+        // Don't waste time if fs access is not required
+        if self.size.is_some() && self.modified_at.is_some() {
+            return Ok(());
         }
 
-        let file = File::open(absolute_source_path).await.ok()?;
-        let size: u64 = file.metadata().await.ok()?.len();
+        let file = File::open(absolute_source_path).await?;
+        let metadata = file.metadata().await?;
 
-        self.size = Some(size);
+        if self.size.is_none() {
+            let size: u64 = metadata.len();
+            self.size = Some(size);
+        }
 
-        Some(())
+        if self.modified_at.is_none() {
+            let modified_at: DateTime<Utc> = metadata.modified()?.into();
+            self.modified_at = Some(modified_at);
+        }
+
+        Ok(())
     }
 }
 
@@ -63,7 +81,10 @@ impl MetadataCollection {
                 absolute_source_path.push(&path);
 
                 let mut metadata = Metadata::from(&path);
-                metadata.try_update_size(absolute_source_path).await;
+                match metadata.try_update_fields(absolute_source_path).await {
+                    Ok(_) => (),
+                    Err(err) => print!("Metadata error: {:?}", err),
+                };
 
                 drop(permit);
                 metadata

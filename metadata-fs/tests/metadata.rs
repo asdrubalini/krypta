@@ -19,6 +19,7 @@ async fn test_metadata_size() {
 
     for metadata in metadatas.metadatas {
         assert_eq!(metadata.size, Some(100));
+        assert_ne!(metadata.modified_at, None);
     }
 
     remove_dir_all(source_path).unwrap();
