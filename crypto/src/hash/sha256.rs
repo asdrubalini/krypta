@@ -1,9 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    concurrent::ConcurrentComputable,
     error::{CryptoError, CryptoResult},
-    traits::Computable,
+    traits::{Computable, ConcurrentComputable},
     BUFFER_SIZE,
 };
 
@@ -44,7 +43,8 @@ pub struct Sha256FileHasher {
 
 impl Sha256FileHasher {
     /// Build a new SingleSha256 instance with file's source_path
-    fn try_new(source_path: &Path) -> CryptoResult<Self> {
+    pub fn try_new<P: AsRef<Path>>(source_path: P) -> CryptoResult<Self> {
+        let source_path = source_path.as_ref();
         let source_path_buf = source_path.to_path_buf();
 
         // Error out if source path does not exists or if is a directory
@@ -103,7 +103,7 @@ pub struct Sha256ConcurrentFileHasher {
 }
 
 impl Sha256ConcurrentFileHasher {
-    pub fn try_new(source_paths: &[&Path]) -> CryptoResult<Self> {
+    pub fn try_new<P: AsRef<Path>>(source_paths: &[P]) -> CryptoResult<Self> {
         let mut hashers = Vec::new();
 
         for source_path in source_paths {
@@ -119,12 +119,12 @@ impl ConcurrentComputable for Sha256ConcurrentFileHasher {
     type Output = Sha256Hash;
 
     fn computables(&self) -> Vec<Self::Computables> {
-        todo!()
+        self.hashers.clone()
     }
 
     fn computable_result_to_output(
         result: CryptoResult<<Self::Computables as Computable>::Output>,
     ) -> Self::Output {
-        todo!()
+        result.unwrap()
     }
 }

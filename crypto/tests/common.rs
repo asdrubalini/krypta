@@ -1,6 +1,7 @@
 use rand::Rng;
 use std::fs::{create_dir, remove_dir_all, File};
 use std::io::Write;
+use std::path::PathBuf;
 
 pub fn generate_random_plaintext_file(file_path: &str, length: usize) {
     let mut plaintext_file = File::create(file_path).unwrap();
@@ -22,9 +23,13 @@ pub fn generate_random_key() -> [u8; 32] {
 }
 
 pub fn init_test_path(tests_path: &str) {
+    if PathBuf::from(tests_path).exists() {
+        remove_dir_all(tests_path).unwrap();
+    }
+
     create_dir(tests_path).unwrap();
 }
 
-pub fn clean_test_path(tests_path: &str) {
+pub fn clean_tests_path(tests_path: &str) {
     remove_dir_all(tests_path).unwrap();
 }

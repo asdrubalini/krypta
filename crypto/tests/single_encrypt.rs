@@ -3,7 +3,7 @@ use std::{fs::remove_file, path::Path};
 use file_diff::diff;
 
 use crate::common::{
-    clean_test_path, generate_random_key, generate_random_plaintext_file, init_test_path,
+    clean_tests_path, generate_random_key, generate_random_plaintext_file, init_test_path,
 };
 
 mod common;
