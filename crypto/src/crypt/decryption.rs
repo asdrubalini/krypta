@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    error::{CryptoError, CryptoResult},
+    error::SodiumOxideError,
     traits::{Computable, ConcurrentComputable},
     BUFFER_SIZE,
 };
@@ -26,8 +26,8 @@ impl FileDecryptor {
         source_path: P,
         destination_path: P,
         key: &[u8; 32],
-    ) -> CryptoResult<FileDecryptor> {
-        let key = Key::from_slice(key).ok_or(CryptoError::InvalidKeyLength)?;
+    ) -> anyhow::Result<FileDecryptor> {
+        let key = Key::from_slice(key).ok_or(SodiumOxideError::InvalidKeyLength)?;
 
         Ok(FileDecryptor {
             source_path: source_path.as_ref().to_path_buf(),
@@ -42,16 +42,12 @@ impl Computable for FileDecryptor {
     type Output = ();
 
     /// Try to decrypt a file as specified in struct
-    async fn start(self) -> CryptoResult<Self::Output> {
+    async fn start(self) -> anyhow::Result<Self::Output> {
         // The file we are trying to decrypt
-        let file_input = File::open(&self.source_path)
-            .await
-            .map_err(|_| CryptoError::SourceFileNotFound(self.source_path))?;
+        let file_input = File::open(&self.source_path).await?;
 
         // The decrypted file
-        let file_output = File::create(&self.destination_path)
-            .await
-            .map_err(CryptoError::CannotCreateDestinationFile)?;
+        let file_output = File::create(&self.destination_path).await?;
 
         // Source file reader
         let mut reader_input = BufReader::new(file_input);
@@ -62,16 +58,13 @@ impl Computable for FileDecryptor {
 
         // Read Header from file
         let mut header_buf = [0u8; HEADERBYTES];
-        reader_input
-            .read_exact(&mut header_buf)
-            .await
-            .map_err(CryptoError::FileReadError)?;
+        reader_input.read_exact(&mut header_buf).await?;
 
         let header = Header::from_slice(&header_buf).unwrap();
         let key = self.key;
 
         let mut decryption_stream =
-            Stream::init_pull(&header, &key).map_err(|_| CryptoError::SodiumOxideError)?;
+            Stream::init_pull(&header, &key).map_err(|_| SodiumOxideError::InitPull)?;
 
         // Read -> Decrypt -> Write loop
         while let Ok(size) = reader_input.read_buf(&mut buffer_input).await {
@@ -88,21 +81,15 @@ impl Computable for FileDecryptor {
             // Decrypt
             let (result, _tag) = decryption_stream
                 .pull(&buffer_input, None)
-                .map_err(|_| CryptoError::SodiumOxideError)?;
+                .map_err(|_| SodiumOxideError::Pull)?;
 
             // Write to output buffer
-            writer_output
-                .write_all(&result)
-                .await
-                .map_err(CryptoError::FileWriteError)?;
+            writer_output.write_all(&result).await?;
 
             buffer_input.clear();
         }
 
-        writer_output
-            .flush()
-            .await
-            .map_err(CryptoError::FileWriteError)?;
+        writer_output.flush().await?;
 
         Ok(())
     }
@@ -114,7 +101,7 @@ pub struct FileConcurrentDecryptor {
 }
 
 impl FileConcurrentDecryptor {
-    pub fn try_new<P: AsRef<Path>>(source_paths: &[P]) -> CryptoResult<Self> {
+    pub fn try_new<P: AsRef<Path>>(source_paths: &[P]) -> anyhow::Result<Self> {
         let mut decryptors = Vec::new();
 
         todo!();
@@ -137,7 +124,7 @@ impl ConcurrentComputable for FileConcurrentDecryptor {
     }
 
     fn computable_result_to_output(
-        result: CryptoResult<<Self::Computables as Computable>::Output>,
+        result: anyhow::Result<<Self::Computables as Computable>::Output>,
     ) -> Self::Output {
         result.is_ok()
     }

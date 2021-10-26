@@ -1,3 +1,5 @@
+#![feature(io_error_more)]
+
 pub mod crypt;
 pub mod hash;
 
