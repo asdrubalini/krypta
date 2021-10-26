@@ -113,6 +113,7 @@ impl FileConcurrentEncryptor {
     pub fn try_new<P: AsRef<Path>>(source_paths: &[P]) -> CryptoResult<Self> {
         let mut encryptors = Vec::new();
 
+        todo!();
         // for source_path in source_paths {
         // encryptors.push(FileEncryptor::try_new(source_path)?);
         // }
