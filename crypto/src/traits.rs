@@ -28,7 +28,7 @@ pub trait ConcurrentComputable {
     ) -> Self::Output;
 
     /// Start Computable action in a concurrent manner
-    async fn start_all(self: Box<Self>) -> Vec<Self::Output> {
+    async fn start_all(&self) -> Vec<Self::Output> {
         let cpus_count = num_cpus::get();
         let semaphore = Arc::new(Semaphore::new(cpus_count));
 

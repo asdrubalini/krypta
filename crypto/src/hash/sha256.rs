@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    fmt::Debug,
+    path::{Path, PathBuf},
+};
 
 use crate::{
     error::{CryptoError, CryptoResult},
@@ -26,6 +29,12 @@ impl From<&[u8]> for Sha256Hash {
         let mut hash = Self::default();
         hash.hash.copy_from_slice(slice);
         hash
+    }
+}
+
+impl Debug for Sha256Hash {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_hex())
     }
 }
 
@@ -110,7 +119,7 @@ impl Sha256ConcurrentFileHasher {
             hashers.push(Sha256FileHasher::try_new(source_path)?);
         }
 
-        Ok(Self { hashers: hashers })
+        Ok(Self { hashers })
     }
 }
 

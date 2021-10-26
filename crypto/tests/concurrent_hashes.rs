@@ -1,9 +1,6 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use crypto::{
-    hash::Sha256ConcurrentFileHasher,
-    traits::{Computable, ConcurrentComputable},
-};
+use crypto::{hash::Sha256ConcurrentFileHasher, traits::ConcurrentComputable};
 
 use crate::common::{clean_tests_path, generate_plaintext_with_content, init_test_path};
 
@@ -23,7 +20,7 @@ const TESTS_PATH: &str = "./hashes_tests/";
 // }
 
 #[tokio::test]
-async fn empty_files() {
+async fn empty_equal_files() {
     init_test_path(TESTS_PATH);
 
     let mut paths = Vec::new();
@@ -38,6 +35,14 @@ async fn empty_files() {
     }
 
     let concurrent = Sha256ConcurrentFileHasher::try_new(&paths).unwrap();
+    let results = concurrent.start_all().await;
+
+    for result in results {
+        assert_eq!(
+            result.as_hex(),
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
+    }
 
     clean_tests_path(TESTS_PATH);
 }
