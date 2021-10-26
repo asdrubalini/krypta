@@ -1,10 +1,10 @@
 use std::{
     fmt::Debug,
+    io,
     path::{Path, PathBuf},
 };
 
 use crate::{
-    error::{CryptoError, CryptoResult},
     traits::{Computable, ConcurrentComputable},
     BUFFER_SIZE,
 };
@@ -52,15 +52,21 @@ pub struct Sha256FileHasher {
 
 impl Sha256FileHasher {
     /// Build a new SingleSha256 instance with file's source_path
-    pub fn try_new<P: AsRef<Path>>(source_path: P) -> CryptoResult<Self> {
+    pub fn try_new<P: AsRef<Path>>(source_path: P) -> anyhow::Result<Self> {
         let source_path = source_path.as_ref();
         let source_path_buf = source_path.to_path_buf();
 
         // Error out if source path does not exists or if is a directory
         if !source_path.exists() {
-            return Err(CryptoError::SourceFileNotFound(source_path_buf));
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                source_path.as_os_str().to_str().unwrap(),
+            ))?;
         } else if source_path.is_dir() {
-            return Err(CryptoError::SourceFileIsAPath(source_path_buf));
+            return Err(io::Error::new(
+                io::ErrorKind::IsADirectory,
+                source_path.as_os_str().to_str().unwrap(),
+            ))?;
         }
 
         Ok(Self {
@@ -73,10 +79,8 @@ impl Sha256FileHasher {
 impl Computable for Sha256FileHasher {
     type Output = Sha256Hash;
 
-    async fn start(self) -> CryptoResult<Self::Output> {
-        let file_input = File::open(&self.source_path)
-            .await
-            .or(Err(CryptoError::SourceFileNotFound(self.source_path)))?;
+    async fn start(self) -> anyhow::Result<Self::Output> {
+        let file_input = File::open(&self.source_path).await?;
 
         // Source file reader
         let mut reader_input = BufReader::new(file_input);
@@ -112,7 +116,7 @@ pub struct Sha256ConcurrentFileHasher {
 }
 
 impl Sha256ConcurrentFileHasher {
-    pub fn try_new<P: AsRef<Path>>(source_paths: &[P]) -> CryptoResult<Self> {
+    pub fn try_new<P: AsRef<Path>>(source_paths: &[P]) -> anyhow::Result<Self> {
         let mut hashers = Vec::new();
 
         for source_path in source_paths {
@@ -134,7 +138,7 @@ impl ConcurrentComputable for Sha256ConcurrentFileHasher {
     }
 
     fn computable_result_to_output(
-        result: CryptoResult<<Self::Computables as Computable>::Output>,
+        result: anyhow::Result<<Self::Computables as Computable>::Output>,
     ) -> Self::Output {
         result.unwrap()
     }

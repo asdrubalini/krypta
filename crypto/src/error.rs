@@ -1,14 +1,18 @@
-use std::path::PathBuf;
-
-pub type CryptoResult<T> = Result<T, CryptoError>;
+use std::{error::Error, fmt::Display};
 
 #[derive(Debug)]
-pub enum CryptoError {
+pub enum SodiumOxideError {
+    InitPull,
+    InitPush,
+    Pull,
+    Push,
     InvalidKeyLength,
-    SourceFileNotFound(PathBuf),
-    SourceFileIsAPath(PathBuf),
-    CannotCreateDestinationFile(std::io::Error),
-    FileWriteError(std::io::Error),
-    FileReadError(std::io::Error),
-    SodiumOxideError,
 }
+
+impl Display for SodiumOxideError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl Error for SodiumOxideError {}

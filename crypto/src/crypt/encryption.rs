@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    error::{CryptoError, CryptoResult},
+    error::SodiumOxideError,
     traits::{Computable, ConcurrentComputable},
     BUFFER_SIZE,
 };
@@ -26,8 +26,8 @@ impl FileEncryptor {
         source_path: P,
         destination_path: P,
         key: &[u8; 32],
-    ) -> CryptoResult<FileEncryptor> {
-        let key = Key::from_slice(key).ok_or(CryptoError::InvalidKeyLength)?;
+    ) -> anyhow::Result<FileEncryptor> {
+        let key = Key::from_slice(key).ok_or(SodiumOxideError::InvalidKeyLength)?;
 
         Ok(FileEncryptor {
             source_path: source_path.as_ref().to_path_buf(),
@@ -42,19 +42,15 @@ impl Computable for FileEncryptor {
     type Output = ();
 
     /// Try to encrypt a file as specified in struct
-    async fn start(self) -> CryptoResult<Self::Output> {
+    async fn start(self) -> anyhow::Result<Self::Output> {
         let (mut encryption_stream, header) =
-            Stream::init_push(&self.key).map_err(|_| CryptoError::SodiumOxideError)?;
+            Stream::init_push(&self.key).map_err(|_| SodiumOxideError::InitPush)?;
 
         // The file we are trying to encrypt
-        let file_input = File::open(&self.source_path)
-            .await
-            .map_err(|_| CryptoError::SourceFileNotFound(self.source_path))?;
+        let file_input = File::open(&self.source_path).await?;
 
         // The encrypted file
-        let file_output = File::create(&self.destination_path)
-            .await
-            .map_err(CryptoError::CannotCreateDestinationFile)?;
+        let file_output = File::create(&self.destination_path).await?;
 
         // Source file reader
         let mut reader_input = BufReader::new(file_input);
@@ -64,10 +60,7 @@ impl Computable for FileEncryptor {
         let mut writer_output = BufWriter::new(file_output);
 
         // Write header to file
-        writer_output
-            .write_all(&header.0)
-            .await
-            .map_err(CryptoError::FileWriteError)?;
+        writer_output.write_all(&header.0).await?;
 
         // Read -> Encrypt -> Write loop
         while let Ok(size) = reader_input.read_buf(&mut buffer_input).await {
@@ -84,21 +77,15 @@ impl Computable for FileEncryptor {
             // Encrypt
             let result = encryption_stream
                 .push(&buffer_input, None, Tag::Message)
-                .map_err(|_| CryptoError::SodiumOxideError)?;
+                .map_err(|_| SodiumOxideError::Push)?;
 
             // Write to output buffer
-            writer_output
-                .write_all(&result)
-                .await
-                .map_err(CryptoError::FileWriteError)?;
+            writer_output.write_all(&result).await?;
 
             buffer_input.clear();
         }
 
-        writer_output
-            .flush()
-            .await
-            .map_err(CryptoError::FileWriteError)?;
+        writer_output.flush().await?;
 
         Ok(())
     }
@@ -110,7 +97,7 @@ pub struct FileConcurrentEncryptor {
 }
 
 impl FileConcurrentEncryptor {
-    pub fn try_new<P: AsRef<Path>>(source_paths: &[P]) -> CryptoResult<Self> {
+    pub fn try_new<P: AsRef<Path>>(source_paths: &[P]) -> anyhow::Result<Self> {
         let mut encryptors = Vec::new();
 
         todo!();
@@ -133,7 +120,7 @@ impl ConcurrentComputable for FileConcurrentEncryptor {
     }
 
     fn computable_result_to_output(
-        result: CryptoResult<<Self::Computables as Computable>::Output>,
+        result: anyhow::Result<<Self::Computables as Computable>::Output>,
     ) -> Self::Output {
         result.is_ok()
     }
