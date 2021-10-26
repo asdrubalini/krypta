@@ -20,7 +20,7 @@ pub trait ConcurrentComputable {
     type Output: Send;
 
     /// Get a Vec of `Computable`s
-    fn computables(&self) -> Vec<Self::Computables>;
+    fn computables(&mut self) -> Vec<Self::Computables>;
 
     /// Map each `Computable` Result to an output
     fn computable_result_to_output(
@@ -28,7 +28,7 @@ pub trait ConcurrentComputable {
     ) -> Self::Output;
 
     /// Start Computable action in a concurrent manner
-    async fn start_all(&self) -> Vec<Self::Output> {
+    async fn start_all(&mut self) -> Vec<Self::Output> {
         let cpus_count = num_cpus::get();
         let semaphore = Arc::new(Semaphore::new(cpus_count));
 

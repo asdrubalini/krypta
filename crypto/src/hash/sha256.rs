@@ -108,7 +108,7 @@ impl Computable for Sha256FileHasher {
 
 #[derive(Debug, Clone)]
 pub struct Sha256ConcurrentFileHasher {
-    hashers: Vec<Sha256FileHasher>,
+    hashers: Option<Vec<Sha256FileHasher>>,
 }
 
 impl Sha256ConcurrentFileHasher {
@@ -119,7 +119,9 @@ impl Sha256ConcurrentFileHasher {
             hashers.push(Sha256FileHasher::try_new(source_path)?);
         }
 
-        Ok(Self { hashers })
+        Ok(Self {
+            hashers: Some(hashers),
+        })
     }
 }
 
@@ -127,8 +129,8 @@ impl ConcurrentComputable for Sha256ConcurrentFileHasher {
     type Computables = Sha256FileHasher;
     type Output = Sha256Hash;
 
-    fn computables(&self) -> Vec<Self::Computables> {
-        self.hashers.clone()
+    fn computables(&mut self) -> Vec<Self::Computables> {
+        self.hashers.take().expect("Cannot take computables")
     }
 
     fn computable_result_to_output(

@@ -110,7 +110,7 @@ impl Computable for FileDecryptor {
 
 #[derive(Debug, Clone)]
 pub struct FileConcurrentDecryptor {
-    decryptors: Vec<FileDecryptor>,
+    decryptors: Option<Vec<FileDecryptor>>,
 }
 
 impl FileConcurrentDecryptor {
@@ -121,7 +121,9 @@ impl FileConcurrentDecryptor {
         // encryptors.push(FileEncryptor::try_new(source_path)?);
         // }
 
-        Ok(Self { decryptors })
+        Ok(Self {
+            decryptors: Some(decryptors),
+        })
     }
 }
 
@@ -129,8 +131,8 @@ impl ConcurrentComputable for FileConcurrentDecryptor {
     type Computables = FileDecryptor;
     type Output = bool;
 
-    fn computables(&self) -> Vec<Self::Computables> {
-        self.decryptors.clone()
+    fn computables(&mut self) -> Vec<Self::Computables> {
+        self.decryptors.take().expect("Cannot take computables")
     }
 
     fn computable_result_to_output(
