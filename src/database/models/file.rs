@@ -19,7 +19,7 @@ pub struct File {
     pub is_remote: bool,
     pub is_encrypted: bool,
     pub random_hash: String,
-    pub contents_hash: Option<String>,
+    pub contents_hash: String,
     pub size: u64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -58,7 +58,7 @@ impl File {
         path: PathBuf,
         is_remote: bool,
         is_encrypted: bool,
-        contents_hash: Option<String>,
+        contents_hash: String,
         size: u64,
     ) -> Self {
         let random_hash = File::pseudorandom_sha256_string();
@@ -113,7 +113,7 @@ impl Insertable<File> for File {
             .bind(file.is_remote)
             .bind(file.is_encrypted)
             .bind(file.random_hash)
-            .bind(file.contents_hash.expect("File's contents_hash is None"))
+            .bind(file.contents_hash)
             .bind(BigIntAsBlob::from_u64(&file.size))
             .bind(file.created_at)
             .bind(file.updated_at)
@@ -136,7 +136,7 @@ impl Insertable<File> for File {
                 .bind(file.is_remote)
                 .bind(file.is_encrypted)
                 .bind(file.random_hash)
-                .bind(file.contents_hash.expect("File's contents_hash is None"))
+                .bind(file.contents_hash)
                 .bind(BigIntAsBlob::from_u64(&file.size))
                 .bind(file.created_at)
                 .bind(file.updated_at)
@@ -195,22 +195,40 @@ impl File {
 
         Ok(files.0)
     }
+}
 
-    pub fn set_contents_hash(&mut self, hash: String) {
-        self.contents_hash = Some(hash);
+pub struct MetadataFile {
+    pub title: String,
+    pub path: PathBuf,
+    pub is_remote: bool,
+    pub is_encrypted: bool,
+    pub size: u64,
+}
+
+/// Convert &Metadata into a MetadataFile
+impl From<&Metadata> for MetadataFile {
+    fn from(metadata: &Metadata) -> Self {
+        MetadataFile {
+            title: metadata.path.to_string_lossy().to_string(),
+            path: metadata.path,
+            is_remote: false,
+            is_encrypted: false,
+            size: metadata.size_or_default(),
+        }
     }
 }
 
-/// Convert &Metadata into a File
-impl From<&Metadata> for File {
-    fn from(metadata: &Metadata) -> Self {
+impl MetadataFile {
+    /// Converts a `MetadataFile` into a `File` with some additional fields that are
+    /// not present in a `Metadata` struct
+    pub fn into_file(self, contents_hash: String) -> File {
         File::new(
-            metadata.path.to_string_lossy().to_string(),
-            metadata.path.clone(),
-            false,
-            false,
-            None,
-            metadata.size_or_default(),
+            self.title,
+            self.path,
+            self.is_remote,
+            self.is_encrypted,
+            contents_hash,
+            self.size,
         )
     }
 }
@@ -248,7 +266,7 @@ mod tests {
             PathBuf::from("/path/to/foo7bar"),
             false,
             false,
-            Some("asdas".to_string()),
+            "asdas".to_string(),
             0,
         );
 
@@ -259,7 +277,7 @@ mod tests {
             PathBuf::from("/path/to/foo7bar"),
             false,
             false,
-            Some("bfsdfb".to_string()),
+            "bfsdfb".to_string(),
             0,
         );
 
@@ -275,7 +293,7 @@ mod tests {
             PathBuf::from("/path/to/foo/bar"),
             false,
             false,
-            Some("sdadfb".to_string()),
+            "sdadfb".to_string(),
             0,
         );
 
@@ -303,7 +321,7 @@ mod tests {
                     PathBuf::from(format!("/path/to/foo/bar/{}", i)),
                     false,
                     false,
-                    Some(format!("test_hash_placeholder_{}", i)),
+                    format!("test_hash_placeholder_{}", i),
                     0,
                 )
             })
@@ -326,7 +344,7 @@ mod tests {
             PathBuf::from("/path/to/foo/bar"),
             false,
             false,
-            Some("test_hash_placeholder".to_string()),
+            "test_hash_placeholder".to_string(),
             64,
         );
 
@@ -349,7 +367,7 @@ mod tests {
                     PathBuf::from(format!("/path/to/foo/bar/{}", i)),
                     false,
                     false,
-                    Some(format!("test_hash_placeholder_{}", i)),
+                    format!("test_hash_placeholder_{}", i),
                     1_u64.pow(10), // 10 GB
                 )
             })
@@ -377,7 +395,7 @@ mod tests {
                     PathBuf::from(format!("/path/to/foo/bar/{}", i)),
                     false,
                     false,
-                    Some(format!("test_hash_placeholder_{}", i)),
+                    format!("test_hash_placeholder_{}", i),
                     0,
                 )
             })
@@ -388,22 +406,5 @@ mod tests {
 
         let archive_count = File::count(&database).await.unwrap();
         assert_eq!(archive_count, 8192);
-    }
-
-    #[tokio::test]
-    #[should_panic]
-    async fn test_insert_file_with_none_contents_hash() {
-        let database = create_in_memory().await.unwrap();
-
-        let file1 = File::new(
-            "foobar".to_string(),
-            PathBuf::from("/path/to/foo/bar"),
-            false,
-            false,
-            None,
-            0,
-        );
-
-        File::insert(&database, file1).await.unwrap();
     }
 }

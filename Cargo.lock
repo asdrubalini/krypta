@@ -2303,11 +2303,13 @@ dependencies = [
 name = "vault-manager"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "byte-unit",
  "byteorder",
  "chrono",
  "clap",
+ "crypto",
  "dotenv",
  "log",
  "metadata-fs",

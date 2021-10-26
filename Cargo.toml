@@ -11,8 +11,9 @@ members = [
 
 [dependencies]
 metadata-fs = { version = "0.1.0", path = "./metadata-fs" }
+crypto = { version = "0.1.0", path = "./crypto" }
 
-tokio = { version = "1", features = [ "macros" ] }
+tokio = { version = "1", features = [ "macros", "rt" ] }
 sqlx = { version = "0.5", features = [ "sqlite", "runtime-tokio-rustls", "chrono" ] }
 
 serde = { version = "1", features = [ "derive" ] }
@@ -34,3 +35,4 @@ clap = "2.33"
 async-trait = "0.1"
 byte-unit = "4"
 byteorder = "1"
+anyhow = "1.0"

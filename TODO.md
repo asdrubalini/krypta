@@ -1,4 +1,5 @@
 # Major TODOs
+- Decide if sync should detect deleted files (probably not, deletion should happen manually)
 - Mechanism than can detect file changes based on file's date and time modification (and then fallback to SHA-256)
 - Add file's fs last modification time in database schema
 - Add file's SHA-256 in database schema

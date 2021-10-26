@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use crypto::{hash::Sha256ConcurrentFileHasher, traits::ConcurrentComputable};
 use metadata_fs::{MetadataCollection, PathFinder};
 use tokio::task::JoinError;
 
@@ -21,7 +22,7 @@ pub struct SyncReport {
     pub processed_files: usize,
 }
 
-/// Adds missing fields into database according to source folder
+/// Adds missing files into database according to source folder
 pub async fn sync_database_from_source_path(
     database: &Database,
     source_path: &PathBuf,
@@ -52,17 +53,24 @@ pub async fn sync_database_from_source_path(
     // Filter out only files that needs to be added to the database
     path_finder.filter_paths(&database_paths);
 
+    // Start computing new file's hashes
+    let mut hasher = Sha256ConcurrentFileHasher::try_new(&path_finder.paths).unwrap();
+    let hashes_join = tokio::task::spawn(async move { hasher.start_all().await });
+
     // Build a MetadataCollection from PathFinder
     let paths_with_metadata = MetadataCollection::from_path_finder(path_finder).await;
 
     // Finally build File(s) from MetadataCollection
-    let files_to_insert: Vec<models::File> = paths_with_metadata
+    let files_to_insert = paths_with_metadata
         .metadatas
         .iter()
-        .map(|metadata| models::File::from(metadata))
-        .collect();
+        .map(|metadata| models::MetadataFile::from(metadata));
 
-    // TODO: compute hashes and start adding to file
+    let hashes = hashes_join.await.unwrap();
+
+    let files_to_insert: Vec<models::File> = files_to_insert
+        .map(|file| file.into_file("".to_string()))
+        .collect();
 
     log::trace!("Start adding to database");
 
