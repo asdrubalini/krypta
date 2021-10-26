@@ -22,7 +22,7 @@ pub struct FileDecryptor {
 }
 
 impl FileDecryptor {
-    fn try_new<P: AsRef<Path>>(
+    pub fn try_new<P: AsRef<Path>>(
         source_path: P,
         destination_path: P,
         key: &[u8; 32],
