@@ -1,3 +1,9 @@
+/// PathFinder is a module that is able to, given a source_directory, recursively find files
+/// and strip the host-specific bits from them, obtaining something that can be safely inserted into
+/// a database
+///
+/// `CuttablePathBuf` is a structure that holds a single full path and a `cut_index`, and can provide
+/// both relative and absolute paths when needed.
 use std::path::{Path, PathBuf};
 
 use walkdir::WalkDir;
@@ -10,7 +16,9 @@ pub struct CuttablePathBuf {
     cut_index: usize,
 }
 
+// TODO: check if we can return absolute and relatives referencing self.path without allocation
 impl CuttablePathBuf {
+    /// Build a CuttablePathBuf from a Path-like and a cut_index
     pub fn from_path<P: AsRef<Path>>(path: P, cut_index: usize) -> Self {
         Self {
             cut_index,
@@ -18,16 +26,18 @@ impl CuttablePathBuf {
         }
     }
 
+    /// Gets the absolute path
     pub fn get_absolute(&self) -> PathBuf {
         self.path.clone()
     }
 
+    /// Gets the relative path
     pub fn get_relative(&self) -> PathBuf {
         self.path.iter().skip(self.cut_index).collect::<PathBuf>()
     }
 }
 
-/// Holds the information about the absolute path and all the found files
+/// Holds the information about the found files (paths are excluded)
 pub struct PathFinder {
     pub paths: Vec<CuttablePathBuf>,
 }
