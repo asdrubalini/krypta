@@ -1,5 +1,6 @@
 # Major TODOs
 - Switch to anyhow in the main crate
+- Move main crate into its own `vault-manager`
 - ConcurrentComputable should return an HashMap
 - Mechanism than can detect file changes based on file's date and time modification (and then fallback to SHA-256)
 - Add file's fs last modification time in database schema
