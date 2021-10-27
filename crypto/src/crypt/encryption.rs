@@ -112,16 +112,21 @@ impl FileConcurrentEncryptor {
 }
 
 impl ConcurrentComputable for FileConcurrentEncryptor {
-    type Computables = FileEncryptor;
+    type Computable = FileEncryptor;
     type Output = bool;
+    type Key = PathBuf;
 
-    fn computables(&mut self) -> Vec<Self::Computables> {
+    fn computables(&mut self) -> Vec<Self::Computable> {
         self.encryptors.take().expect("Cannot take computables")
     }
 
     fn computable_result_to_output(
-        result: anyhow::Result<<Self::Computables as Computable>::Output>,
+        result: anyhow::Result<<Self::Computable as Computable>::Output>,
     ) -> Self::Output {
         result.is_ok()
+    }
+
+    fn computable_to_key(computable: &<Self as ConcurrentComputable>::Computable) -> Self::Key {
+        computable.source_path.clone()
     }
 }

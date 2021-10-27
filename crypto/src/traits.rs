@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use async_trait::async_trait;
 use tokio::sync::Semaphore;
@@ -14,19 +14,23 @@ pub trait Computable {
 /// Provide the ability to execute multiple `Computable` objects at once
 #[async_trait]
 pub trait ConcurrentComputable {
-    type Computables: Computable + Send + 'static;
+    type Computable: Computable + Send + 'static;
+    type Key: Hash + Eq + Send + 'static;
     type Output: Send;
 
     /// Get a Vec of `Computable`s
-    fn computables(&mut self) -> Vec<Self::Computables>;
+    fn computables(&mut self) -> Vec<Self::Computable>;
 
     /// Map each `Computable` Result to an output
     fn computable_result_to_output(
-        result: anyhow::Result<<<Self as ConcurrentComputable>::Computables as Computable>::Output>,
+        result: anyhow::Result<<<Self as ConcurrentComputable>::Computable as Computable>::Output>,
     ) -> Self::Output;
 
+    /// Map a computable to its key
+    fn computable_to_key(computable: &<Self as ConcurrentComputable>::Computable) -> Self::Key;
+
     /// Start Computable action in a concurrent manner
-    async fn start_all(&mut self) -> Vec<Self::Output> {
+    async fn start_all(&mut self) -> HashMap<Self::Key, Self::Output> {
         let cpus_count = num_cpus::get();
         let semaphore = Arc::new(Semaphore::new(cpus_count));
 
@@ -38,22 +42,27 @@ pub trait ConcurrentComputable {
             let permit = semaphore.clone().acquire_owned().await.unwrap();
 
             let handle = tokio::spawn(async move {
+                let key = Self::computable_to_key(&computable);
                 let result = computable.start().await;
 
                 drop(permit);
-                result
+                (key, result)
             });
 
             handles.push(handle);
         }
 
-        let mut outputs: Vec<Self::Output> = Vec::new();
+        let mut output_map: HashMap<Self::Key, Self::Output> = HashMap::new();
 
         for handle in handles {
-            let result = handle.await.unwrap();
-            outputs.push(Self::computable_result_to_output(result));
+            let task_ret = handle.await.unwrap();
+
+            let key = task_ret.0;
+            let output = Self::computable_result_to_output(task_ret.1);
+
+            output_map.insert(key, output);
         }
 
-        outputs
+        output_map
     }
 }
