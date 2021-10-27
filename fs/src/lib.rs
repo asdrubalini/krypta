@@ -6,4 +6,4 @@ mod metadata;
 pub use metadata::{Metadata, MetadataCollection};
 
 mod path_finder;
-pub use path_finder::PathFinder;
+pub use path_finder::{CuttablePathBuf, PathFinder};

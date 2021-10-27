@@ -1,16 +1,16 @@
-/// PathFinder is a module that is able to, given a source_directory, recursively find files
-/// and strip the host-specific bits from them, obtaining something that can be safely inserted into
-/// a database
+/// PathFinder is a module that is able to, given a source_directory, recursively
+/// find files and strip the host-specific bits from them, obtaining something
+/// that can be safely inserted into a database
 ///
-/// `CuttablePathBuf` is a structure that holds a single full path and a `cut_index`, and can provide
-/// both relative and absolute paths when needed.
+/// `CuttablePathBuf` is a structure that holds a single full path and a `cut_index`,
+/// and can provide both relative and absolute paths when needed.
 use std::path::{Path, PathBuf};
 
 use walkdir::WalkDir;
 
 /// This struct is used to obtain a reference to both an absolute path and a relative path, without
 /// allocating it twice and cutting with an index when necessary
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CuttablePathBuf {
     path: PathBuf,
     cut_index: usize,
@@ -43,14 +43,7 @@ pub struct PathFinder {
 }
 
 impl PathFinder {
-    pub fn absolute_paths(&self) -> Vec<PathBuf> {
-        self.paths
-            .iter()
-            .map(|path| path.get_absolute().to_owned())
-            .collect()
-    }
-
-    /// Build a PathFinder instance and populate it with paths from absolute_source_path
+    /// Build a PathFinder instance and populate it with file paths from absolute_source_path
     pub fn with_source_path<P: AsRef<Path>>(absolute_source_path: P) -> Self {
         let absolute_source_path = absolute_source_path.as_ref();
 
@@ -74,8 +67,8 @@ impl PathFinder {
         Self { paths }
     }
 
-    /// Filter paths based on `path_to_filter`, mutating the struct
-    pub fn filter_paths(&mut self, paths_to_filter: &[PathBuf]) {
+    /// Filter out paths based on `path_to_filter`, mutating the struct
+    pub fn filter_out_paths(&mut self, paths_to_filter: &[PathBuf]) {
         let filtered_paths = self
             .paths
             .iter()
@@ -84,42 +77,5 @@ impl PathFinder {
             .collect();
 
         self.paths = filtered_paths;
-    }
-}
-
-mod tests {
-    use std::{
-        fs::{create_dir, remove_dir_all, File},
-        path::Path,
-    };
-
-    use crate::PathFinder;
-
-    fn populate_tests_dir(tests_path: &Path, files_count: usize) {
-        create_dir(tests_path);
-
-        for i in 0..files_count {
-            let mut path = tests_path.to_owned();
-            path.push(format!("{}.txt", i));
-
-            let mut f = File::create(path).unwrap();
-        }
-    }
-
-    fn destroy_tests_dir(tests_path: &Path) {
-        remove_dir_all(tests_path);
-    }
-
-    #[test]
-    fn test_find_paths() {
-        let tests_path = Path::new("./path-finder-tests/");
-        let files_count = 256;
-        populate_tests_dir(tests_path, files_count);
-
-        let path_finder = PathFinder::with_source_path(tests_path);
-
-        assert_eq!(path_finder.absolute_paths().len(), files_count);
-
-        destroy_tests_dir(tests_path);
     }
 }

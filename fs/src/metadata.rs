@@ -1,31 +1,35 @@
-use std::{path::PathBuf, sync::Arc};
+/// Metadata is a module that allows to fetch metadata details from the filesystem such as file size
+/// and file's modified date. This is usually used in pair with PathFinder
+use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use tokio::{fs::File, sync::Semaphore};
 
-use crate::{PathFinder, MAX_CONCURRENT_FILE_OPERATIONS};
+use crate::{path_finder::CuttablePathBuf, PathFinder, MAX_CONCURRENT_FILE_OPERATIONS};
 
+/// Holds a single file's Metadata
 #[derive(Clone, Debug)]
-pub struct Metadata {
+pub struct Metadata<'a> {
     // The actual Path
-    pub path: PathBuf,
+    pub path: &'a CuttablePathBuf,
     // Optional file size, if found
     pub size: Option<u64>,
     // Optional modified_at, if found
     pub modified_at: Option<DateTime<Utc>>,
 }
 
-impl From<&PathBuf> for Metadata {
-    fn from(path: &PathBuf) -> Self {
+// TODO: maybe don't allocate here
+impl<'a> From<&CuttablePathBuf> for Metadata<'a> {
+    fn from(cuttable_path_buf: &CuttablePathBuf) -> Self {
         Self {
-            path: path.clone(),
+            path: cuttable_path_buf,
             size: None,
             modified_at: None,
         }
     }
 }
 
-impl Metadata {
+impl<'a> Metadata<'a> {
     /// Retrieve self.size or get default value in case it is not available
     pub fn size_or_default(&self) -> u64 {
         self.size.unwrap_or(0)
@@ -37,13 +41,16 @@ impl Metadata {
     }
 
     /// Try fs access and update fields if needed
-    async fn try_update_fields(&mut self, absolute_source_path: PathBuf) -> anyhow::Result<()> {
+    async fn try_update_fields(
+        &mut self,
+        cuttable_path_buf: &CuttablePathBuf,
+    ) -> anyhow::Result<()> {
         // Don't waste time if fs access is not required
         if self.size.is_some() && self.modified_at.is_some() {
             return Ok(());
         }
 
-        let file = File::open(absolute_source_path).await?;
+        let file = File::open(cuttable_path_buf.get_absolute()).await?;
         let metadata = file.metadata().await?;
 
         if self.size.is_none() {
@@ -61,7 +68,6 @@ impl Metadata {
 }
 
 pub struct MetadataCollection {
-    absolute_source_path: PathBuf,
     pub metadatas: Vec<Metadata>,
 }
 
@@ -81,7 +87,7 @@ impl MetadataCollection {
                 let relative_path = path.get_relative();
 
                 let mut metadata = Metadata::from(&path);
-                match metadata.try_update_fields(absolute_source_path).await {
+                match metadata.try_update_fields(&path).await {
                     Ok(_) => (),
                     Err(err) => print!("Metadata error: {:?}", err),
                 };
@@ -98,9 +104,6 @@ impl MetadataCollection {
             metadatas.push(handle.await.unwrap());
         }
 
-        Self {
-            absolute_source_path,
-            metadatas,
-        }
+        Self { metadatas }
     }
 }

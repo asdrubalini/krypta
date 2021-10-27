@@ -605,6 +605,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fs"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "rand",
+ "tokio 1.11.0",
+ "walkdir",
+]
+
+[[package]]
 name = "fuchsia-zircon"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1091,17 +1102,6 @@ name = "memchr"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "308cc39be01b73d0d18f82a0e7b2a3df85245f84af96fdddc5d202d27e47b86a"
-
-[[package]]
-name = "metadata-fs"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "rand",
- "tokio 1.11.0",
- "walkdir",
-]
 
 [[package]]
 name = "mime"
@@ -2311,8 +2311,8 @@ dependencies = [
  "clap",
  "crypto",
  "dotenv",
+ "fs",
  "log",
- "metadata-fs",
  "pretty_env_logger",
  "rand",
  "rust-s3",

@@ -3,7 +3,7 @@ use std::{
     path::Path,
 };
 
-use metadata_fs::{MetadataCollection, PathFinder};
+use fs::{MetadataCollection, PathFinder};
 
 mod common;
 
