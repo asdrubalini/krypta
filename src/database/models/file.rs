@@ -210,7 +210,7 @@ impl From<&Metadata> for MetadataFile {
     fn from(metadata: &Metadata) -> Self {
         MetadataFile {
             title: metadata.path.to_string_lossy().to_string(),
-            path: metadata.path,
+            path: metadata.path.clone(),
             is_remote: false,
             is_encrypted: false,
             size: metadata.size_or_default(),

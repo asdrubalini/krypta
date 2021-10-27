@@ -39,7 +39,6 @@ pub async fn sync_database_from_source_path(
     };
 
     log::trace!("Start finding local files");
-    // let local_paths = find_paths_relative(&full_source_path);
     let mut path_finder = PathFinder::with_source_path(&absolute_source_path);
 
     log::trace!("Done with finding local files");
@@ -54,7 +53,8 @@ pub async fn sync_database_from_source_path(
     path_finder.filter_paths(&database_paths);
 
     // Start computing new file's hashes
-    let mut hasher = Sha256ConcurrentFileHasher::try_new(&path_finder.paths).unwrap();
+    // TODO: handle errors with something other than unwrap
+    let mut hasher = Sha256ConcurrentFileHasher::try_new(&path_finder.absolute_paths()).unwrap();
     let hashes_join = tokio::task::spawn(async move { hasher.start_all().await });
 
     // Build a MetadataCollection from PathFinder
@@ -69,7 +69,10 @@ pub async fn sync_database_from_source_path(
     let hashes = hashes_join.await.unwrap();
 
     let files_to_insert: Vec<models::File> = files_to_insert
-        .map(|file| file.into_file("".to_string()))
+        .map(|file| {
+            let hash = hashes.get(&file.path).unwrap();
+            file.into_file(hash.as_hex())
+        })
         .collect();
 
     log::trace!("Start adding to database");

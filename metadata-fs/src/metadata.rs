@@ -68,17 +68,17 @@ pub struct MetadataCollection {
 impl MetadataCollection {
     /// Build MetadataCollection instance from a PathFinder instance populating some fields
     pub async fn from_path_finder(path_finder: PathFinder) -> Self {
-        let absolute_source_path = path_finder.absolute_source_path.clone();
+        // let absolute_source_path = path_finder.absolute_source_path.clone();
 
         let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_FILE_OPERATIONS));
         let mut handles = Vec::new();
 
         for path in path_finder.paths {
-            let mut absolute_source_path = absolute_source_path.clone();
+            // let mut absolute_source_path = absolute_source_path.clone();
             let permit = semaphore.clone().acquire_owned().await.unwrap();
 
             let handle = tokio::spawn(async move {
-                absolute_source_path.push(&path);
+                let relative_path = path.get_relative();
 
                 let mut metadata = Metadata::from(&path);
                 match metadata.try_update_fields(absolute_source_path).await {
