@@ -9,9 +9,9 @@ use crate::{path_finder::CuttablePathBuf, PathFinder, MAX_CONCURRENT_FILE_OPERAT
 
 /// Holds a single file's Metadata
 #[derive(Clone, Debug)]
-pub struct Metadata<'a> {
+pub struct Metadata {
     // The actual Path
-    pub path: &'a CuttablePathBuf,
+    pub path: CuttablePathBuf,
     // Optional file size, if found
     pub size: Option<u64>,
     // Optional modified_at, if found
@@ -19,17 +19,17 @@ pub struct Metadata<'a> {
 }
 
 // TODO: maybe don't allocate here
-impl<'a> From<&CuttablePathBuf> for Metadata<'a> {
+impl From<&CuttablePathBuf> for Metadata {
     fn from(cuttable_path_buf: &CuttablePathBuf) -> Self {
         Self {
-            path: cuttable_path_buf,
+            path: cuttable_path_buf.clone(),
             size: None,
             modified_at: None,
         }
     }
 }
 
-impl<'a> Metadata<'a> {
+impl Metadata {
     /// Retrieve self.size or get default value in case it is not available
     pub fn size_or_default(&self) -> u64 {
         self.size.unwrap_or(0)
@@ -41,16 +41,13 @@ impl<'a> Metadata<'a> {
     }
 
     /// Try fs access and update fields if needed
-    async fn try_update_fields(
-        &mut self,
-        cuttable_path_buf: &CuttablePathBuf,
-    ) -> anyhow::Result<()> {
+    async fn try_update_fields(&mut self) -> anyhow::Result<()> {
         // Don't waste time if fs access is not required
         if self.size.is_some() && self.modified_at.is_some() {
             return Ok(());
         }
 
-        let file = File::open(cuttable_path_buf.get_absolute()).await?;
+        let file = File::open(self.cuttable_path_buf.get_absolute()).await?;
         let metadata = file.metadata().await?;
 
         if self.size.is_none() {
@@ -67,6 +64,7 @@ impl<'a> Metadata<'a> {
     }
 }
 
+/// A collection of Metadata objects
 pub struct MetadataCollection {
     pub metadatas: Vec<Metadata>,
 }
@@ -80,7 +78,6 @@ impl MetadataCollection {
         let mut handles = Vec::new();
 
         for path in path_finder.paths {
-            // let mut absolute_source_path = absolute_source_path.clone();
             let permit = semaphore.clone().acquire_owned().await.unwrap();
 
             let handle = tokio::spawn(async move {
