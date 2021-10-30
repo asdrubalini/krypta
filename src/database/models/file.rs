@@ -1,7 +1,6 @@
-use std::path::PathBuf;
+use std::{fs::Metadata, path::PathBuf};
 
 use async_trait::async_trait;
-use metadata_fs::Metadata;
 use rand::Rng;
 use sqlx::{
     sqlite::SqliteRow,

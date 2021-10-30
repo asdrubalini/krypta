@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use crypto::{hash::Sha256ConcurrentFileHasher, traits::ConcurrentComputable};
-use metadata_fs::{MetadataCollection, PathFinder};
+use fs::PathFinder;
 use tokio::task::JoinError;
 
 use crate::database::{
@@ -39,7 +39,7 @@ pub async fn sync_database_from_source_path(
     };
 
     log::trace!("Start finding local files");
-    let mut path_finder = PathFinder::with_source_path(&absolute_source_path);
+    let mut path_finder = PathFinder::from_source_path(&absolute_source_path);
 
     log::trace!("Done with finding local files");
 
@@ -50,18 +50,15 @@ pub async fn sync_database_from_source_path(
         .map_err(SyncError::DatabaseError)?;
 
     // Filter out only files that needs to be added to the database
-    path_finder.filter_paths(&database_paths);
+    path_finder.filter_out_paths(&database_paths);
 
     // Start computing new file's hashes
     // TODO: handle errors with something other than unwrap
     let mut hasher = Sha256ConcurrentFileHasher::try_new(&path_finder.absolute_paths()).unwrap();
     let hashes_join = tokio::task::spawn(async move { hasher.start_all().await });
 
-    // Build a MetadataCollection from PathFinder
-    let paths_with_metadata = MetadataCollection::from_path_finder(path_finder).await;
-
     // Finally build File(s) from MetadataCollection
-    let files_to_insert = paths_with_metadata
+    let files_to_insert = path_finder
         .metadatas
         .iter()
         .map(|metadata| models::MetadataFile::from(metadata));
