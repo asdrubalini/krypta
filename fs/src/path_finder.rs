@@ -4,92 +4,96 @@
 ///
 /// `CuttablePathBuf` is a structure that holds a single full path and a `cut_index`,
 /// and can provide both relative and absolute paths when needed.
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    fs::Metadata,
+    hash::Hash,
+    path::{Path, PathBuf},
+};
 
 use walkdir::WalkDir;
 
-/// This struct is used to obtain a reference to both an absolute path and a relative path, without
-/// allocating it twice and cutting with an index when necessary
-#[derive(Clone, Debug)]
-pub struct CuttablePathBuf<'a> {
-    absolute_source_path: &'a Path,
-    relative_path: PathBuf,
+/// A relative Path which can also be turned into an absolute Path
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RelativePath<'a> {
+    source_path: &'a Path,
+    relative_file_path: PathBuf,
 }
 
-impl CuttablePathBuf {
+impl<'a> Hash for RelativePath<'a> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.relative_file_path.hash(state);
+    }
+}
+
+impl<'a> RelativePath<'a> {
     /// Build a CuttablePathBuf from a Path-like and a cut_index
-    pub fn from_path<P: AsRef<Path>>(
-        absolute_source_path: P,
-        absolute_file_path: P,
-        cut_index: usize,
-    ) -> Self {
+    fn from_path<'b>(source_path: &'a Path, absolute_file_path: PathBuf, cut_index: usize) -> Self {
         let relative_file_path = absolute_file_path
-            .as_ref()
             .iter()
             .skip(cut_index)
             .collect::<PathBuf>();
 
         Self {
-            absolute_source_path,
-            relative_path,
+            source_path,
+            relative_file_path,
         }
     }
 
     /// Gets the absolute path
-    pub fn get_absolute(&self) -> &Path {
-        let ciao = self.absolute_source_path + self.relative_path;
+    pub fn get_absolute(&self) -> PathBuf {
+        let mut absolute = self.source_path.to_path_buf();
+        absolute.push(&self.relative_file_path);
+        absolute
     }
 
     /// Gets the relative path
     pub fn get_relative(&self) -> &Path {
-        &self.relative_path
+        &self.relative_file_path
     }
 }
 
 /// Holds the information about the found files (paths are excluded)
 #[derive(Debug)]
-pub struct PathFinder {
-    absolute_source_path: PathBuf,
-    pub paths: Vec<CuttablePathBuf>,
+pub struct PathFinder<'a> {
+    source_path: &'a PathBuf,
+    pub metadatas: HashMap<RelativePath<'a>, Metadata>,
 }
 
-impl PathFinder {
+impl<'a> PathFinder<'a> {
     /// Build a PathFinder instance and populate it with file paths from absolute_source_path
-    pub fn with_source_path<P: AsRef<Path>>(absolute_source_path: P) -> Self {
-        let absolute_source_path = absolute_source_path.as_ref();
+    pub fn from_source_path<P: AsRef<Path>>(source_path: P) -> Self {
+        let source_path = source_path.as_ref().to_owned();
+        let cut_index = source_path.iter().peekable().count();
 
-        // /path/to/foo/bar -> 4
-        let absolute_source_path_length = absolute_source_path.iter().peekable().count();
-
-        // - Find all files in `absolute_source_path`, ignoring folders and without following links
-        // - Turn DirItem(s) into PathBuf and strip off the host-specific paths in order to
-        // have something that we can put into the database
-        let paths = WalkDir::new(absolute_source_path)
+        let metadatas = WalkDir::new(source_path)
             .follow_links(false)
             .into_iter()
-            .filter_map(|e| e.ok())
-            .filter(|e| match e.metadata() {
-                Ok(metadata) => metadata.is_file(),
-                Err(_) => true,
+            .filter_map(|res| res.ok())
+            // Map into a tuple of (RelativePath, &Metadata)
+            .map(|entry| {
+                let absolute_file_path = entry.path().to_path_buf();
+
+                let relative_path =
+                    RelativePath::from_path(source_path.as_path(), absolute_file_path, cut_index);
+                let metadata = entry.metadata().unwrap();
+
+                (relative_path, metadata)
             })
-            .map(|e| CuttablePathBuf::from_path(e.path(), absolute_source_path_length))
-            .collect();
+            // Exclude dirs
+            .filter(|(_, metadata)| metadata.is_file())
+            .collect::<HashMap<_, _>>();
 
         Self {
-            paths,
-            absolute_source_path,
+            metadatas,
+            source_path,
         }
     }
 
     /// Filter out paths based on `path_to_filter`, mutating the struct
     pub fn filter_out_paths(&mut self, paths_to_filter: &[PathBuf]) {
-        let filtered_paths = self
-            .paths
-            .iter()
-            .filter(|path| !paths_to_filter.contains(&path.get_relative().to_path_buf()))
-            .map(|path| path.to_owned())
-            .collect();
-
-        self.paths = filtered_paths;
+        for path in paths_to_filter {
+            self.metadatas.remove(path);
+        }
     }
 }

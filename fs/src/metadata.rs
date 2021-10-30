@@ -77,7 +77,7 @@ impl MetadataCollection {
         let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_FILE_OPERATIONS));
         let mut handles = Vec::new();
 
-        for path in path_finder.paths {
+        for path in path_finder.metadatas {
             let permit = semaphore.clone().acquire_owned().await.unwrap();
 
             let handle = tokio::spawn(async move {

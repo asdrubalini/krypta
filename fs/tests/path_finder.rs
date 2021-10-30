@@ -14,9 +14,9 @@ fn test_path_finder() {
 
     // common::generate_files(source_path, 128, 0);
 
-    let path_finder = PathFinder::with_source_path(source_path);
+    let path_finder = PathFinder::from_source_path(source_path);
 
-    for path in path_finder.paths {
+    for path in path_finder.metadatas {
         // assert!(path.to_string_lossy().to_string().starts_with("file_"));
         println!("{:?}", path.get_absolute());
     }
