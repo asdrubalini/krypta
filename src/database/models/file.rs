@@ -204,20 +204,18 @@ pub struct MetadataFile {
     pub size: u64,
 }
 
-/// Convert &Metadata into a MetadataFile
-impl From<&Metadata> for MetadataFile {
-    fn from(metadata: &Metadata) -> Self {
+impl MetadataFile {
+    /// Convert &Metadata into a MetadataFile
+    pub fn new(path: &PathBuf, metadata: &Metadata) -> Self {
         MetadataFile {
-            title: metadata.path.to_string_lossy().to_string(),
-            path: metadata.path.clone(),
+            title: path.to_string_lossy().to_string(),
+            path: path.clone(),
             is_remote: false,
             is_encrypted: false,
-            size: metadata.size_or_default(),
+            size: metadata.len(),
         }
     }
-}
 
-impl MetadataFile {
     /// Converts a `MetadataFile` into a `File` with some additional fields that are
     /// not present in a `Metadata` struct
     pub fn into_file(self, contents_hash: String) -> File {

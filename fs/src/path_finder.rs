@@ -7,75 +7,49 @@
 use std::{
     collections::HashMap,
     fs::Metadata,
-    hash::Hash,
     path::{Path, PathBuf},
 };
 
 use walkdir::WalkDir;
 
-/// A relative Path which can also be turned into an absolute Path
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct RelativePath<'a> {
-    source_path: &'a Path,
-    relative_file_path: PathBuf,
+/// This trait is used in order to strip the "local bits" from a PathBuf
+/// so that it can be safely inserted into the database without polluting it
+/// with host-specific folders
+trait CanonicalizeAndSkipPath<T> {
+    fn canonicalize_and_skip_n(&mut self, n: usize) -> Result<T, std::io::Error>;
 }
 
-impl<'a> Hash for RelativePath<'a> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.relative_file_path.hash(state);
-    }
-}
-
-impl<'a> RelativePath<'a> {
-    /// Build a CuttablePathBuf from a Path-like and a cut_index
-    fn from_path<'b>(source_path: &'a Path, absolute_file_path: PathBuf, cut_index: usize) -> Self {
-        let relative_file_path = absolute_file_path
-            .iter()
-            .skip(cut_index)
-            .collect::<PathBuf>();
-
-        Self {
-            source_path,
-            relative_file_path,
-        }
-    }
-
-    /// Gets the absolute path
-    pub fn get_absolute(&self) -> PathBuf {
-        let mut absolute = self.source_path.to_path_buf();
-        absolute.push(&self.relative_file_path);
-        absolute
-    }
-
-    /// Gets the relative path
-    pub fn get_relative(&self) -> &Path {
-        &self.relative_file_path
+impl CanonicalizeAndSkipPath<PathBuf> for &Path {
+    fn canonicalize_and_skip_n(&mut self, n: usize) -> Result<PathBuf, std::io::Error> {
+        Ok(self.canonicalize()?.iter().skip(n).collect::<PathBuf>())
     }
 }
 
 /// Holds the information about the found files (paths are excluded)
 #[derive(Debug)]
-pub struct PathFinder<'a> {
-    source_path: &'a PathBuf,
-    pub metadatas: HashMap<RelativePath<'a>, Metadata>,
+pub struct PathFinder {
+    source_path: PathBuf,
+    pub metadatas: HashMap<PathBuf, Metadata>,
 }
 
-impl<'a> PathFinder<'a> {
+impl PathFinder {
     /// Build a PathFinder instance and populate it with file paths from absolute_source_path
-    pub fn from_source_path<P: AsRef<Path>>(source_path: P) -> Self {
-        let source_path = source_path.as_ref().to_owned();
-        let cut_index = source_path.iter().peekable().count();
+    pub fn from_source_path<P: AsRef<Path>>(source_path: P) -> anyhow::Result<Self> {
+        let source_path = source_path.as_ref().to_owned().canonicalize()?;
+        let source_path_length = source_path.iter().peekable().count();
 
-        let metadatas = WalkDir::new(source_path)
+        let metadatas = WalkDir::new(&source_path)
             .follow_links(false)
             .into_iter()
             .filter_map(|res| res.ok())
             // Map into a tuple of (RelativePath, &Metadata)
             .map(|entry| {
-                let absolute_file_path = entry.path().to_path_buf();
+                // TODO: handle errors here
+                let relative_path = entry
+                    .path()
+                    .canonicalize_and_skip_n(source_path_length)
+                    .unwrap();
 
-                let relative_path =
-                    RelativePath::from_path(source_path.as_path(), absolute_file_path, cut_index);
                 let metadata = entry.metadata().unwrap();
 
                 (relative_path, metadata)
@@ -84,16 +58,28 @@ impl<'a> PathFinder<'a> {
             .filter(|(_, metadata)| metadata.is_file())
             .collect::<HashMap<_, _>>();
 
-        Self {
+        Ok(Self {
             metadatas,
             source_path,
-        }
+        })
     }
 
     /// Filter out paths based on `path_to_filter`, mutating the struct
-    pub fn filter_out_paths(&mut self, paths_to_filter: &[PathBuf]) {
-        for path in paths_to_filter {
+    pub fn filter_out_paths(&mut self, relative_paths_to_filter: &[PathBuf]) {
+        for path in relative_paths_to_filter {
             self.metadatas.remove(path);
         }
+    }
+
+    /// Get all paths as absolute
+    pub fn get_all_absolute_paths(&self) -> Vec<PathBuf> {
+        self.metadatas
+            .iter()
+            .map(|(path, _)| {
+                let mut absolute = self.source_path.clone();
+                absolute.push(path);
+                absolute
+            })
+            .collect()
     }
 }

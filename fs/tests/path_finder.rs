@@ -9,17 +9,17 @@ mod common;
 
 #[test]
 fn test_path_finder() {
-    let source_path = Path::new("/mnt/data");
-    // create_dir_all(source_path).unwrap();
+    let source_path = Path::new("./path_finder_tests/");
+    create_dir_all(source_path).unwrap();
 
-    // common::generate_files(source_path, 128, 0);
+    common::generate_files(source_path, 128, 0);
 
-    let path_finder = PathFinder::from_source_path(source_path);
+    let path_finder = PathFinder::from_source_path(source_path).unwrap();
 
-    for path in path_finder.metadatas {
-        // assert!(path.to_string_lossy().to_string().starts_with("file_"));
-        println!("{:?}", path.get_absolute());
+    for (path, metadata) in path_finder.metadatas {
+        assert!(path.to_string_lossy().to_string().starts_with("file_"));
+        assert_eq!(metadata.len(), 0);
     }
 
-    // remove_dir_all(source_path).unwrap();
+    remove_dir_all(source_path).unwrap();
 }
