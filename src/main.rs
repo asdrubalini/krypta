@@ -3,7 +3,6 @@ mod actions;
 mod commands;
 mod config;
 mod database;
-mod storage;
 
 use dotenv::dotenv;
 

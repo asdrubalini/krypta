@@ -1,20 +1,12 @@
 use std::path::PathBuf;
 
-use crypto::{hash::Sha256ConcurrentFileHasher, traits::ConcurrentComputable};
+use crypto::{hash::Sha256ConcurrentFileHasher, traits::ConcurrentCompute};
 use fs::PathFinder;
-use tokio::task::JoinError;
 
 use crate::database::{
     models::{self, Insertable},
     Database,
 };
-
-#[derive(Debug)]
-pub enum SyncError {
-    DatabaseError(sqlx::Error),
-    SourceFolderNotFound(std::io::Error),
-    TaskError(JoinError),
-}
 
 /// Final report of sync job, thrown if no fatal errors are encountered
 #[derive(Debug)]
@@ -26,10 +18,9 @@ pub struct SyncReport {
 pub async fn sync_database_from_source_path(
     database: &Database,
     source_path: &PathBuf,
-) -> Result<SyncReport, SyncError> {
+) -> anyhow::Result<SyncReport> {
     // Transform relative path into a full one
-    let absolute_source_path =
-        std::fs::canonicalize(source_path).map_err(SyncError::SourceFolderNotFound)?;
+    let absolute_source_path = std::fs::canonicalize(source_path)?;
 
     log::trace!("Start fetching paths from database");
     // Start fetching files' paths we know from database
@@ -46,10 +37,7 @@ pub async fn sync_database_from_source_path(
     log::trace!("Done with finding local files");
 
     // Await for paths from database
-    let database_paths = database_paths_handle
-        .await
-        .map_err(SyncError::TaskError)?
-        .map_err(SyncError::DatabaseError)?;
+    let database_paths = database_paths_handle.await??;
 
     // Filter out only files that needs to be added to the database
     path_finder.filter_out_paths(&database_paths);
@@ -78,9 +66,7 @@ pub async fn sync_database_from_source_path(
     log::trace!("Start adding to database");
 
     // Use the File(s) we just got with the database api
-    models::File::insert_many(database, &files_to_insert)
-        .await
-        .map_err(SyncError::DatabaseError)?;
+    models::File::insert_many(database, &files_to_insert).await?;
 
     let processed_files = files_to_insert.len();
 
@@ -91,7 +77,7 @@ pub async fn sync_database_from_source_path(
 pub async fn sync_encrypted_path_from_database(
     database: &Database,
     encrypted_path: &PathBuf,
-) -> Result<SyncReport, SyncError> {
+) -> anyhow::Result<SyncReport> {
     todo!()
 }
 
