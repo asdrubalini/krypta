@@ -101,12 +101,22 @@ pub struct FileConcurrentDecryptor {
 }
 
 impl FileConcurrentDecryptor {
-    pub fn try_new<P: AsRef<Path>>(source_paths: &[P], key: &[u8; 32]) -> anyhow::Result<Self> {
+    pub fn try_new<P: AsRef<Path>>(
+        source_paths: &[P],
+        enc_file_suffix: impl AsRef<str>,
+        key: &[u8; 32],
+    ) -> anyhow::Result<Self> {
         let mut decryptors = vec![];
 
         for source_path in source_paths {
-            let destination_path = source_path;
-            decryptors.push(FileDecryptor::try_new(source_path, destination_path, key)?);
+            let mut destination_path = source_path.as_ref().to_path_buf();
+            destination_path.push(enc_file_suffix.as_ref());
+
+            decryptors.push(FileDecryptor::try_new(
+                source_path.as_ref(),
+                &destination_path,
+                key,
+            )?);
         }
 
         Ok(Self {
