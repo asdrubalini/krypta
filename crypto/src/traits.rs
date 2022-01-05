@@ -5,7 +5,7 @@ use tokio::sync::Semaphore;
 
 /// Something that can be computed asynchronously
 #[async_trait]
-pub trait Computable {
+pub trait Compute {
     type Output: Send;
 
     async fn start(self) -> anyhow::Result<Self::Output>;
@@ -13,8 +13,8 @@ pub trait Computable {
 
 /// Provide the ability to execute multiple `Computable` objects at once
 #[async_trait]
-pub trait ConcurrentComputable {
-    type Computable: Computable + Send + 'static;
+pub trait ConcurrentCompute {
+    type Computable: Compute + Send + 'static;
     type Key: Hash + Eq + Send + 'static;
     type Output: Send;
 
@@ -23,11 +23,11 @@ pub trait ConcurrentComputable {
 
     /// Map each `Computable` Result to an output
     fn computable_result_to_output(
-        result: anyhow::Result<<<Self as ConcurrentComputable>::Computable as Computable>::Output>,
+        result: anyhow::Result<<<Self as ConcurrentCompute>::Computable as Compute>::Output>,
     ) -> Self::Output;
 
     /// Map a computable to its key
-    fn computable_to_key(computable: &<Self as ConcurrentComputable>::Computable) -> Self::Key;
+    fn computable_to_key(computable: &<Self as ConcurrentCompute>::Computable) -> Self::Key;
 
     /// Start Computable action in a concurrent manner
     async fn start_all(&mut self) -> HashMap<Self::Key, Self::Output> {

@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use crate::{
     error::SodiumOxideError,
-    traits::{Computable, ConcurrentComputable},
+    traits::{Compute, ConcurrentCompute},
     BUFFER_SIZE,
 };
 
@@ -38,7 +38,7 @@ impl FileEncryptor {
 }
 
 #[async_trait]
-impl Computable for FileEncryptor {
+impl Compute for FileEncryptor {
     type Output = ();
 
     /// Try to encrypt a file as specified in struct
@@ -97,13 +97,14 @@ pub struct FileConcurrentEncryptor {
 }
 
 impl FileConcurrentEncryptor {
-    pub fn try_new<P: AsRef<Path>>(source_paths: &[P]) -> anyhow::Result<Self> {
-        let mut encryptors = Vec::new();
+    // TODO: use thiserror instead of anyhow
+    pub fn try_new<P: AsRef<Path>>(source_paths: &[P], key: &[u8; 32]) -> anyhow::Result<Self> {
+        let mut encryptors = vec![];
 
-        todo!();
-        // for source_path in source_paths {
-        // encryptors.push(FileEncryptor::try_new(source_path)?);
-        // }
+        for source_path in source_paths {
+            let destination_path = source_path;
+            encryptors.push(FileEncryptor::try_new(source_path, destination_path, key)?);
+        }
 
         Ok(Self {
             encryptors: Some(encryptors),
@@ -111,7 +112,7 @@ impl FileConcurrentEncryptor {
     }
 }
 
-impl ConcurrentComputable for FileConcurrentEncryptor {
+impl ConcurrentCompute for FileConcurrentEncryptor {
     type Computable = FileEncryptor;
     type Output = bool;
     type Key = PathBuf;
@@ -121,12 +122,12 @@ impl ConcurrentComputable for FileConcurrentEncryptor {
     }
 
     fn computable_result_to_output(
-        result: anyhow::Result<<Self::Computable as Computable>::Output>,
+        result: anyhow::Result<<Self::Computable as Compute>::Output>,
     ) -> Self::Output {
         result.is_ok()
     }
 
-    fn computable_to_key(computable: &<Self as ConcurrentComputable>::Computable) -> Self::Key {
+    fn computable_to_key(computable: &<Self as ConcurrentCompute>::Computable) -> Self::Key {
         computable.source_path.clone()
     }
 }

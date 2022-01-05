@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    traits::{Computable, ConcurrentComputable},
+    traits::{Compute, ConcurrentCompute},
     BUFFER_SIZE,
 };
 
@@ -76,7 +76,7 @@ impl Sha256FileHasher {
 }
 
 #[async_trait]
-impl Computable for Sha256FileHasher {
+impl Compute for Sha256FileHasher {
     type Output = Sha256Hash;
 
     async fn start(self) -> anyhow::Result<Self::Output> {
@@ -129,7 +129,7 @@ impl Sha256ConcurrentFileHasher {
     }
 }
 
-impl ConcurrentComputable for Sha256ConcurrentFileHasher {
+impl ConcurrentCompute for Sha256ConcurrentFileHasher {
     type Computable = Sha256FileHasher;
     type Output = Sha256Hash;
     type Key = PathBuf;
@@ -139,12 +139,12 @@ impl ConcurrentComputable for Sha256ConcurrentFileHasher {
     }
 
     fn computable_result_to_output(
-        result: anyhow::Result<<Self::Computable as Computable>::Output>,
+        result: anyhow::Result<<Self::Computable as Compute>::Output>,
     ) -> Self::Output {
         result.unwrap()
     }
 
-    fn computable_to_key(computable: &<Self as ConcurrentComputable>::Computable) -> Self::Key {
+    fn computable_to_key(computable: &<Self as ConcurrentCompute>::Computable) -> Self::Key {
         computable.source_path.clone()
     }
 }

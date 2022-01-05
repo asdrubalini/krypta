@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use crate::{
     error::SodiumOxideError,
-    traits::{Computable, ConcurrentComputable},
+    traits::{Compute, ConcurrentCompute},
     BUFFER_SIZE,
 };
 
@@ -38,7 +38,7 @@ impl FileDecryptor {
 }
 
 #[async_trait]
-impl Computable for FileDecryptor {
+impl Compute for FileDecryptor {
     type Output = ();
 
     /// Try to decrypt a file as specified in struct
@@ -101,13 +101,13 @@ pub struct FileConcurrentDecryptor {
 }
 
 impl FileConcurrentDecryptor {
-    pub fn try_new<P: AsRef<Path>>(source_paths: &[P]) -> anyhow::Result<Self> {
-        let mut decryptors = Vec::new();
+    pub fn try_new<P: AsRef<Path>>(source_paths: &[P], key: &[u8; 32]) -> anyhow::Result<Self> {
+        let mut decryptors = vec![];
 
-        todo!();
-        // for source_path in source_paths {
-        // encryptors.push(FileEncryptor::try_new(source_path)?);
-        // }
+        for source_path in source_paths {
+            let destination_path = source_path;
+            decryptors.push(FileDecryptor::try_new(source_path, destination_path, key)?);
+        }
 
         Ok(Self {
             decryptors: Some(decryptors),
@@ -115,7 +115,7 @@ impl FileConcurrentDecryptor {
     }
 }
 
-impl ConcurrentComputable for FileConcurrentDecryptor {
+impl ConcurrentCompute for FileConcurrentDecryptor {
     type Computable = FileDecryptor;
     type Output = bool;
     type Key = PathBuf;
@@ -125,12 +125,12 @@ impl ConcurrentComputable for FileConcurrentDecryptor {
     }
 
     fn computable_result_to_output(
-        result: anyhow::Result<<Self::Computable as Computable>::Output>,
+        result: anyhow::Result<<Self::Computable as Compute>::Output>,
     ) -> Self::Output {
         result.is_ok()
     }
 
-    fn computable_to_key(computable: &<Self as ConcurrentComputable>::Computable) -> Self::Key {
+    fn computable_to_key(computable: &<Self as ConcurrentCompute>::Computable) -> Self::Key {
         computable.source_path.clone()
     }
 }

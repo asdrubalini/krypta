@@ -1,52 +1,55 @@
 use std::{fs::remove_file, path::Path};
 
-use crypto::{hash::Sha256FileHasher, traits::Computable};
+use common::TempPath;
+use crypto::{hash::Sha256FileHasher, traits::Compute};
 use rand::{prelude::SmallRng, SeedableRng};
 
-use crate::common::{
-    clean_tests_path, generate_plaintext_with_content, generate_random_plaintext_file_with_rng,
-    init_test_path,
-};
+use crate::common::{generate_plaintext_with_content, generate_random_plaintext_file_with_rng};
 
 mod common;
 
-async fn plaintext_hash(content: &str, plaintext_file: &str) -> String {
-    generate_plaintext_with_content(plaintext_file, content.to_string());
+/// Create file with specified filename and content, write data, compute hash and then
+/// remove the file
+async fn create_plaintext_file_and_hash(content: &str, plaintext_file: impl AsRef<Path>) -> String {
+    generate_plaintext_with_content(plaintext_file.as_ref(), content);
 
-    let hasher = Sha256FileHasher::try_new(Path::new(plaintext_file)).unwrap();
+    let hasher = Sha256FileHasher::try_new(plaintext_file.as_ref()).unwrap();
     let hash = hasher.start().await.unwrap();
 
-    remove_file(plaintext_file).unwrap();
+    remove_file(plaintext_file.as_ref()).unwrap();
 
     hash.as_hex()
 }
 
 #[tokio::test]
-async fn small_file() {
-    const TESTS_PATH: &str = "./small_file/";
-    const PLAINTEXT_FILE: &str = "./small_file/file";
+async fn small_ascii_file() {
+    let tmp = TempPath::new();
 
-    init_test_path(TESTS_PATH);
+    let mut plaintext_file = tmp.path();
+    plaintext_file.push("small_file.txt");
 
-    // Empty hash
+    // Empty string hash
     assert_eq!(
-        plaintext_hash("", PLAINTEXT_FILE).await,
+        create_plaintext_file_and_hash("", &plaintext_file).await,
         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     );
 
     // Short ascii hash
     assert_eq!(
-        plaintext_hash("abc", PLAINTEXT_FILE).await,
+        create_plaintext_file_and_hash("abc", &plaintext_file).await,
         "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
     );
-
-    clean_tests_path(TESTS_PATH);
 }
 
-async fn seeded_hash(rng: &mut SmallRng, length: usize, plaintext_file: &str) -> String {
+async fn seeded_hash(
+    rng: &mut SmallRng,
+    length: usize,
+    plaintext_file: impl AsRef<Path>,
+) -> String {
+    let plaintext_file = plaintext_file.as_ref();
     generate_random_plaintext_file_with_rng(rng, plaintext_file, length);
 
-    let hasher = Sha256FileHasher::try_new(Path::new(plaintext_file)).unwrap();
+    let hasher = Sha256FileHasher::try_new(plaintext_file).unwrap();
     let hash = hasher.start().await.unwrap();
 
     remove_file(plaintext_file).unwrap();
@@ -56,10 +59,10 @@ async fn seeded_hash(rng: &mut SmallRng, length: usize, plaintext_file: &str) ->
 
 #[tokio::test]
 async fn big_random_file() {
-    const TESTS_PATH: &str = "./big_random_file/";
-    const PLAINTEXT_FILE: &str = "./big_random_file/file";
+    let tmp = TempPath::new();
 
-    init_test_path(TESTS_PATH);
+    let mut plaintext_file = tmp.path();
+    plaintext_file.push("big_random_file.txt");
 
     let mut rng = SmallRng::seed_from_u64(0);
 
@@ -195,9 +198,7 @@ async fn big_random_file() {
     ];
 
     for i in 0..128 {
-        let hash = seeded_hash(&mut rng, 2usize.pow(20), PLAINTEXT_FILE).await;
+        let hash = seeded_hash(&mut rng, 2usize.pow(20), &plaintext_file).await;
         assert_eq!(hash, expected_hashes[i]);
     }
-
-    clean_tests_path(TESTS_PATH);
 }
