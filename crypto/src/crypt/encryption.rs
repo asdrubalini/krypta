@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    error::{CryptoError, SodiumOxideError},
+    errors::{CryptoError, SodiumOxideError},
     traits::{Compute, ConcurrentCompute},
     BUFFER_SIZE,
 };

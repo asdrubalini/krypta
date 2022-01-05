@@ -3,7 +3,7 @@ use std::{collections::HashMap, hash::Hash, sync::Arc};
 use async_trait::async_trait;
 use tokio::sync::Semaphore;
 
-use crate::error::CryptoError;
+use crate::errors::CryptoError;
 
 /// Something that can be computed asynchronously
 #[async_trait]

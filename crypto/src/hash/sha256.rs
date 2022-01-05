@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    error::CryptoError,
+    errors::CryptoError,
     traits::{Compute, ConcurrentCompute},
     BUFFER_SIZE,
 };
