@@ -1,17 +1,19 @@
 [package]
 name = "crypto"
-description = "Handle concurrent file encryption and decryption using libsodium"
+description = "Handle concurrent file encryption, decryption and hashing using libsodium"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+temp-path = { version = "0.1.0", path = "../temp-path" }
+
 sodiumoxide = "0.2"
 tokio = { version = "1", features = [ "fs", "io-util", "macros", "sync", "rt", "rt-multi-thread" ] }
 bytes = "1"
 num_cpus = "1.13"
 async-trait = "0.1"
-sha2 = "0.9"
-anyhow = "1.0"
+sha2 = "0.10"
+thiserror = "1.0"
 
 [dev-dependencies]
 file_diff = "1"

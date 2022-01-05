@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS "file" (
 	"is_remote" INTEGER NOT NULL,
 	"is_encrypted" INTEGER NOT NULL,
 	"random_hash" TEXT NOT NULL UNIQUE,
+	"contents_hash" TEXT NOT NULL UNIQUE,
 	"size" BLOB NOT NULL,
 	"created_at" TEXT NOT NULL,
 	"updated_at" TEXT NOT NULL,

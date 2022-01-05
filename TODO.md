@@ -1,4 +1,5 @@
 # Major TODOs
+- Decide if sync should detect deleted files (probably not, deletion should happen manually)
 - Switch to anyhow in the main crate
 - Move main crate into its own `vault-manager`
 - ConcurrentComputable should return an HashMap

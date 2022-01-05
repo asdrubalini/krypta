@@ -1,14 +1,16 @@
 [package]
-name = "metadata-fs"
+name = "fs"
 description = "Find paths in fs and compute their metadata"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+temp-path = { version = "0.1.0", path = "../temp-path" }
+
 tokio = { version = "1", features = [ "fs", "sync", "rt", "macros" ] }
 walkdir = "2"
 chrono = "0.4"
-anyhow = "1.0"
+thiserror = "1.0"
 
 [dev-dependencies]
 rand = "0.8"

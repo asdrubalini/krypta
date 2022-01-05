@@ -5,7 +5,8 @@ use std::{
 };
 
 use crate::{
-    traits::{Computable, ConcurrentComputable},
+    errors::CryptoError,
+    traits::{Compute, ConcurrentCompute},
     BUFFER_SIZE,
 };
 
@@ -52,7 +53,7 @@ pub struct Sha256FileHasher {
 
 impl Sha256FileHasher {
     /// Build a new SingleSha256 instance with file's source_path
-    pub fn try_new<P: AsRef<Path>>(source_path: P) -> anyhow::Result<Self> {
+    pub fn try_new<P: AsRef<Path>>(source_path: P) -> Result<Self, CryptoError> {
         let source_path = source_path.as_ref();
         let source_path_buf = source_path.to_path_buf();
 
@@ -76,10 +77,10 @@ impl Sha256FileHasher {
 }
 
 #[async_trait]
-impl Computable for Sha256FileHasher {
+impl Compute for Sha256FileHasher {
     type Output = Sha256Hash;
 
-    async fn start(self) -> anyhow::Result<Self::Output> {
+    async fn start(self) -> Result<Self::Output, CryptoError> {
         let file_input = File::open(&self.source_path).await?;
 
         // Source file reader
@@ -116,7 +117,7 @@ pub struct Sha256ConcurrentFileHasher {
 }
 
 impl Sha256ConcurrentFileHasher {
-    pub fn try_new<P: AsRef<Path>>(source_paths: &[P]) -> anyhow::Result<Self> {
+    pub fn try_new<P: AsRef<Path>>(source_paths: &[P]) -> Result<Self, CryptoError> {
         let mut hashers = Vec::new();
 
         for source_path in source_paths {
@@ -129,17 +130,22 @@ impl Sha256ConcurrentFileHasher {
     }
 }
 
-impl ConcurrentComputable for Sha256ConcurrentFileHasher {
-    type Computables = Sha256FileHasher;
+impl ConcurrentCompute for Sha256ConcurrentFileHasher {
+    type Computable = Sha256FileHasher;
     type Output = Sha256Hash;
+    type Key = PathBuf;
 
-    fn computables(&mut self) -> Vec<Self::Computables> {
+    fn computables(&mut self) -> Vec<Self::Computable> {
         self.hashers.take().expect("Cannot take computables")
     }
 
     fn computable_result_to_output(
-        result: anyhow::Result<<Self::Computables as Computable>::Output>,
+        result: Result<<Self::Computable as Compute>::Output, CryptoError>,
     ) -> Self::Output {
         result.unwrap()
+    }
+
+    fn computable_to_key(computable: &<Self as ConcurrentCompute>::Computable) -> Self::Key {
+        computable.source_path.clone()
     }
 }

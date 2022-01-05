@@ -19,6 +19,7 @@ It has the following fields:
 - `is_remote`: whether or not the file exists on remote endpoint
 - `is_encrypted`: whether or not the file has been encrypted
 - `random_hash`: randomly-generated hash unique to each file (SHA-256)
+- `contents_hash`: hash of the plaintext version
 - `size`: file size, in bytes
 - `created_at`
 - `updated_at`

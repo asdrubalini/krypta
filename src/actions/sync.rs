@@ -1,19 +1,12 @@
 use std::path::PathBuf;
 
-use metadata_fs::{MetadataCollection, PathFinder};
-use tokio::task::JoinError;
+use crypto::{hash::Sha256ConcurrentFileHasher, traits::ConcurrentCompute};
+use fs::PathFinder;
 
 use crate::database::{
     models::{self, Insertable},
     Database,
 };
-
-#[derive(Debug)]
-pub enum SyncError {
-    DatabaseError(sqlx::Error),
-    SourceFolderNotFound(std::io::Error),
-    TaskError(JoinError),
-}
 
 /// Final report of sync job, thrown if no fatal errors are encountered
 #[derive(Debug)]
@@ -21,14 +14,13 @@ pub struct SyncReport {
     pub processed_files: usize,
 }
 
-/// Adds missing fields into database according to source folder
+/// Adds missing files into database according to source folder
 pub async fn sync_database_from_source_path(
     database: &Database,
     source_path: &PathBuf,
-) -> Result<SyncReport, SyncError> {
+) -> anyhow::Result<SyncReport> {
     // Transform relative path into a full one
-    let absolute_source_path =
-        std::fs::canonicalize(source_path).map_err(SyncError::SourceFolderNotFound)?;
+    let absolute_source_path = std::fs::canonicalize(source_path)?;
 
     log::trace!("Start fetching paths from database");
     // Start fetching files' paths we know from database
@@ -38,36 +30,40 @@ pub async fn sync_database_from_source_path(
     };
 
     log::trace!("Start finding local files");
-    // let local_paths = find_paths_relative(&full_source_path);
-    let mut path_finder = PathFinder::with_source_path(&absolute_source_path);
+    // Find all file paths
+    let mut path_finder = PathFinder::from_source_path(&absolute_source_path).unwrap();
 
     log::trace!("Done with finding local files");
 
     // Await for paths from database
-    let database_paths = database_paths_handle
-        .await
-        .map_err(SyncError::TaskError)?
-        .map_err(SyncError::DatabaseError)?;
+    let database_paths = database_paths_handle.await??;
 
     // Filter out only files that needs to be added to the database
-    path_finder.filter_paths(&database_paths);
+    path_finder.filter_out_paths(&database_paths);
 
-    // Build a MetadataCollection from PathFinder
-    let paths_with_metadata = MetadataCollection::from_path_finder(path_finder).await;
+    // Start computing new file's hashes
+    let mut hasher = Sha256ConcurrentFileHasher::try_new(&path_finder.get_all_absolute_paths())?;
+    let hashes_join = tokio::task::spawn(async move { hasher.start_all().await });
 
     // Finally build File(s) from MetadataCollection
-    let files_to_insert: Vec<models::File> = paths_with_metadata
+    let files_to_insert = path_finder
         .metadatas
         .iter()
-        .map(|metadata| models::File::from(metadata))
+        .map(|(path, metadata)| models::MetadataFile::new(path, metadata));
+
+    let hashes = hashes_join.await.unwrap();
+
+    let files_to_insert: Vec<models::File> = files_to_insert
+        .map(|file| {
+            let hash = hashes.get(&file.path).unwrap();
+            file.into_file(hash.as_hex())
+        })
         .collect();
 
     log::trace!("Start adding to database");
 
     // Use the File(s) we just got with the database api
-    models::File::insert_many(database, &files_to_insert)
-        .await
-        .map_err(SyncError::DatabaseError)?;
+    models::File::insert_many(database, &files_to_insert).await?;
 
     let processed_files = files_to_insert.len();
 
@@ -78,7 +74,7 @@ pub async fn sync_database_from_source_path(
 pub async fn sync_encrypted_path_from_database(
     database: &Database,
     encrypted_path: &PathBuf,
-) -> Result<SyncReport, SyncError> {
+) -> anyhow::Result<SyncReport> {
     todo!()
 }
 

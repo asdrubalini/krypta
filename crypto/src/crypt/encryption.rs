@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    error::SodiumOxideError,
-    traits::{Computable, ConcurrentComputable},
+    errors::{CryptoError, SodiumOxideError},
+    traits::{Compute, ConcurrentCompute},
     BUFFER_SIZE,
 };
 
@@ -26,8 +26,9 @@ impl FileEncryptor {
         source_path: P,
         destination_path: P,
         key: &[u8; 32],
-    ) -> anyhow::Result<FileEncryptor> {
-        let key = Key::from_slice(key).ok_or(SodiumOxideError::InvalidKeyLength)?;
+    ) -> Result<FileEncryptor, CryptoError> {
+        let key = Key::from_slice(key)
+            .ok_or(CryptoError::SodiumOxide(SodiumOxideError::InvalidKeyLength))?;
 
         Ok(FileEncryptor {
             source_path: source_path.as_ref().to_path_buf(),
@@ -38,13 +39,13 @@ impl FileEncryptor {
 }
 
 #[async_trait]
-impl Computable for FileEncryptor {
+impl Compute for FileEncryptor {
     type Output = ();
 
     /// Try to encrypt a file as specified in struct
-    async fn start(self) -> anyhow::Result<Self::Output> {
-        let (mut encryption_stream, header) =
-            Stream::init_push(&self.key).map_err(|_| SodiumOxideError::InitPush)?;
+    async fn start(self) -> Result<Self::Output, CryptoError> {
+        let (mut encryption_stream, header) = Stream::init_push(&self.key)
+            .map_err(|_| CryptoError::SodiumOxide(SodiumOxideError::InitPush))?;
 
         // The file we are trying to encrypt
         let file_input = File::open(&self.source_path).await?;
@@ -77,7 +78,7 @@ impl Computable for FileEncryptor {
             // Encrypt
             let result = encryption_stream
                 .push(&buffer_input, None, Tag::Message)
-                .map_err(|_| SodiumOxideError::Push)?;
+                .map_err(|_| CryptoError::SodiumOxide(SodiumOxideError::Push))?;
 
             // Write to output buffer
             writer_output.write_all(&result).await?;
@@ -97,13 +98,24 @@ pub struct FileConcurrentEncryptor {
 }
 
 impl FileConcurrentEncryptor {
-    pub fn try_new<P: AsRef<Path>>(source_paths: &[P]) -> anyhow::Result<Self> {
-        let mut encryptors = Vec::new();
+    // TODO: use thiserror instead of anyhow
+    pub fn try_new<P: AsRef<Path>>(
+        source_paths: &[P],
+        enc_file_suffix: impl AsRef<str>,
+        key: &[u8; 32],
+    ) -> Result<Self, CryptoError> {
+        let mut encryptors = vec![];
 
-        todo!();
-        // for source_path in source_paths {
-        // encryptors.push(FileEncryptor::try_new(source_path)?);
-        // }
+        for source_path in source_paths {
+            let mut destination_path = source_path.as_ref().to_path_buf();
+            destination_path.push(enc_file_suffix.as_ref());
+
+            encryptors.push(FileEncryptor::try_new(
+                source_path.as_ref(),
+                &destination_path,
+                key,
+            )?);
+        }
 
         Ok(Self {
             encryptors: Some(encryptors),
@@ -111,17 +123,22 @@ impl FileConcurrentEncryptor {
     }
 }
 
-impl ConcurrentComputable for FileConcurrentEncryptor {
-    type Computables = FileEncryptor;
+impl ConcurrentCompute for FileConcurrentEncryptor {
+    type Computable = FileEncryptor;
     type Output = bool;
+    type Key = PathBuf;
 
-    fn computables(&mut self) -> Vec<Self::Computables> {
+    fn computables(&mut self) -> Vec<Self::Computable> {
         self.encryptors.take().expect("Cannot take computables")
     }
 
     fn computable_result_to_output(
-        result: anyhow::Result<<Self::Computables as Computable>::Output>,
+        result: Result<<Self::Computable as Compute>::Output, CryptoError>,
     ) -> Self::Output {
         result.is_ok()
+    }
+
+    fn computable_to_key(computable: &<Self as ConcurrentCompute>::Computable) -> Self::Key {
+        computable.source_path.clone()
     }
 }
