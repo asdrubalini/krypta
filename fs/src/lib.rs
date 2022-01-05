@@ -8,3 +8,5 @@
 /// starts obtaining `Metadata` for each file, `MAX_CONCURRENT_FILE_OPERATIONS` at the same time.
 mod path_finder;
 pub use path_finder::PathFinder;
+
+pub mod errors;

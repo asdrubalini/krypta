@@ -1,12 +1,8 @@
-use std::{
-    fs::File,
-    io::Write,
-    path::{Path, PathBuf},
-};
+use std::{fs::File, io::Write, path::Path};
 
-pub fn generate_files(path: &Path, files_count: usize, file_length: usize) {
+pub fn generate_files(path: impl AsRef<Path>, files_count: usize, file_length: usize) {
     for i in 0..files_count {
-        let mut filename = PathBuf::from(path);
+        let mut filename = path.as_ref().to_path_buf();
         filename.push(format!("file_{}", i));
 
         let mut out_file = File::create(filename).unwrap();

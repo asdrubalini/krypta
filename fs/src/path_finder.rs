@@ -1,6 +1,6 @@
 /// PathFinder is a module that is able to, given a source_directory, recursively
 /// find files and strip the host-specific bits from them, obtaining something
-/// that can be safely inserted into a database
+/// that can be safely inserted into a database, for example
 ///
 /// `CuttablePathBuf` is a structure that holds a single full path and a `cut_index`,
 /// and can provide both relative and absolute paths when needed.
@@ -12,8 +12,10 @@ use std::{
 
 use walkdir::WalkDir;
 
+use crate::errors::FsError;
+
 /// This trait is used in order to strip the "local bits" from a PathBuf
-/// so that it can be safely inserted into the database without polluting it
+/// so that it can be, for example, safely inserted into the database without polluting it
 /// with host-specific folders
 trait CanonicalizeAndSkipPath<T> {
     fn canonicalize_and_skip_n(&mut self, n: usize) -> Result<T, std::io::Error>;
@@ -34,7 +36,7 @@ pub struct PathFinder {
 
 impl PathFinder {
     /// Build a PathFinder instance and populate it with file paths from absolute_source_path
-    pub fn from_source_path<P: AsRef<Path>>(source_path: P) -> anyhow::Result<Self> {
+    pub fn from_source_path<P: AsRef<Path>>(source_path: P) -> Result<Self, FsError> {
         let source_path = source_path.as_ref().to_owned().canonicalize()?;
         let source_path_length = source_path.iter().peekable().count();
 

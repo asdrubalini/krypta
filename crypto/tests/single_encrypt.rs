@@ -5,8 +5,9 @@ use crypto::{
     traits::Compute,
 };
 use file_diff::diff;
+use temp_path::TempPath;
 
-use crate::common::{generate_random_plaintext_file, generate_seeded_key, TempPath};
+use crate::common::{generate_random_plaintext_file, generate_seeded_key};
 
 mod common;
 

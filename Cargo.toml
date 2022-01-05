@@ -6,7 +6,8 @@ edition = "2021"
 [workspace]
 members = [
     "crypto",
-    "fs"
+    "fs",
+    "temp-path"
 ]
 
 [dependencies]

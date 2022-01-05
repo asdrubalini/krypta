@@ -5,6 +5,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+temp-path = { version = "0.1.0", path = "../temp-path" }
+
 sodiumoxide = "0.2"
 tokio = { version = "1", features = [ "fs", "io-util", "macros", "sync", "rt", "rt-multi-thread" ] }
 bytes = "1"

@@ -1,6 +1,7 @@
 use crypto::{hash::Sha256ConcurrentFileHasher, traits::ConcurrentCompute};
+use temp_path::TempPath;
 
-use crate::common::{generate_plaintext_with_content, TempPath};
+use crate::common::generate_plaintext_with_content;
 
 mod common;
 

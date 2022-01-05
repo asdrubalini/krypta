@@ -236,6 +236,7 @@ dependencies = [
  "rand",
  "sha2 0.10.0",
  "sodiumoxide",
+ "temp-path",
  "thiserror",
  "tokio",
 ]
@@ -323,9 +324,9 @@ dependencies = [
 name = "fs"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "chrono",
  "rand",
+ "thiserror",
  "tokio",
  "walkdir",
 ]
@@ -1126,6 +1127,13 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-xid",
+]
+
+[[package]]
+name = "temp-path"
+version = "0.1.0"
+dependencies = [
+ "rand",
 ]
 
 [[package]]
