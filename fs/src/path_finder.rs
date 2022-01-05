@@ -1,9 +1,3 @@
-/// PathFinder is a module that is able to, given a source_directory, recursively
-/// find files and strip the host-specific bits from them, obtaining something
-/// that can be safely inserted into a database, for example
-///
-/// `CuttablePathBuf` is a structure that holds a single full path and a `cut_index`,
-/// and can provide both relative and absolute paths when needed.
 use std::{
     collections::HashMap,
     fs::Metadata,
@@ -46,17 +40,16 @@ impl PathFinder {
             .filter_map(|res| res.ok())
             // Map into a tuple of (RelativePath, &Metadata)
             .map(|entry| {
-                // TODO: handle errors here
-                let relative_path = entry
-                    .path()
-                    .canonicalize_and_skip_n(source_path_length)
-                    .unwrap();
+                let relative_path = entry.path().canonicalize_and_skip_n(source_path_length)?;
+                let metadata = entry.metadata()?;
 
-                let metadata = entry.metadata().unwrap();
-
-                (relative_path, metadata)
+                Ok((relative_path, metadata))
             })
-            // Exclude dirs
+            .collect::<Result<Vec<(_, _)>, FsError>>()?;
+
+        // Exclude dirs
+        let metadatas = metadatas
+            .into_iter()
             .filter(|(_, metadata)| metadata.is_file())
             .collect::<HashMap<_, _>>();
 
