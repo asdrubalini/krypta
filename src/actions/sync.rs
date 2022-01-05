@@ -31,7 +31,6 @@ pub async fn sync_database_from_source_path(
 
     log::trace!("Start finding local files");
     // Find all file paths
-    // TODO: handle error here
     let mut path_finder = PathFinder::from_source_path(&absolute_source_path).unwrap();
 
     log::trace!("Done with finding local files");
@@ -43,9 +42,7 @@ pub async fn sync_database_from_source_path(
     path_finder.filter_out_paths(&database_paths);
 
     // Start computing new file's hashes
-    // TODO: handle errors with something other than unwrap
-    let mut hasher =
-        Sha256ConcurrentFileHasher::try_new(&path_finder.get_all_absolute_paths()).unwrap();
+    let mut hasher = Sha256ConcurrentFileHasher::try_new(&path_finder.get_all_absolute_paths())?;
     let hashes_join = tokio::task::spawn(async move { hasher.start_all().await });
 
     // Finally build File(s) from MetadataCollection
