@@ -3,12 +3,14 @@ use std::{collections::HashMap, hash::Hash, sync::Arc};
 use async_trait::async_trait;
 use tokio::sync::Semaphore;
 
+use crate::error::CryptoError;
+
 /// Something that can be computed asynchronously
 #[async_trait]
 pub trait Compute {
     type Output: Send;
 
-    async fn start(self) -> anyhow::Result<Self::Output>;
+    async fn start(self) -> Result<Self::Output, CryptoError>;
 }
 
 /// Provide the ability to execute multiple `Computable` objects at once
@@ -23,7 +25,7 @@ pub trait ConcurrentCompute {
 
     /// Map each `Computable` Result to an output
     fn computable_result_to_output(
-        result: anyhow::Result<<<Self as ConcurrentCompute>::Computable as Compute>::Output>,
+        result: Result<<<Self as ConcurrentCompute>::Computable as Compute>::Output, CryptoError>,
     ) -> Self::Output;
 
     /// Map a computable to its key

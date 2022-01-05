@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    error::SodiumOxideError,
+    error::{CryptoError, SodiumOxideError},
     traits::{Compute, ConcurrentCompute},
     BUFFER_SIZE,
 };
@@ -26,8 +26,9 @@ impl FileEncryptor {
         source_path: P,
         destination_path: P,
         key: &[u8; 32],
-    ) -> anyhow::Result<FileEncryptor> {
-        let key = Key::from_slice(key).ok_or(SodiumOxideError::InvalidKeyLength)?;
+    ) -> Result<FileEncryptor, CryptoError> {
+        let key = Key::from_slice(key)
+            .ok_or(CryptoError::SodiumOxide(SodiumOxideError::InvalidKeyLength))?;
 
         Ok(FileEncryptor {
             source_path: source_path.as_ref().to_path_buf(),
@@ -42,9 +43,9 @@ impl Compute for FileEncryptor {
     type Output = ();
 
     /// Try to encrypt a file as specified in struct
-    async fn start(self) -> anyhow::Result<Self::Output> {
-        let (mut encryption_stream, header) =
-            Stream::init_push(&self.key).map_err(|_| SodiumOxideError::InitPush)?;
+    async fn start(self) -> Result<Self::Output, CryptoError> {
+        let (mut encryption_stream, header) = Stream::init_push(&self.key)
+            .map_err(|_| CryptoError::SodiumOxide(SodiumOxideError::InitPush))?;
 
         // The file we are trying to encrypt
         let file_input = File::open(&self.source_path).await?;
@@ -77,7 +78,7 @@ impl Compute for FileEncryptor {
             // Encrypt
             let result = encryption_stream
                 .push(&buffer_input, None, Tag::Message)
-                .map_err(|_| SodiumOxideError::Push)?;
+                .map_err(|_| CryptoError::SodiumOxide(SodiumOxideError::Push))?;
 
             // Write to output buffer
             writer_output.write_all(&result).await?;
@@ -102,7 +103,7 @@ impl FileConcurrentEncryptor {
         source_paths: &[P],
         enc_file_suffix: impl AsRef<str>,
         key: &[u8; 32],
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self, CryptoError> {
         let mut encryptors = vec![];
 
         for source_path in source_paths {
@@ -132,7 +133,7 @@ impl ConcurrentCompute for FileConcurrentEncryptor {
     }
 
     fn computable_result_to_output(
-        result: anyhow::Result<<Self::Computable as Compute>::Output>,
+        result: Result<<Self::Computable as Compute>::Output, CryptoError>,
     ) -> Self::Output {
         result.is_ok()
     }

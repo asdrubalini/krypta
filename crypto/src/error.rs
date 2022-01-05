@@ -1,18 +1,23 @@
-use std::{error::Error, fmt::Display};
+use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum SodiumOxideError {
+    #[error("InitPull")]
     InitPull,
+    #[error("InitPush")]
     InitPush,
+    #[error("Pull")]
     Pull,
+    #[error("Push")]
     Push,
+    #[error("InvalidKeyLength")]
     InvalidKeyLength,
 }
 
-impl Display for SodiumOxideError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
+#[derive(Error, Debug)]
+pub enum CryptoError {
+    #[error("SodiumOxide failed: {0}")]
+    SodiumOxide(SodiumOxideError),
+    #[error("Input/Output error: {0}")]
+    IoError(#[from] std::io::Error),
 }
-
-impl Error for SodiumOxideError {}

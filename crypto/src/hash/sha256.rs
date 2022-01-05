@@ -5,6 +5,7 @@ use std::{
 };
 
 use crate::{
+    error::CryptoError,
     traits::{Compute, ConcurrentCompute},
     BUFFER_SIZE,
 };
@@ -52,7 +53,7 @@ pub struct Sha256FileHasher {
 
 impl Sha256FileHasher {
     /// Build a new SingleSha256 instance with file's source_path
-    pub fn try_new<P: AsRef<Path>>(source_path: P) -> anyhow::Result<Self> {
+    pub fn try_new<P: AsRef<Path>>(source_path: P) -> Result<Self, CryptoError> {
         let source_path = source_path.as_ref();
         let source_path_buf = source_path.to_path_buf();
 
@@ -79,7 +80,7 @@ impl Sha256FileHasher {
 impl Compute for Sha256FileHasher {
     type Output = Sha256Hash;
 
-    async fn start(self) -> anyhow::Result<Self::Output> {
+    async fn start(self) -> Result<Self::Output, CryptoError> {
         let file_input = File::open(&self.source_path).await?;
 
         // Source file reader
@@ -116,7 +117,7 @@ pub struct Sha256ConcurrentFileHasher {
 }
 
 impl Sha256ConcurrentFileHasher {
-    pub fn try_new<P: AsRef<Path>>(source_paths: &[P]) -> anyhow::Result<Self> {
+    pub fn try_new<P: AsRef<Path>>(source_paths: &[P]) -> Result<Self, CryptoError> {
         let mut hashers = Vec::new();
 
         for source_path in source_paths {
@@ -139,7 +140,7 @@ impl ConcurrentCompute for Sha256ConcurrentFileHasher {
     }
 
     fn computable_result_to_output(
-        result: anyhow::Result<<Self::Computable as Compute>::Output>,
+        result: Result<<Self::Computable as Compute>::Output, CryptoError>,
     ) -> Self::Output {
         result.unwrap()
     }
