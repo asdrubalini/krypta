@@ -1,10 +1,11 @@
-use std::fs::{create_dir, remove_dir_all, File};
-use std::io::Write;
-use std::path::{Path, PathBuf};
+#![allow(dead_code)] // So that rust-analyzer stops complaining that common functions are not used
 
-use rand::distributions::Alphanumeric;
+use std::fs::File;
+use std::io::Write;
+use std::path::Path;
+
 use rand::rngs::SmallRng;
-use rand::{Rng, RngCore, SeedableRng};
+use rand::{RngCore, SeedableRng};
 
 pub fn generate_random_plaintext_file(file_path: impl AsRef<Path>, length: usize) {
     let mut plaintext_file = File::create(file_path).unwrap();
