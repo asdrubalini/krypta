@@ -13,7 +13,9 @@ pub async fn execute(database: &Database, path: Option<impl AsRef<Path>>) {
         .map(|p| p.as_ref().to_path_buf())
         .unwrap_or_else(|| env::current_dir().unwrap());
 
-    let current_device = models::Device::find_or_create_current(database);
+    let current_device = models::Device::find_or_create_current(database)
+        .await
+        .unwrap();
 
     // On init the database is empty, so sync::sync_database_from_source_path effectively initialized the database
     let report = sync_database_from_source_path(database, &source_path)
