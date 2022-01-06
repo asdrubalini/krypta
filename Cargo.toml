@@ -5,33 +5,13 @@ edition = "2021"
 
 [workspace]
 members = [
-    "crypto",
-    "fs",
-    "temp-path"
+    "src/vault-manager-impl",
+    "src/crypto",
+    "src/fs",
+    "src/temp-path",
+    "src/cli"
 ]
 
 [dependencies]
-fs = { version = "0.1.0", path = "./fs" }
-crypto = { version = "0.1.0", path = "./crypto" }
-
-tokio = { version = "1", features = [ "macros", "rt" ] }
-sqlx = { version = "0.5", features = [ "sqlite", "runtime-tokio-rustls", "chrono" ] }
-
-serde = { version = "1", features = [ "derive" ] }
-toml = "0.5"
-
-chrono = "0.4"
-
-log = "0.4"
-dotenv = "0.15"
-pretty_env_logger = "0.4"
-
-walkdir = "2"
-rand = "0.8"
-
-clap = "2.34"
-
-async-trait = "0.1"
-byte-unit = "4"
-byteorder = "1"
-anyhow = "1.0"
+vault-manager-impl = { version = "0.1.0", path = "src/vault-manager-impl" }
+tokio = { version = "1", features = [ "macros" ] }

@@ -59,6 +59,10 @@ Note that the database always has all files and keeps track of which ones are pr
 
 Configuration is stored in `config.toml` file in the working directory.
 
+## Init database
+
+`vault init <source_path>`
+
 ## Sync database
 
-`vault --sync <source_path>`
+`vault sync <source_path>`
