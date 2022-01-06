@@ -1,10 +1,21 @@
 # Major TODOs
-- Mechanism than can detect file changes based on file's date and time modification (and then fallback to SHA-256)
+- files may have changed, so we should check the last modified date
+to make sure that they have not, or we don't try to detect them at all
+and instead rely on the user with a special `add` command or something like that.
+NOTE that its not clear where the last os modification date should be stored, in a context
+where multiple devices can operate on a single shared database.
+Now this distinction does not exist, and a single database can only be modified
+by a single device (due to having fields like `is_remote` and `is_encrypted`)
+Maybe there can be a separated table specific to each device with `is_remote`, `is_encrypted`, and 
+something like `fs_last_modified_at`.
+
+- Create separate table of device-specific info and a way to uniquely identify a device 
+(can be MAC address, /etc/machine-id or whatever).
+- Add file's fs last modification time in database schema
+
 - Fuly implement init command
 - Decide if sync should detect deleted files (probably not, deletion should happen manually)
 - Switch to anyhow in the main crate
-- Add file's fs last modification time in database schema
-- Add file's SHA-256 in database schema
 - Use file encryption from implementationw
 - Stable cli interface that can add, remove and search files
 
