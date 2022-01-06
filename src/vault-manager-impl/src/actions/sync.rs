@@ -91,45 +91,45 @@ pub async fn sync_encrypted_path_from_database(
 }
 
 // TODO: uncomment and fix when sync action is fixed
-// #[cfg(test)]
-// mod tests {
-// use std::{
-// fs::{create_dir_all, remove_dir_all, File},
-// path::PathBuf,
-// };
+#[cfg(test)]
+mod tests {
+    use std::{
+        fs::{create_dir_all, remove_dir_all, File},
+        path::PathBuf,
+    };
 
-// use crate::database::{create_in_memory, models::Fetchable};
+    use crate::database::{create_in_memory, models::Fetch};
 
-// use super::*;
+    use super::*;
 
-// #[tokio::test]
-// async fn test_database_sync() {
-// let source_path = PathBuf::from("/tmp/test_dir/foo/bar/");
-// let files_count = 256;
+    #[tokio::test]
+    async fn test_database_sync() {
+        let tmp = tmp::Tmp::new();
 
-// let database = create_in_memory().await.unwrap();
-// create_dir_all(&source_path).unwrap();
+        let source_path = tmp.path();
+        let files_count = 256;
 
-// for i in 0..files_count {
-// let mut filename = source_path.clone();
-// filename.push(format!("file_{}", i));
+        let database = create_in_memory().await.unwrap();
 
-// File::create(filename).unwrap();
-// }
+        for i in 0..files_count {
+            let mut filename = source_path.clone();
+            filename.push(format!("file_{}", i));
 
-// let report = sync_database_from_source_path(&database, &source_path)
-// .await
-// .unwrap();
+            File::create(filename).unwrap();
+        }
 
-// assert_eq!(report.processed_files, files_count);
+        // Populate database
+        let report = sync_database_from_source_path(&database, &source_path)
+            .await
+            .unwrap();
 
-// let files = models::File::fetch_all(&database).await.unwrap();
-// assert_eq!(files.len(), files_count);
+        assert_eq!(report.processed_files, files_count);
 
-// for file in files {
-// assert!(file.path.starts_with("file_"));
-// }
+        let files = models::File::fetch_all(&database).await.unwrap();
+        assert_eq!(files.len(), files_count);
 
-// remove_dir_all(source_path).unwrap();
-// }
-// }
+        for file in files {
+            assert!(file.path.starts_with("file_"));
+        }
+    }
+}
