@@ -1,5 +1,5 @@
 use fs::PathFinder;
-use temp_path::TempPath;
+use tmp::TempPath;
 
 mod common;
 

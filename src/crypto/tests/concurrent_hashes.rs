@@ -1,5 +1,5 @@
 use crypto::{hash::Sha256ConcurrentFileHasher, traits::ConcurrentCompute};
-use temp_path::TempPath;
+use tmp::TempPath;
 
 use crate::common::generate_plaintext_with_content;
 

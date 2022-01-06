@@ -2,7 +2,7 @@ use std::{fs::remove_file, path::Path};
 
 use crypto::{hash::Sha256FileHasher, traits::Compute};
 use rand::{prelude::SmallRng, SeedableRng};
-use temp_path::TempPath;
+use tmp::TempPath;
 
 use crate::common::{generate_plaintext_with_content, generate_random_plaintext_file_with_rng};
 
