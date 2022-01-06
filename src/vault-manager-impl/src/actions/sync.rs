@@ -14,10 +14,10 @@ pub struct SyncReport {
     pub processed_files: usize,
 }
 
-/// Adds missing files into database according to source folder
+/// Add missing files into database according to source folder
 pub async fn sync_database_from_source_path(
     database: &Database,
-    source_path: &PathBuf,
+    source_path: impl AsRef<Path>,
 ) -> anyhow::Result<SyncReport> {
     // Transform relative path into a full one
     let absolute_source_path = std::fs::canonicalize(source_path)?;
