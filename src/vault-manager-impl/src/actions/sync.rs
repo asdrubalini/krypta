@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use crypto::{hash::Sha256ConcurrentFileHasher, traits::ConcurrentCompute};
 use database::{
-    models::{self, traits::InsertMany},
+    models::{self, traits::InsertMany, Device},
     Database,
 };
 use fs::PathFinder;
@@ -17,6 +17,7 @@ pub struct SyncReport {
 pub async fn sync_database_from_source_path(
     database: &Database,
     source_path: impl AsRef<Path>,
+    current_device: Device,
 ) -> anyhow::Result<SyncReport> {
     // Transform relative path into a full one
     let absolute_source_path = std::fs::canonicalize(source_path)?;
@@ -114,8 +115,12 @@ mod tests {
             File::create(filename).unwrap();
         }
 
+        let current_device = models::Device::find_or_create_current(&database)
+            .await
+            .unwrap();
+
         // Populate database
-        let report = sync_database_from_source_path(&database, &source_path)
+        let report = sync_database_from_source_path(&database, &source_path, current_device)
             .await
             .unwrap();
 

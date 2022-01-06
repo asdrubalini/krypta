@@ -1,2 +1,2 @@
-INSERT INTO file (platform_id, name)
+INSERT INTO device (platform_id, name)
 VALUES (?, ?)

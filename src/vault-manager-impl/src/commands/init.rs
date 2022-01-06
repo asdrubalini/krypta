@@ -16,7 +16,7 @@ pub async fn execute(database: &Database, path: Option<impl AsRef<Path>>) {
         .unwrap();
 
     // On init the database is empty, so sync::sync_database_from_source_path effectively initialized the database
-    let report = sync_database_from_source_path(database, &source_path)
+    let report = sync_database_from_source_path(database, &source_path, current_device)
         .await
         .unwrap();
 
