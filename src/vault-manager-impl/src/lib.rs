@@ -1,6 +1,5 @@
 mod actions;
 mod commands;
-mod database;
 
 use dotenv::dotenv;
 

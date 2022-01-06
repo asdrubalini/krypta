@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::database::{errors::DatabaseError, Database};
+use crate::{errors::DatabaseError, Database};
 
 /// A model that can be full-text searched
 #[async_trait]

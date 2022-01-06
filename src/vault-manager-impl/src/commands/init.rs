@@ -1,11 +1,9 @@
 use std::{env, path::Path};
 
+use database::{models, Database};
 use log::info;
 
-use crate::{
-    actions::sync::sync_database_from_source_path,
-    database::{models, Database},
-};
+use crate::actions::sync::sync_database_from_source_path;
 
 pub async fn execute(database: &Database, path: Option<impl AsRef<Path>>) {
     // Default is pwd, fallback to it if path is None

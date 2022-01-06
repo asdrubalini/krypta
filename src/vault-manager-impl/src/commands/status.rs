@@ -1,6 +1,5 @@
 use byte_unit::Byte;
-
-use crate::database::{models, Database};
+use database::{models, Database};
 
 pub async fn execute(database: &Database) {
     let archive_size_bytes = models::File::archive_size(database).await.unwrap();

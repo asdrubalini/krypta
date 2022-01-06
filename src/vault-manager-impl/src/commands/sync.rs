@@ -1,7 +1,8 @@
 use std::path::PathBuf;
 
+use database::Database;
+
 use crate::actions::sync::{sync_database_from_source_path, sync_encrypted_path_from_database};
-use crate::database::Database;
 
 pub async fn execute(database: &Database) {
     // TODO: read from database or cli

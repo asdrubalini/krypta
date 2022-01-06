@@ -1,12 +1,11 @@
 use std::path::{Path, PathBuf};
 
 use crypto::{hash::Sha256ConcurrentFileHasher, traits::ConcurrentCompute};
-use fs::PathFinder;
-
-use crate::database::{
-    models::{self, InsertMany},
+use database::{
+    models::{self, traits::InsertMany},
     Database,
 };
+use fs::PathFinder;
 
 /// Final report of sync job, thrown if no fatal errors are encountered
 #[derive(Debug)]
@@ -95,8 +94,7 @@ pub async fn sync_encrypted_path_from_database(
 mod tests {
     use std::fs::File;
 
-    use crate::database::api::tests::create_in_memory;
-    use crate::database::models::Fetch;
+    use database::models::traits::Fetch;
 
     use super::*;
 
@@ -107,7 +105,7 @@ mod tests {
         let source_path = tmp.path();
         let files_count = 256;
 
-        let database = create_in_memory().await.unwrap();
+        let database = database::create_in_memory().await.unwrap();
 
         for i in 0..files_count {
             let mut filename = source_path.clone();

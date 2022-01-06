@@ -8,21 +8,14 @@ fs = { version = "0.1.0", path = "../fs" }
 crypto = { version = "0.1.0", path = "../crypto" }
 cli = { version = "0.1.0", path = "../cli" }
 tmp = { version = "0.1.0", path = "../tmp" }
+database = { version = "0.1.0", path = "../database" }
 
 tokio = { version = "1", features = [ "macros", "rt" ] }
-sqlx = { version = "0.5", features = [ "sqlite", "runtime-tokio-rustls", "chrono" ] }
-
-chrono = "0.4"
 
 log = "0.4"
 dotenv = "0.15"
 pretty_env_logger = "0.4"
 
-walkdir = "2"
-rand = "0.8"
-
-async-trait = "0.1"
 byte-unit = "4"
-byteorder = "1"
 anyhow = "1.0"
 thiserror = "1.0"

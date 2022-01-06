@@ -8,8 +8,9 @@ use sqlx::{
     FromRow, Row,
 };
 
-use super::{Fetch, Insert, InsertMany, Search};
-use crate::database::{errors::DatabaseError, BigIntAsBlob, Database};
+use crate::{errors::DatabaseError, BigIntAsBlob, Database};
+
+use super::traits::{Fetch, Insert, InsertMany, Search};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct File {
@@ -207,11 +208,12 @@ impl MetadataFile {
 mod tests {
     use std::path::PathBuf;
 
-    use super::File;
-    use crate::database::{
-        api::tests::create_in_memory,
-        models::{Fetch, Insert, InsertMany},
+    use crate::{
+        create_in_memory,
+        models::traits::{Fetch, Insert, InsertMany},
     };
+
+    use super::File;
 
     #[test]
     fn test_pseudorandom_sha256_string_is_valid_length_and_contains_valid_chars() {

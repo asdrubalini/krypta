@@ -2,9 +2,9 @@ use std::fs::File;
 
 use async_trait::async_trait;
 
-use crate::database::{errors::DatabaseError, Database};
+use crate::{errors::DatabaseError, Database};
 
-use super::{Insert, Search};
+use super::traits::{Insert, Search};
 
 #[derive(Debug, sqlx::FromRow, Clone)]
 pub struct Device {
