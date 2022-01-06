@@ -40,7 +40,6 @@ pub async fn sync_database_from_source_path(
 
     // Now that we have files already in database and all the local files,
     // filter out only files that needs to be added to the database
-
     // TODO: they may have changed, so here we should check the last modified date
     // to make sure that they have not, or we don't try to detect them at all
     // and instead rely on the user with a special `add` command or something like that.
