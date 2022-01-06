@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crypto::{hash::Sha256ConcurrentFileHasher, traits::ConcurrentCompute};
 use fs::PathFinder;
@@ -93,12 +93,10 @@ pub async fn sync_encrypted_path_from_database(
 // TODO: uncomment and fix when sync action is fixed
 #[cfg(test)]
 mod tests {
-    use std::{
-        fs::{create_dir_all, remove_dir_all, File},
-        path::PathBuf,
-    };
+    use std::fs::File;
 
-    use crate::database::{create_in_memory, models::Fetch};
+    use crate::database::api::tests::create_in_memory;
+    use crate::database::models::Fetch;
 
     use super::*;
 

@@ -65,8 +65,8 @@ impl Sha256FileHasher {
             ))?;
         } else if source_path.is_dir() {
             return Err(io::Error::new(
-                io::ErrorKind::IsADirectory,
-                source_path.as_os_str().to_str().unwrap(),
+                io::ErrorKind::Other,
+                "Expected file, found directory",
             ))?;
         }
 

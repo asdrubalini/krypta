@@ -16,8 +16,6 @@ It has the following fields:
 - `id`: database's incremental and unique id
 - `title`: friendly file's name
 - `path`: original, unencrypted file path
-- `is_remote`: whether or not the file exists on remote endpoint
-- `is_encrypted`: whether or not the file has been encrypted
 - `random_hash`: randomly-generated hash unique to each file (SHA-256)
 - `contents_hash`: hash of the plaintext version
 - `size`: file size, in bytes
@@ -31,20 +29,6 @@ Finally, the `key` table stores the encryption key.
 TODO: add a log table
 
 Other tables are used to store tags and link them to files.
-
-## File states
-
-Each single file can be in three states:
-- (1) Not present in the database
-- (2) Present in the database, in an unencrypted format and not on the cloud
-- (3) Present in the database, in an encrypted format but not on the cloud
-- (4) Present in the database, in and encrypted format and on the cloud
-
-You can know in what state each file is by executing an SQL query:
-
-`SELECT is_remote, is_encrypted FROM file WHERE random_hash = ?`
-
-if it returns `null`, then the file is in the (1) state. If it returns `(0, 0)`, then the file is in the (2) state. If it returns `(0, 1)`, then the file is in the (3) state and finally, if it returns `(1, 1)` we are in the (4) state.
 
 ## Local storage
 

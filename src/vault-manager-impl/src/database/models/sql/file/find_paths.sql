@@ -1,4 +1,2 @@
-SELECT
-  file.path
-FROM
-  file
+SELECT file.path
+FROM file

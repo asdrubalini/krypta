@@ -1,6 +1,6 @@
 use std::{env, path::Path, str::FromStr};
 
-use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Executor, SqlitePool};
+use sqlx::{ConnectOptions, Executor, sqlite::SqliteConnectOptions, SqlitePool};
 
 pub type Database = SqlitePool;
 
@@ -25,18 +25,8 @@ pub async fn connect_or_create() -> Result<Database, sqlx::Error> {
     Ok(connection)
 }
 
-/// Connect to SQLite database
-pub async fn create_in_memory() -> Result<Database, sqlx::Error> {
-    let options = SqliteConnectOptions::from_str("sqlite::memory:")?;
-    let connection = SqlitePool::connect_with(options).await?;
-
-    load_schema(&connection).await;
-
-    Ok(connection)
-}
-
 /// Load database schema
-pub async fn load_schema(database: &Database) {
+async fn load_schema(database: &Database) {
     log::info!("New database... loading schema");
 
     database
@@ -46,10 +36,23 @@ pub async fn load_schema(database: &Database) {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use std::{env, fs::remove_file, path::Path};
+    use std::str::FromStr;
+    use sqlx::sqlite::SqliteConnectOptions;
+    use sqlx::SqlitePool;
 
-    use super::{connect_or_create, create_in_memory};
+    use super::{connect_or_create, load_schema, Database};
+
+    /// Connect to SQLite database
+    pub async fn create_in_memory() -> Result<Database, sqlx::Error> {
+        let options = SqliteConnectOptions::from_str("sqlite::memory:")?;
+        let connection = SqlitePool::connect_with(options).await?;
+
+        load_schema(&connection).await;
+
+        Ok(connection)
+    }
 
     #[tokio::test]
     async fn test_create_sqlite_connection_in_memory() {

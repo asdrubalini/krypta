@@ -15,8 +15,6 @@ use crate::database::{BigIntAsBlob, Database};
 pub struct File {
     pub title: String,
     pub path: String,
-    pub is_remote: bool,
-    pub is_encrypted: bool,
     pub random_hash: String,
     pub contents_hash: String,
     pub size: u64,
@@ -28,8 +26,6 @@ impl<'r> FromRow<'r, SqliteRow> for File {
     fn from_row(row: &'r SqliteRow) -> Result<Self, sqlx::Error> {
         let title = row.try_get("title")?;
         let path = row.try_get("path")?;
-        let is_remote = row.try_get("is_remote")?;
-        let is_encrypted = row.try_get("is_encrypted")?;
         let random_hash = row.try_get("random_hash")?;
         let contents_hash = row.try_get("contents_hash")?;
         let size: Vec<u8> = row.try_get("size")?;
@@ -39,8 +35,6 @@ impl<'r> FromRow<'r, SqliteRow> for File {
         Ok(File {
             title,
             path,
-            is_remote,
-            is_encrypted,
             random_hash,
             contents_hash,
             size: BigIntAsBlob::from_bytes(&size),
@@ -52,22 +46,13 @@ impl<'r> FromRow<'r, SqliteRow> for File {
 
 impl File {
     /// Build a new `File`
-    pub fn new(
-        title: String,
-        path: PathBuf,
-        is_remote: bool,
-        is_encrypted: bool,
-        contents_hash: String,
-        size: u64,
-    ) -> Self {
+    pub fn new(title: String, path: PathBuf, contents_hash: String, size: u64) -> Self {
         let random_hash = File::pseudorandom_sha256_string();
         let now = chrono::Utc::now();
 
         File {
             title,
             path: path.to_string_lossy().to_string(),
-            is_remote,
-            is_encrypted,
             random_hash,
             contents_hash,
             size,
@@ -109,8 +94,6 @@ impl Insert<File> for File {
         sqlx::query(include_str!("./sql/file/insert.sql"))
             .bind(file.title)
             .bind(file.path)
-            .bind(file.is_remote)
-            .bind(file.is_encrypted)
             .bind(file.random_hash)
             .bind(file.contents_hash)
             .bind(BigIntAsBlob::from_u64(&file.size))
@@ -132,8 +115,6 @@ impl Insert<File> for File {
             sqlx::query(include_str!("./sql/file/insert.sql"))
                 .bind(file.title)
                 .bind(file.path)
-                .bind(file.is_remote)
-                .bind(file.is_encrypted)
                 .bind(file.random_hash)
                 .bind(file.contents_hash)
                 .bind(BigIntAsBlob::from_u64(&file.size))
@@ -199,8 +180,6 @@ impl File {
 pub struct MetadataFile {
     pub title: String,
     pub path: PathBuf,
-    pub is_remote: bool,
-    pub is_encrypted: bool,
     pub size: u64,
 }
 
@@ -210,8 +189,6 @@ impl MetadataFile {
         MetadataFile {
             title: path.to_string_lossy().to_string(),
             path: path.clone(),
-            is_remote: false,
-            is_encrypted: false,
             size: metadata.len(),
         }
     }
@@ -219,14 +196,7 @@ impl MetadataFile {
     /// Converts a `MetadataFile` into a `File` with some additional fields that are
     /// not present in a `Metadata` struct
     pub fn into_file(self, contents_hash: String) -> File {
-        File::new(
-            self.title,
-            self.path,
-            self.is_remote,
-            self.is_encrypted,
-            contents_hash,
-            self.size,
-        )
+        File::new(self.title, self.path, contents_hash, self.size)
     }
 }
 
@@ -236,7 +206,7 @@ mod tests {
 
     use super::File;
     use crate::database::{
-        create_in_memory,
+        api::tests::create_in_memory,
         models::{Fetch, Insert},
     };
 
@@ -261,8 +231,6 @@ mod tests {
         let file1 = File::new(
             "foobar".to_string(),
             PathBuf::from("/path/to/foo7bar"),
-            false,
-            false,
             "asdas".to_string(),
             0,
         );
@@ -272,8 +240,6 @@ mod tests {
         let file2 = File::new(
             "foobar".to_string(),
             PathBuf::from("/path/to/foo7bar"),
-            false,
-            false,
             "bfsdfb".to_string(),
             0,
         );
@@ -288,8 +254,6 @@ mod tests {
         let insert_file = File::new(
             "foobar".to_string(),
             PathBuf::from("/path/to/foo/bar"),
-            false,
-            false,
             "sdadfb".to_string(),
             0,
         );
@@ -316,8 +280,6 @@ mod tests {
                 File::new(
                     format!("foobar_{}", i),
                     PathBuf::from(format!("/path/to/foo/bar/{}", i)),
-                    false,
-                    false,
                     format!("test_hash_placeholder_{}", i),
                     0,
                 )
@@ -339,8 +301,6 @@ mod tests {
         let file = File::new(
             format!("foobar"),
             PathBuf::from("/path/to/foo/bar"),
-            false,
-            false,
             "test_hash_placeholder".to_string(),
             64,
         );
@@ -362,8 +322,6 @@ mod tests {
                 File::new(
                     format!("foobar_{}", i),
                     PathBuf::from(format!("/path/to/foo/bar/{}", i)),
-                    false,
-                    false,
                     format!("test_hash_placeholder_{}", i),
                     1_u64.pow(10), // 10 GB
                 )
@@ -390,8 +348,6 @@ mod tests {
                 File::new(
                     format!("foobar_{}", i),
                     PathBuf::from(format!("/path/to/foo/bar/{}", i)),
-                    false,
-                    false,
                     format!("test_hash_placeholder_{}", i),
                     0,
                 )

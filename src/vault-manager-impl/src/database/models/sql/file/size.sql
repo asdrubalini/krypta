@@ -1,4 +1,2 @@
-select
-    file.size
-from
-    file;
+select file.size
+from file;

@@ -4,9 +4,9 @@ use crate::actions::sync::{sync_database_from_source_path, sync_encrypted_path_f
 use crate::database::Database;
 
 pub async fn execute(database: &Database) {
-    // TODO: read from database
-    let source_path = todo!();
-    let encrypted_path = todo!();
+    // TODO: read from database or cli
+    let source_path = PathBuf::new();
+    let encrypted_path = PathBuf::new();
 
     let database_sync_report = sync_database_from_source_path(database, &source_path)
         .await

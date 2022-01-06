@@ -1,5 +1,3 @@
-#![feature(io_error_more)]
-
 const BUFFER_SIZE: usize = 16384;
 
 pub mod crypt;
