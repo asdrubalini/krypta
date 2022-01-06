@@ -5,7 +5,7 @@ use crypto::{
     traits::Compute,
 };
 use file_diff::diff;
-use tmp::TempPath;
+use tmp::Tmp;
 
 use crate::common::{generate_random_plaintext_file, generate_seeded_key};
 
@@ -48,7 +48,7 @@ async fn encrypt_decrypt_with_key(tmp_path: impl AsRef<Path>, key: &[u8; 32]) {
 
 #[tokio::test]
 async fn small_file_seeded_key() {
-    let tmp = TempPath::new();
+    let tmp = Tmp::new();
 
     let tests_file_size = [
         0, 1, 2, 3, 8, 9, 200, 256, 512, 893, 1024, 8192, 100_000, 250_000, 1_000_000,

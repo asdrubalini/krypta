@@ -1,5 +1,5 @@
 use crypto::{hash::Sha256ConcurrentFileHasher, traits::ConcurrentCompute};
-use tmp::TempPath;
+use tmp::Tmp;
 
 use crate::common::generate_plaintext_with_content;
 
@@ -7,7 +7,7 @@ mod common;
 
 #[tokio::test]
 async fn empty_equal_files() {
-    let tmp = TempPath::new();
+    let tmp = Tmp::new();
 
     let mut paths = vec![];
 

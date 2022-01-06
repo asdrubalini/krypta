@@ -1,11 +1,11 @@
 use fs::PathFinder;
-use tmp::TempPath;
+use tmp::Tmp;
 
 mod common;
 
 #[test]
 fn test_path_finder() {
-    let tmp = TempPath::new();
+    let tmp = Tmp::new();
 
     common::generate_files(tmp.path(), 128, 0);
 

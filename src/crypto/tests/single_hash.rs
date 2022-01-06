@@ -2,7 +2,7 @@ use std::{fs::remove_file, path::Path};
 
 use crypto::{hash::Sha256FileHasher, traits::Compute};
 use rand::{prelude::SmallRng, SeedableRng};
-use tmp::TempPath;
+use tmp::Tmp;
 
 use crate::common::{generate_plaintext_with_content, generate_random_plaintext_file_with_rng};
 
@@ -23,7 +23,7 @@ async fn create_plaintext_file_and_hash(content: &str, plaintext_file: impl AsRe
 
 #[tokio::test]
 async fn small_ascii_file() {
-    let tmp = TempPath::new();
+    let tmp = Tmp::new();
 
     let mut plaintext_file = tmp.path();
     plaintext_file.push("small_file.txt");
@@ -59,7 +59,7 @@ async fn seeded_hash(
 
 #[tokio::test]
 async fn big_random_file() {
-    let tmp = TempPath::new();
+    let tmp = Tmp::new();
 
     let mut plaintext_file = tmp.path();
     plaintext_file.push("big_random_file.txt");

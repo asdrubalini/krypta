@@ -10,11 +10,11 @@ use rand::{distributions::Alphanumeric, Rng};
 const TMP_FILENAME_LENGTH: usize = 24;
 
 #[derive(Debug)]
-pub struct TempPath {
+pub struct Tmp {
     path: PathBuf,
 }
 
-impl TempPath {
+impl Tmp {
     /// Generate a random path in the form of "/tmp/<random chars>/"
     fn generate_random_tmp(folder_length: usize) -> PathBuf {
         let random_name = rand::thread_rng()
@@ -47,7 +47,7 @@ impl TempPath {
     }
 }
 
-impl Drop for TempPath {
+impl Drop for Tmp {
     fn drop(&mut self) {
         if self.path.exists() {
             remove_dir_all(&self.path).unwrap();
@@ -62,12 +62,12 @@ impl Drop for TempPath {
 
 #[cfg(test)]
 mod tests {
-    use super::TempPath;
+    use super::Tmp;
 
     #[test]
     fn test_generate_random_tmp_path_length() {
         for length in 1..32 {
-            let path = TempPath::generate_random_tmp(length);
+            let path = Tmp::generate_random_tmp(length);
             let generated_folder = path.into_iter().last().unwrap();
 
             assert_eq!(generated_folder.len(), length);
@@ -78,7 +78,7 @@ mod tests {
     fn test_temp_path_folder_creation_and_destruction() {
         for _ in 0..256 {
             let path = {
-                let tmp = TempPath::new();
+                let tmp = Tmp::new();
 
                 // Make sure that path gets created
                 assert!(tmp.path().exists());
