@@ -4,7 +4,7 @@ use crypto::{hash::Sha256ConcurrentFileHasher, traits::ConcurrentCompute};
 use fs::PathFinder;
 
 use crate::database::{
-    models::{self, Insert},
+    models::{self, InsertMany},
     Database,
 };
 

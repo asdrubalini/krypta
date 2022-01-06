@@ -8,8 +8,8 @@ use sqlx::{
     FromRow, Row,
 };
 
-use super::{Fetch, Insert, Search};
-use crate::database::{BigIntAsBlob, Database};
+use super::{Fetch, Insert, InsertMany, Search};
+use crate::database::{errors::DatabaseError, BigIntAsBlob, Database};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct File {
@@ -63,9 +63,9 @@ impl File {
 }
 
 #[async_trait]
-impl Fetch<File> for File {
+impl Fetch for File {
     /// Fetch all records from database
-    async fn fetch_all(database: &Database) -> Result<Vec<File>, sqlx::Error> {
+    async fn fetch_all(database: &Database) -> Result<Vec<Self>, DatabaseError> {
         let files = sqlx::query_as::<_, File>(include_str!("./sql/file/fetch_all.sql"))
             .fetch_all(database)
             .await?;
@@ -75,9 +75,9 @@ impl Fetch<File> for File {
 }
 
 #[async_trait]
-impl Search<File> for File {
+impl Search for File {
     /// Search files stored in database
-    async fn search(database: &Database, query: &str) -> Result<Vec<File>, sqlx::Error> {
+    async fn search(database: &Database, query: &str) -> Result<Vec<Self>, DatabaseError> {
         let files = sqlx::query_as::<_, File>(include_str!("./sql/file/search.sql"))
             .bind(format!("%{}%", query))
             .fetch_all(database)
@@ -88,9 +88,9 @@ impl Search<File> for File {
 }
 
 #[async_trait]
-impl Insert<File> for File {
+impl Insert for File {
     /// Insert a new file into the database
-    async fn insert(database: &Database, file: File) -> Result<(), sqlx::Error> {
+    async fn insert(database: &Database, file: Self) -> Result<(), DatabaseError> {
         sqlx::query(include_str!("./sql/file/insert.sql"))
             .bind(file.title)
             .bind(file.path)
@@ -104,8 +104,11 @@ impl Insert<File> for File {
 
         Ok(())
     }
+}
 
-    async fn insert_many(database: &Database, files: &[File]) -> Result<(), sqlx::Error> {
+#[async_trait]
+impl InsertMany for File {
+    async fn insert_many(database: &Database, files: &[Self]) -> Result<(), DatabaseError> {
         let mut transaction = database.begin().await?;
 
         for file in files {
@@ -207,7 +210,7 @@ mod tests {
     use super::File;
     use crate::database::{
         api::tests::create_in_memory,
-        models::{Fetch, Insert},
+        models::{Fetch, Insert, InsertMany},
     };
 
     #[test]

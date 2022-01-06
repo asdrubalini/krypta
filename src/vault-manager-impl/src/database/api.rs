@@ -1,6 +1,6 @@
 use std::{env, path::Path, str::FromStr};
 
-use sqlx::{ConnectOptions, Executor, sqlite::SqliteConnectOptions, SqlitePool};
+use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Executor, SqlitePool};
 
 pub type Database = SqlitePool;
 
@@ -37,10 +37,10 @@ async fn load_schema(database: &Database) {
 
 #[cfg(test)]
 pub mod tests {
-    use std::{env, fs::remove_file, path::Path};
-    use std::str::FromStr;
     use sqlx::sqlite::SqliteConnectOptions;
     use sqlx::SqlitePool;
+    use std::str::FromStr;
+    use std::{env, fs::remove_file, path::Path};
 
     use super::{connect_or_create, load_schema, Database};
 
