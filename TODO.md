@@ -1,8 +1,8 @@
 # Major TODOs
+- Mechanism than can detect file changes based on file's date and time modification (and then fallback to SHA-256)
 - Fuly implement init command
 - Decide if sync should detect deleted files (probably not, deletion should happen manually)
 - Switch to anyhow in the main crate
-- Mechanism than can detect file changes based on file's date and time modification (and then fallback to SHA-256)
 - Add file's fs last modification time in database schema
 - Add file's SHA-256 in database schema
 - Use file encryption from implementationw

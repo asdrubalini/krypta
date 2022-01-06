@@ -8,7 +8,7 @@ use sqlx::{
     FromRow, Row,
 };
 
-use super::{Fetchable, Insertable, Searchable};
+use super::{Fetch, Insert, Search};
 use crate::database::{BigIntAsBlob, Database};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -78,7 +78,7 @@ impl File {
 }
 
 #[async_trait]
-impl Fetchable<File> for File {
+impl Fetch<File> for File {
     /// Fetch all records from database
     async fn fetch_all(database: &Database) -> Result<Vec<File>, sqlx::Error> {
         let files = sqlx::query_as::<_, File>(include_str!("./sql/file/fetch_all.sql"))
@@ -90,7 +90,7 @@ impl Fetchable<File> for File {
 }
 
 #[async_trait]
-impl Searchable<File> for File {
+impl Search<File> for File {
     /// Search files stored in database
     async fn search(database: &Database, query: &str) -> Result<Vec<File>, sqlx::Error> {
         let files = sqlx::query_as::<_, File>(include_str!("./sql/file/search.sql"))
@@ -103,7 +103,7 @@ impl Searchable<File> for File {
 }
 
 #[async_trait]
-impl Insertable<File> for File {
+impl Insert<File> for File {
     /// Insert a new file into the database
     async fn insert(database: &Database, file: File) -> Result<(), sqlx::Error> {
         sqlx::query(include_str!("./sql/file/insert.sql"))
@@ -237,7 +237,7 @@ mod tests {
     use super::File;
     use crate::database::{
         create_in_memory,
-        models::{Fetchable, Insertable},
+        models::{Fetch, Insert},
     };
 
     #[test]

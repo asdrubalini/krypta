@@ -4,7 +4,7 @@ use crypto::{hash::Sha256ConcurrentFileHasher, traits::ConcurrentCompute};
 use fs::PathFinder;
 
 use crate::database::{
-    models::{self, Insertable},
+    models::{self, Insert},
     Database,
 };
 
@@ -38,31 +38,42 @@ pub async fn sync_database_from_source_path(
     // Await for paths from database
     let database_paths = database_paths_handle.await??;
 
-    // Filter out only files that needs to be added to the database
+    // Now that we have files already in database and all the local files,
+    // filter out only files that needs to be added to the database
+    // TODO: they may have changed, so here we should check the last modified date
+    // to make sure that they have not
     path_finder.filter_out_paths(&database_paths);
 
-    // Start computing new file's hashes
+    // Start computing new file's hashes in the background
     let mut hasher = Sha256ConcurrentFileHasher::try_new(&path_finder.get_all_absolute_paths())?;
     let hashes_join = tokio::task::spawn(async move { hasher.start_all().await });
 
-    // Finally build File(s) from MetadataCollection
     let files_to_insert = path_finder
         .metadatas
         .iter()
         .map(|(path, metadata)| models::MetadataFile::new(path, metadata));
 
+    // Wait until all requested hashes have been computed
     let hashes = hashes_join.await.unwrap();
 
+    // Put hashes together with files constructing `models::File` objects
     let files_to_insert: Vec<models::File> = files_to_insert
         .map(|file| {
-            let hash = hashes.get(&file.path).unwrap();
+            // Since `crypto::Sha256ConcurrentHasher` expects absolute paths, they need to be constructed here
+            let mut absolute_file_path = absolute_source_path.clone();
+            absolute_file_path.push(&file.path);
+
+            let hash = hashes.get(&absolute_file_path).expect(&format!(
+                "Hash for required file {:?} cannot be found",
+                file.path
+            ));
             file.into_file(hash.as_hex())
         })
         .collect();
 
     log::trace!("Start adding to database");
 
-    // Use the File(s) we just got with the database api
+    // Use the File(s) we just got with the database api and insert them all
     models::File::insert_many(database, &files_to_insert).await?;
 
     let processed_files = files_to_insert.len();
@@ -72,8 +83,8 @@ pub async fn sync_database_from_source_path(
 
 /// Add missing files in the encrypted path, encrypting them first
 pub async fn sync_encrypted_path_from_database(
-    database: &Database,
-    encrypted_path: &PathBuf,
+    _database: &Database,
+    _encrypted_path: &PathBuf,
 ) -> anyhow::Result<SyncReport> {
     todo!()
 }
