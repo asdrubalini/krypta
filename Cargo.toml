@@ -8,7 +8,7 @@ members = [
     "src/vault-manager-impl",
     "src/crypto",
     "src/fs",
-    "src/temp-path",
+    "src/tmp",
     "src/cli"
 ]
 

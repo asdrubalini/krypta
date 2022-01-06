@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-temp-path = { version = "0.1.0", path = "../temp-path" }
+tmp = { version = "0.1.0", path = "../tmp" }
 
 tokio = { version = "1", features = [ "fs", "sync", "rt", "macros" ] }
 walkdir = "2"
