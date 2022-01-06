@@ -16,10 +16,10 @@ pub struct TempPath {
 
 impl TempPath {
     /// Generate a random path in the form of "/tmp/<random chars>/"
-    fn generate_random_tmp(folder_lenght: usize) -> PathBuf {
+    fn generate_random_tmp(folder_length: usize) -> PathBuf {
         let random_name = rand::thread_rng()
             .sample_iter(&Alphanumeric)
-            .take(folder_lenght)
+            .take(folder_length)
             .map(char::from)
             .collect::<String>();
 
@@ -65,12 +65,12 @@ mod tests {
     use super::TempPath;
 
     #[test]
-    fn test_generate_random_tmp_path_lenght() {
-        for lenght in 1..32 {
-            let path = TempPath::generate_random_tmp(lenght);
+    fn test_generate_random_tmp_path_length() {
+        for length in 1..32 {
+            let path = TempPath::generate_random_tmp(length);
             let generated_folder = path.into_iter().last().unwrap();
 
-            assert_eq!(generated_folder.len(), lenght);
+            assert_eq!(generated_folder.len(), length);
         }
     }
 
