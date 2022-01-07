@@ -49,30 +49,6 @@ pub struct InsertFile {
     pub updated_at: DateTime<Utc>,
 }
 
-// impl<'r> FromRow<'r, SqliteRow> for File {
-// fn from_row(row: &'r SqliteRow) -> Result<Self, sqlx::Error> {
-// let id = row.try_get("id")?;
-// let title = row.try_get("title")?;
-// let path = row.try_get("path")?;
-// let random_hash = row.try_get("random_hash")?;
-// let contents_hash = row.try_get("contents_hash")?;
-// let size: Vec<u8> = row.try_get("size")?;
-// let created_at = row.try_get("created_at")?;
-// let updated_at = row.try_get("updated_at")?;
-
-// Ok(File {
-// id,
-// title,
-// path,
-// random_hash,
-// contents_hash,
-// size: BigIntAsBlob::from_bytes(&size),
-// created_at,
-// updated_at,
-// })
-// }
-// }
-
 impl InsertFile {
     /// Build a new `InsertFile`
     pub fn new(title: String, path: PathBuf, contents_hash: String, size: u64) -> Self {
