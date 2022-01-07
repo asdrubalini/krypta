@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::{fs::Metadata, path::PathBuf};
 
 use async_trait::async_trait;
@@ -206,10 +207,12 @@ pub struct MetadataFile {
 
 impl MetadataFile {
     /// Convert &Metadata into a MetadataFile
-    pub fn new(path: &PathBuf, metadata: &Metadata) -> Self {
+    pub fn new(path: impl AsRef<Path>, metadata: &Metadata) -> Self {
+        let path = path.as_ref();
+
         MetadataFile {
             title: path.to_string_lossy().to_string(),
-            path: path.clone(),
+            path: path.to_path_buf(),
             size: metadata.len(),
         }
     }
@@ -330,7 +333,7 @@ mod tests {
             64,
         );
 
-        let result = file.insert(&database).await.unwrap();
+        file.insert(&database).await.unwrap();
         let archive_size = File::archive_size(&database).await;
         let archive_size = archive_size.unwrap();
 

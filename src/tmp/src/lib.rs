@@ -14,6 +14,12 @@ pub struct Tmp {
     path: PathBuf,
 }
 
+impl Default for Tmp {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Tmp {
     /// Generate a random path in the form of "/tmp/<random chars>/"
     fn generate_random_tmp(folder_length: usize) -> PathBuf {

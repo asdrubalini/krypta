@@ -62,12 +62,12 @@ impl Sha256FileHasher {
             return Err(io::Error::new(
                 io::ErrorKind::NotFound,
                 source_path.as_os_str().to_str().unwrap(),
-            ))?;
+            )
+            .into());
         } else if source_path.is_dir() {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                "Expected file, found directory",
-            ))?;
+            return Err(
+                io::Error::new(io::ErrorKind::Other, "Expected file, found directory").into(),
+            );
         }
 
         Ok(Self {

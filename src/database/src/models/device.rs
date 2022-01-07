@@ -57,7 +57,7 @@ impl Device {
         let platform_id = get_current_platform_id()?;
         let mut results = Self::search(database, &platform_id).await?;
 
-        if results.len() == 0 {
+        if results.is_empty() {
             // Create and inser
             let device = InsertDevice::new(&platform_id, &platform_id);
             let device = device.insert(database).await?;

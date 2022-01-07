@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crypto::{hash::Sha256ConcurrentFileHasher, traits::ConcurrentCompute};
 use database::{
@@ -17,7 +17,7 @@ pub struct SyncReport {
 pub async fn sync_database_from_source_path(
     database: &Database,
     source_path: impl AsRef<Path>,
-    current_device: Device,
+    _current_device: Device,
 ) -> anyhow::Result<SyncReport> {
     // Transform relative path into a full one
     let absolute_source_path = std::fs::canonicalize(source_path)?;
@@ -64,10 +64,9 @@ pub async fn sync_database_from_source_path(
             let mut absolute_file_path = absolute_source_path.clone();
             absolute_file_path.push(&file.path);
 
-            let hash = hashes.get(&absolute_file_path).expect(&format!(
-                "Hash for required file {:?} cannot be found",
-                file.path
-            ));
+            let hash = hashes.get(&absolute_file_path).unwrap_or_else(|| {
+                panic!("Hash for required file {:?} cannot be found", file.path)
+            });
             file.into_insert_file(hash.as_hex())
         })
         .collect();
@@ -85,7 +84,7 @@ pub async fn sync_database_from_source_path(
 /// Add missing files in the encrypted path, encrypting them first
 pub async fn sync_encrypted_path_from_database(
     _database: &Database,
-    _encrypted_path: &PathBuf,
+    _encrypted_path: impl AsRef<Path>,
 ) -> anyhow::Result<SyncReport> {
     todo!()
 }
