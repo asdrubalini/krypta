@@ -122,15 +122,16 @@ impl Insert<File> for InsertFile {
 }
 
 #[async_trait]
-impl InsertMany for InsertFile {
-    async fn insert_many(database: &Database, files: &[Self]) -> Result<(), DatabaseError> {
+impl InsertMany<File> for InsertFile {
+    async fn insert_many(database: &Database, files: &[Self]) -> Result<Vec<File>, DatabaseError> {
         let mut transaction = database.begin().await?;
+        let mut inserted_files = vec![];
 
         for file in files {
             let file = file.clone();
-            log::trace!("{}", file.title);
+            log::trace!("InsertMany: {}", file.title);
 
-            sqlx::query(include_str!("./sql/file/insert.sql"))
+            let file = sqlx::query_as::<_, File>(include_str!("./sql/file/insert.sql"))
                 .bind(file.title)
                 .bind(file.path)
                 .bind(file.random_hash)
@@ -138,13 +139,15 @@ impl InsertMany for InsertFile {
                 .bind(BigIntAsBlob::from_u64(&file.size))
                 .bind(file.created_at)
                 .bind(file.updated_at)
-                .execute(&mut transaction)
+                .fetch_one(&mut transaction)
                 .await?;
+
+            inserted_files.push(file);
         }
 
         transaction.commit().await?;
 
-        Ok(())
+        Ok(inserted_files)
     }
 }
 

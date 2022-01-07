@@ -16,8 +16,11 @@ pub trait Insert<T>: Sized {
 
 /// A model that can be mass-inserted
 #[async_trait]
-pub trait InsertMany: Sized {
-    async fn insert_many(database: &Database, files: &[Self]) -> Result<(), DatabaseError>;
+pub trait InsertMany<T>: Sized {
+    async fn insert_many(
+        database: &Database,
+        insertables: &[Self],
+    ) -> Result<Vec<T>, DatabaseError>;
 }
 
 /// A model that can be fetched

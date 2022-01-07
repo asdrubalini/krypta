@@ -20,23 +20,27 @@ impl FileDevice {
         is_unlocked: bool,
         is_encrypted: bool,
     ) -> Self {
-        todo!()
+        FileDevice {
+            file_id: file.id,
+            device_id: device.id,
+            is_unlocked,
+            is_encrypted,
+        }
     }
 }
 
-/*
 #[async_trait]
-impl Insert for FileDevice {
-    async fn insert(database: &Database, file_device: Self) -> Result<(), DatabaseError> {
-        sqlx::query(include_str!("./sql/file_device/insert.sql"))
-            .bind(file_device.file_id)
-            .bind(file_device.device_id)
-            .bind(file_device.is_unlocked)
-            .bind(file_device.is_encrypted)
-            .execute(database)
-            .await?;
+impl Insert<FileDevice> for FileDevice {
+    async fn insert(self, database: &Database) -> Result<FileDevice, DatabaseError> {
+        let file_device =
+            sqlx::query_as::<_, FileDevice>(include_str!("./sql/file_device/insert.sql"))
+                .bind(self.file_id)
+                .bind(self.device_id)
+                .bind(self.is_unlocked)
+                .bind(self.is_encrypted)
+                .fetch_one(database)
+                .await?;
 
-        Ok(())
+        Ok(file_device)
     }
 }
-*/
