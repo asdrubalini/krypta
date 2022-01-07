@@ -2,7 +2,7 @@ use async_trait::async_trait;
 
 use crate::{errors::DatabaseError, models, Database};
 
-use super::traits::Insert;
+use crate::traits::Insert;
 
 #[derive(sqlx::FromRow)]
 pub struct FileDevice {

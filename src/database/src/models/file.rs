@@ -11,7 +11,7 @@ use sqlx::{
 
 use crate::{errors::DatabaseError, BigIntAsBlob, Database};
 
-use super::traits::{Fetch, Insert, InsertMany, Search};
+use crate::traits::{Fetch, Insert, InsertMany, Search};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct File {
@@ -228,13 +228,8 @@ impl MetadataFile {
 mod tests {
     use std::path::PathBuf;
 
-    use crate::{
-        create_in_memory,
-        models::{
-            file::InsertFile,
-            traits::{Fetch, Insert, InsertMany},
-        },
-    };
+    use crate::traits::{Fetch, Insert, InsertMany};
+    use crate::{create_in_memory, models::file::InsertFile};
 
     use super::File;
 

@@ -6,3 +6,4 @@ pub use bigint_as_blob::BigIntAsBlob;
 
 pub mod errors;
 pub mod models;
+pub mod traits;

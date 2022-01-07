@@ -1,8 +1,9 @@
 use std::path::Path;
 
 use crypto::{hash::Sha256ConcurrentFileHasher, traits::ConcurrentCompute};
+use database::traits::InsertMany;
 use database::{
-    models::{self, traits::InsertMany, Device},
+    models::{self, Device},
     Database,
 };
 use fs::PathFinder;
@@ -94,7 +95,7 @@ pub async fn sync_encrypted_path_from_database(
 mod tests {
     use std::fs::File;
 
-    use database::models::traits::Fetch;
+    use database::traits::Fetch;
 
     use super::*;
 

@@ -4,7 +4,7 @@ use async_trait::async_trait;
 
 use crate::{errors::DatabaseError, Database};
 
-use super::traits::{Insert, Search};
+use crate::traits::{Insert, Search};
 
 #[derive(Debug, sqlx::FromRow, Clone)]
 pub struct Device {
