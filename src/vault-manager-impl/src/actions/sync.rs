@@ -25,8 +25,6 @@ pub async fn sync_database_from_source_path(
 
     log::trace!("Start fetching paths from database");
     // Start fetching files' paths we know from database
-    // TODO: evaluate tokio::spawn_blocking
-    // let database_paths_handle = models::File::get_file_paths(&mut database)?;
     let database_paths = models::File::get_file_paths(database)?;
 
     log::trace!("Start finding local files");
@@ -34,10 +32,6 @@ pub async fn sync_database_from_source_path(
     let mut path_finder = PathFinder::from_source_path(&absolute_source_path).unwrap();
 
     log::trace!("Done with finding local files");
-
-    // Await for paths from database
-    // TODO: evaluate tokio::spawn_blocking
-    // let database_paths = database_paths_handle.await??;
 
     // Now that we have files already in database and all the local files,
     // filter out only files that needs to be added to the database
