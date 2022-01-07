@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS "file" (
 	"path" TEXT NOT NULL UNIQUE,
 	"random_hash" TEXT NOT NULL UNIQUE,
 	"contents_hash" TEXT NOT NULL,
-	"size" BLOB NOT NULL,
+	"size" INTEGER NOT NULL,
 	"created_at" TEXT NOT NULL,
 	"updated_at" TEXT NOT NULL,
 	PRIMARY KEY("id" AUTOINCREMENT)

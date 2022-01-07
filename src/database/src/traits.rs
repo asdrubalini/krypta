@@ -7,12 +7,12 @@ pub trait Search: Sized {
 
 /// A model that can be inserted
 pub trait Insert<T>: Sized {
-    fn insert(self, db: &Database) -> DatabaseResult<T>;
+    fn insert(&self, db: &Database) -> DatabaseResult<T>;
 }
 
 /// A model that can be mass-inserted
 pub trait InsertMany<T>: Sized {
-    fn insert_many(db: &Database, insertables: &[Self]) -> DatabaseResult<Vec<T>>;
+    fn insert_many(db: &mut Database, insertables: &[Self]) -> DatabaseResult<Vec<T>>;
 }
 
 /// A model that can be fetched

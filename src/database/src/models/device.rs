@@ -84,7 +84,7 @@ impl Device {
 
 impl Search for Device {
     fn search(db: &Database, query: impl AsRef<str>) -> Result<Vec<Device>, DatabaseError> {
-        let mut stmt = db.prepare(include_str!("./sql/device/search.sql"))?;
+        let mut stmt = db.prepare(include_str!("sql/device/search.sql"))?;
         let mut rows = stmt.query([format!("%{}%", query.as_ref())])?;
 
         let mut devices = vec![];
@@ -97,9 +97,9 @@ impl Search for Device {
 }
 
 impl Insert<Device> for InsertDevice {
-    fn insert(self, db: &Database) -> DatabaseResult<Device> {
+    fn insert(&self, db: &Database) -> DatabaseResult<Device> {
         let device = db.query_row(
-            include_str!("./sql/device/insert.sql"),
+            include_str!("sql/device/insert.sql"),
             params![self.platform_id, self.name],
             |row| Ok(Device::try_from(row)?),
         )?;
