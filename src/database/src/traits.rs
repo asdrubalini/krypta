@@ -1,30 +1,21 @@
-use async_trait::async_trait;
-
-use crate::{errors::DatabaseError, Database};
+use crate::{errors::DatabaseResult, Database};
 
 /// A model that can be full-text searched
-#[async_trait]
 pub trait Search: Sized {
-    async fn search(database: &Database, query: &str) -> Result<Vec<Self>, DatabaseError>;
+    fn search(db: &Database, query: impl AsRef<str>) -> DatabaseResult<Vec<Self>>;
 }
 
 /// A model that can be inserted
-#[async_trait]
 pub trait Insert<T>: Sized {
-    async fn insert(self, database: &Database) -> Result<T, DatabaseError>;
+    fn insert(&self, db: &Database) -> DatabaseResult<T>;
 }
 
 /// A model that can be mass-inserted
-#[async_trait]
 pub trait InsertMany<T>: Sized {
-    async fn insert_many(
-        database: &Database,
-        insertables: &[Self],
-    ) -> Result<Vec<T>, DatabaseError>;
+    fn insert_many(db: &mut Database, insertables: &[Self]) -> DatabaseResult<Vec<T>>;
 }
 
 /// A model that can be fetched
-#[async_trait]
 pub trait Fetch: Sized {
-    async fn fetch_all(database: &Database) -> Result<Vec<Self>, DatabaseError>;
+    fn fetch_all(db: &Database) -> DatabaseResult<Vec<Self>>;
 }

@@ -8,12 +8,10 @@ pub async fn start() {
     pretty_env_logger::init();
 
     // Initialize database pool
-    let database = database::connect_or_create()
-        .await
-        .expect("Cannot open database");
+    let mut database = database::connect_or_create().expect("Cannot open database");
 
     // Parse cli arguments and execute requested operation
-    commands::execute_command(&database).await;
+    commands::execute_command(&mut database).await;
 
-    database.close().await;
+    database.close().unwrap();
 }
