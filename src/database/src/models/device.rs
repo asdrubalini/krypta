@@ -112,7 +112,7 @@ impl Insert<Device> for InsertDevice {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::create_in_memory;
+    use crate::{create_in_memory, traits::Search};
 
     use super::Device;
 
@@ -120,5 +120,13 @@ pub mod tests {
     fn test_find_or_create_current() {
         let db = create_in_memory().unwrap();
         let device = Device::find_or_create_current(&db).unwrap();
+
+        let found_device = Device::search(&db, &device.platform_id).unwrap();
+
+        assert_eq!(found_device.len(), 1);
+        assert_eq!(
+            found_device.first().unwrap().platform_id,
+            device.platform_id
+        );
     }
 }
