@@ -1,4 +1,5 @@
-SELECT title,
+SELECT id,
+  title,
   path,
   random_hash,
   contents_hash,

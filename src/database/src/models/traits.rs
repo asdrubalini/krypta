@@ -10,8 +10,8 @@ pub trait Search: Sized {
 
 /// A model that can be inserted
 #[async_trait]
-pub trait Insert: Sized {
-    async fn insert(database: &Database, to_insert: Self) -> Result<(), DatabaseError>;
+pub trait Insert<T>: Sized {
+    async fn insert(self, database: &Database) -> Result<T, DatabaseError>;
 }
 
 /// A model that can be mass-inserted

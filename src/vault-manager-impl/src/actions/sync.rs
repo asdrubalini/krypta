@@ -58,7 +58,7 @@ pub async fn sync_database_from_source_path(
     let hashes = hashes_join.await.unwrap();
 
     // Put hashes together with files constructing `models::File` objects
-    let files_to_insert: Vec<models::File> = files_to_insert
+    let files_to_insert: Vec<models::InsertFile> = files_to_insert
         .map(|file| {
             // Since `crypto::Sha256ConcurrentHasher` expects absolute paths, they need to be constructed here
             let mut absolute_file_path = absolute_source_path.clone();
@@ -68,14 +68,14 @@ pub async fn sync_database_from_source_path(
                 "Hash for required file {:?} cannot be found",
                 file.path
             ));
-            file.into_file(hash.as_hex())
+            file.into_insert_file(hash.as_hex())
         })
         .collect();
 
     log::trace!("Start adding to database");
 
     // Use the File(s) we just got with the database api and insert them all
-    models::File::insert_many(database, &files_to_insert).await?;
+    models::InsertFile::insert_many(database, &files_to_insert).await?;
 
     let processed_files = files_to_insert.len();
 

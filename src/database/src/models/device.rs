@@ -8,9 +8,17 @@ use super::traits::{Insert, Search};
 
 #[derive(Debug, sqlx::FromRow, Clone)]
 pub struct Device {
-    // Platform specific id
+    /// Database internal id
+    pub id: i64,
+    /// Platform specific id
     pub platform_id: String,
-    // Friendly name
+    /// Friendly name
+    pub name: String,
+}
+
+/// A device that can be inserted
+pub struct InsertDevice {
+    pub platform_id: String,
     pub name: String,
 }
 
@@ -28,11 +36,20 @@ pub fn get_current_platform_id() -> Result<String, std::io::Error> {
     Ok(machine_id)
 }
 
+impl InsertDevice {
+    pub fn new<S: AsRef<str>>(platform_id: S, name: S) -> Self {
+        let platform_id = platform_id.as_ref().to_owned();
+        let name = name.as_ref().to_owned();
+
+        InsertDevice { platform_id, name }
+    }
+}
+
 impl Device {
     /// Build a new `Device`
-    pub fn new(platform_id: String, name: String) -> Self {
-        Device { platform_id, name }
-    }
+    // pub fn new(platform_id: String, name: String) -> Self {
+    // Device { platform_id, name }
+    // }
 
     /// Attempts to find the current device in the database, creating one if it doesn't
     /// exists yet
@@ -42,8 +59,9 @@ impl Device {
 
         if results.len() == 0 {
             // Create and inser
-            let device = Self::new(platform_id.clone(), platform_id);
-            Self::insert(database, device.clone()).await?;
+            let device = InsertDevice::new(&platform_id, &platform_id);
+            let device = device.insert(database).await?;
+
             Ok(device)
         } else {
             // Return the existing one
@@ -65,14 +83,14 @@ impl Search for Device {
 }
 
 #[async_trait]
-impl Insert for Device {
-    async fn insert(database: &Database, device: Self) -> Result<(), DatabaseError> {
-        sqlx::query(include_str!("./sql/device/insert.sql"))
-            .bind(device.platform_id)
-            .bind(device.name)
-            .execute(database)
+impl Insert<Device> for InsertDevice {
+    async fn insert(self, database: &Database) -> Result<Device, DatabaseError> {
+        let device = sqlx::query_as::<_, Device>(include_str!("./sql/device/insert.sql"))
+            .bind(self.platform_id)
+            .bind(self.name)
+            .fetch_one(database)
             .await?;
 
-        Ok(())
+        Ok(device)
     }
 }
