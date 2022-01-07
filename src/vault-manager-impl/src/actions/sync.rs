@@ -16,7 +16,7 @@ pub struct SyncReport {
 
 /// Add missing files into database according to source folder
 pub async fn sync_database_from_source_path(
-    database: &Database,
+    database: &mut Database,
     source_path: impl AsRef<Path>,
     current_device: Device,
 ) -> anyhow::Result<SyncReport> {
@@ -25,10 +25,9 @@ pub async fn sync_database_from_source_path(
 
     log::trace!("Start fetching paths from database");
     // Start fetching files' paths we know from database
-    let database_paths_handle = {
-        let database = database.clone();
-        tokio::spawn(async move { models::File::get_file_paths(&database).await })
-    };
+    // TODO: evaluate tokio::spawn_blocking
+    // let database_paths_handle = models::File::get_file_paths(&mut database)?;
+    let database_paths = models::File::get_file_paths(database)?;
 
     log::trace!("Start finding local files");
     // Find all file paths
@@ -37,7 +36,8 @@ pub async fn sync_database_from_source_path(
     log::trace!("Done with finding local files");
 
     // Await for paths from database
-    let database_paths = database_paths_handle.await??;
+    // TODO: evaluate tokio::spawn_blocking
+    // let database_paths = database_paths_handle.await??;
 
     // Now that we have files already in database and all the local files,
     // filter out only files that needs to be added to the database
@@ -75,7 +75,7 @@ pub async fn sync_database_from_source_path(
     log::trace!("Start adding to database");
 
     // Use the File(s) we just got with the database api and insert them all
-    let inserted_files = models::InsertFile::insert_many(database, &files_to_insert).await?;
+    let inserted_files = models::InsertFile::insert_many(database, &files_to_insert)?;
 
     // For each inserted File, create `FileDevice`s objects which marks each file as being unlocked
     // and not encrypted
@@ -84,7 +84,7 @@ pub async fn sync_database_from_source_path(
         .map(|file| models::FileDevice::new(&file, &current_device, true, false))
         .collect::<Vec<_>>();
 
-    models::FileDevice::insert_many(database, &file_devices).await?;
+    models::FileDevice::insert_many(database, &file_devices)?;
 
     let processed_files = files_to_insert.len();
 
@@ -115,7 +115,7 @@ mod tests {
         let source_path = tmp.path();
         let files_count = 256;
 
-        let database = database::create_in_memory().await.unwrap();
+        let mut database = database::create_in_memory().unwrap();
 
         for i in 0..files_count {
             let mut filename = source_path.clone();
@@ -124,18 +124,16 @@ mod tests {
             File::create(filename).unwrap();
         }
 
-        let current_device = models::Device::find_or_create_current(&database)
-            .await
-            .unwrap();
+        let current_device = models::Device::find_or_create_current(&database).unwrap();
 
         // Populate database
-        let report = sync_database_from_source_path(&database, &source_path, current_device)
+        let report = sync_database_from_source_path(&mut database, &source_path, current_device)
             .await
             .unwrap();
 
         assert_eq!(report.processed_files, files_count);
 
-        let files = models::File::fetch_all(&database).await.unwrap();
+        let files = models::File::fetch_all(&mut database).unwrap();
         assert_eq!(files.len(), files_count);
 
         for file in files {
