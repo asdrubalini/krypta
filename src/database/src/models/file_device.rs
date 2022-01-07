@@ -36,8 +36,8 @@ impl Insert<FileDevice> for FileDevice {
             sqlx::query_as::<_, FileDevice>(include_str!("./sql/file_device/insert.sql"))
                 .bind(self.file_id)
                 .bind(self.device_id)
-                .bind(self.is_unlocked as i64)
-                .bind(self.is_encrypted as i64)
+                .bind(self.is_unlocked)
+                .bind(self.is_encrypted)
                 .fetch_one(database)
                 .await?;
 
