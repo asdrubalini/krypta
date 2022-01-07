@@ -20,7 +20,7 @@ async fn empty_equal_files() {
         paths.push(plaintext_path);
     }
 
-    let mut concurrent = Sha256ConcurrentFileHasher::try_new(&paths).unwrap();
+    let concurrent = Sha256ConcurrentFileHasher::try_new(&paths).unwrap();
     let results = concurrent.start_all().await;
 
     for i in 0..8192 {

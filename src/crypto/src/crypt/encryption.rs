@@ -94,7 +94,7 @@ impl Compute for FileEncryptor {
 
 #[derive(Debug, Clone)]
 pub struct FileConcurrentEncryptor {
-    encryptors: Option<Vec<FileEncryptor>>,
+    encryptors: Vec<FileEncryptor>,
 }
 
 impl FileConcurrentEncryptor {
@@ -117,9 +117,7 @@ impl FileConcurrentEncryptor {
             )?);
         }
 
-        Ok(Self {
-            encryptors: Some(encryptors),
-        })
+        Ok(Self { encryptors })
     }
 }
 
@@ -128,8 +126,8 @@ impl ConcurrentCompute for FileConcurrentEncryptor {
     type Output = bool;
     type Key = PathBuf;
 
-    fn computables(&mut self) -> Vec<Self::Computable> {
-        self.encryptors.take().expect("Cannot take computables")
+    fn computables(&self) -> Vec<Self::Computable> {
+        self.encryptors.clone()
     }
 
     fn computable_result_to_output(
