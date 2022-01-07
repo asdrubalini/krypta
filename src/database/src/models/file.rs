@@ -152,7 +152,6 @@ impl InsertMany<File> for InsertFile {
     }
 }
 
-#[allow(dead_code)]
 impl File {
     /// Generate a pseudorandom sha256 hash
     fn pseudorandom_sha256_string() -> String {

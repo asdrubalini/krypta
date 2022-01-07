@@ -36,8 +36,8 @@ impl Insert<FileDevice> for FileDevice {
             sqlx::query_as::<_, FileDevice>(include_str!("./sql/file_device/insert.sql"))
                 .bind(self.file_id)
                 .bind(self.device_id)
-                .bind(self.is_unlocked)
-                .bind(self.is_encrypted)
+                .bind(self.is_unlocked as i64)
+                .bind(self.is_encrypted as i64)
                 .fetch_one(database)
                 .await?;
 
@@ -77,5 +77,35 @@ impl InsertMany<FileDevice> for FileDevice {
         transaction.commit().await?;
 
         Ok(inserted_items)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::FileDevice;
+    use crate::create_in_memory;
+    use crate::models::{Device, InsertFile};
+    use crate::traits::Insert;
+
+    #[tokio::test]
+    async fn test_insert() {
+        let database = create_in_memory().await.unwrap();
+
+        // Prepare file
+        let file = InsertFile::new(
+            "random title".to_string(),
+            Default::default(),
+            "random unique hash".to_string(),
+            0,
+        )
+        .insert(&database)
+        .await
+        .unwrap();
+
+        // Prepare device
+        let device = Device::find_or_create_current(&database).await.unwrap();
+
+        let to_insert = FileDevice::new(&file, &device, false, false);
+        to_insert.insert(&database).await.unwrap();
     }
 }

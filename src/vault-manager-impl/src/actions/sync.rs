@@ -18,7 +18,7 @@ pub struct SyncReport {
 pub async fn sync_database_from_source_path(
     database: &Database,
     source_path: impl AsRef<Path>,
-    _current_device: Device,
+    current_device: Device,
 ) -> anyhow::Result<SyncReport> {
     // Transform relative path into a full one
     let absolute_source_path = std::fs::canonicalize(source_path)?;
@@ -75,7 +75,16 @@ pub async fn sync_database_from_source_path(
     log::trace!("Start adding to database");
 
     // Use the File(s) we just got with the database api and insert them all
-    models::InsertFile::insert_many(database, &files_to_insert).await?;
+    let inserted_files = models::InsertFile::insert_many(database, &files_to_insert).await?;
+
+    // For each inserted File, create `FileDevice`s objects which marks each file as being unlocked
+    // and not encrypted
+    let file_devices = inserted_files
+        .into_iter()
+        .map(|file| models::FileDevice::new(&file, &current_device, true, false))
+        .collect::<Vec<_>>();
+
+    models::FileDevice::insert_many(database, &file_devices).await?;
 
     let processed_files = files_to_insert.len();
 
