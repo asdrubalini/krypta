@@ -1,6 +1,6 @@
 use sqlx::{sqlite::SqliteRow, FromRow, Row};
 
-use crate::database::BigIntAsBlob;
+use crate::BigIntAsBlob;
 
 pub struct VaultInfo {
     name: String,

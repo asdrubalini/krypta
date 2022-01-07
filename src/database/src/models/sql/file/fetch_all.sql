@@ -1,14 +1,9 @@
-INSERT INTO
-  file (
+select id,
     title,
     path,
-    is_remote,
-    is_encrypted,
     random_hash,
     contents_hash,
     size,
     created_at,
     updated_at
-  )
-VALUES
-  (?, ?, ?, ?, ?, ?, ?, ?, ?)
+from file

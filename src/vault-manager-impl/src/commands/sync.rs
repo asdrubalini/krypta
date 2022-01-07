@@ -1,16 +1,22 @@
 use std::path::PathBuf;
 
+use database::{models, Database};
+
 use crate::actions::sync::{sync_database_from_source_path, sync_encrypted_path_from_database};
-use crate::database::Database;
 
 pub async fn execute(database: &Database) {
-    // TODO: read from database
-    let source_path = todo!();
-    let encrypted_path = todo!();
+    // TODO: read from database or cli
+    let source_path = PathBuf::new();
+    let encrypted_path = PathBuf::new();
 
-    let database_sync_report = sync_database_from_source_path(database, &source_path)
+    let current_device = models::Device::find_or_create_current(database)
         .await
-        .expect("Fatal while doing database sync");
+        .unwrap();
+
+    let database_sync_report =
+        sync_database_from_source_path(database, &source_path, current_device)
+            .await
+            .expect("Fatal while doing database sync");
 
     println!(
         "Added {} new files to the database",

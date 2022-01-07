@@ -1,12 +1,12 @@
-use std::path::PathBuf;
+use std::path::Path;
 
 use crypto::{hash::Sha256ConcurrentFileHasher, traits::ConcurrentCompute};
-use fs::PathFinder;
-
-use crate::database::{
-    models::{self, Insert},
+use database::traits::InsertMany;
+use database::{
+    models::{self, Device},
     Database,
 };
+use fs::PathFinder;
 
 /// Final report of sync job, thrown if no fatal errors are encountered
 #[derive(Debug)]
@@ -18,6 +18,7 @@ pub struct SyncReport {
 pub async fn sync_database_from_source_path(
     database: &Database,
     source_path: impl AsRef<Path>,
+    current_device: Device,
 ) -> anyhow::Result<SyncReport> {
     // Transform relative path into a full one
     let absolute_source_path = std::fs::canonicalize(source_path)?;
@@ -58,24 +59,32 @@ pub async fn sync_database_from_source_path(
     let hashes = hashes_join.await.unwrap();
 
     // Put hashes together with files constructing `models::File` objects
-    let files_to_insert: Vec<models::File> = files_to_insert
+    let files_to_insert: Vec<models::InsertFile> = files_to_insert
         .map(|file| {
             // Since `crypto::Sha256ConcurrentHasher` expects absolute paths, they need to be constructed here
             let mut absolute_file_path = absolute_source_path.clone();
             absolute_file_path.push(&file.path);
 
-            let hash = hashes.get(&absolute_file_path).expect(&format!(
-                "Hash for required file {:?} cannot be found",
-                file.path
-            ));
-            file.into_file(hash.as_hex())
+            let hash = hashes.get(&absolute_file_path).unwrap_or_else(|| {
+                panic!("Hash for required file {:?} cannot be found", file.path)
+            });
+            file.into_insert_file(hash.as_hex())
         })
         .collect();
 
     log::trace!("Start adding to database");
 
     // Use the File(s) we just got with the database api and insert them all
-    models::File::insert_many(database, &files_to_insert).await?;
+    let inserted_files = models::InsertFile::insert_many(database, &files_to_insert).await?;
+
+    // For each inserted File, create `FileDevice`s objects which marks each file as being unlocked
+    // and not encrypted
+    let file_devices = inserted_files
+        .into_iter()
+        .map(|file| models::FileDevice::new(&file, &current_device, true, false))
+        .collect::<Vec<_>>();
+
+    models::FileDevice::insert_many(database, &file_devices).await?;
 
     let processed_files = files_to_insert.len();
 
@@ -85,7 +94,7 @@ pub async fn sync_database_from_source_path(
 /// Add missing files in the encrypted path, encrypting them first
 pub async fn sync_encrypted_path_from_database(
     _database: &Database,
-    _encrypted_path: &PathBuf,
+    _encrypted_path: impl AsRef<Path>,
 ) -> anyhow::Result<SyncReport> {
     todo!()
 }
@@ -93,12 +102,9 @@ pub async fn sync_encrypted_path_from_database(
 // TODO: uncomment and fix when sync action is fixed
 #[cfg(test)]
 mod tests {
-    use std::{
-        fs::{create_dir_all, remove_dir_all, File},
-        path::PathBuf,
-    };
+    use std::fs::File;
 
-    use crate::database::{create_in_memory, models::Fetch};
+    use database::traits::Fetch;
 
     use super::*;
 
@@ -109,7 +115,7 @@ mod tests {
         let source_path = tmp.path();
         let files_count = 256;
 
-        let database = create_in_memory().await.unwrap();
+        let database = database::create_in_memory().await.unwrap();
 
         for i in 0..files_count {
             let mut filename = source_path.clone();
@@ -118,8 +124,12 @@ mod tests {
             File::create(filename).unwrap();
         }
 
+        let current_device = models::Device::find_or_create_current(&database)
+            .await
+            .unwrap();
+
         // Populate database
-        let report = sync_database_from_source_path(&database, &source_path)
+        let report = sync_database_from_source_path(&database, &source_path, current_device)
             .await
             .unwrap();
 

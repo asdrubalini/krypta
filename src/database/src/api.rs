@@ -25,7 +25,17 @@ pub async fn connect_or_create() -> Result<Database, sqlx::Error> {
     Ok(connection)
 }
 
-/// Connect to SQLite database
+/// Load database schema
+async fn load_schema(database: &Database) {
+    log::info!("New database... loading schema");
+
+    database
+        .execute(include_str!("../schema.sql"))
+        .await
+        .expect("Cannot load database schema");
+}
+
+/// Create a temporary SQLite database in memory, used in tests
 pub async fn create_in_memory() -> Result<Database, sqlx::Error> {
     let options = SqliteConnectOptions::from_str("sqlite::memory:")?;
     let connection = SqlitePool::connect_with(options).await?;
@@ -35,21 +45,11 @@ pub async fn create_in_memory() -> Result<Database, sqlx::Error> {
     Ok(connection)
 }
 
-/// Load database schema
-pub async fn load_schema(database: &Database) {
-    log::info!("New database... loading schema");
-
-    database
-        .execute(include_str!("../schema.sql"))
-        .await
-        .expect("Cannot load database schema");
-}
-
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use std::{env, fs::remove_file, path::Path};
 
-    use super::{connect_or_create, create_in_memory};
+    use crate::{api::create_in_memory, connect_or_create};
 
     #[tokio::test]
     async fn test_create_sqlite_connection_in_memory() {

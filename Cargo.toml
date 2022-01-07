@@ -9,7 +9,8 @@ members = [
     "src/crypto",
     "src/fs",
     "src/tmp",
-    "src/cli"
+    "src/cli",
+    "src/database"
 ]
 
 [dependencies]

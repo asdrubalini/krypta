@@ -1,6 +1,5 @@
 use cli::{CliCommand, Parser};
-
-use crate::database::Database;
+use database::Database;
 
 use super::{init, status, sync};
 

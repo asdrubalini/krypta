@@ -264,6 +264,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "database"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "byteorder",
+ "chrono",
+ "log",
+ "rand",
+ "sqlx",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "digest"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1360,21 +1374,17 @@ name = "vault-manager-impl"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-trait",
  "byte-unit",
- "byteorder",
- "chrono",
  "cli",
  "crypto",
+ "database",
  "dotenv",
  "fs",
  "log",
  "pretty_env_logger",
- "rand",
- "sqlx",
+ "thiserror",
  "tmp",
  "tokio",
- "walkdir",
 ]
 
 [[package]]
