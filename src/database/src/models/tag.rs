@@ -1,4 +1,4 @@
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug)]
 pub struct Tag {
     pub name: String,
 }
