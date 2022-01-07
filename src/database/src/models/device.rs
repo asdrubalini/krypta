@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::Read;
 
-use rusqlite::params;
+use rusqlite::{params, Row};
 
 use crate::{
     errors::{DatabaseError, DatabaseResult},
@@ -17,6 +17,18 @@ pub struct Device {
     pub platform_id: String,
     /// Friendly name
     pub name: String,
+}
+
+impl TryFrom<&Row<'_>> for Device {
+    type Error = rusqlite::Error;
+
+    fn try_from(row: &Row<'_>) -> Result<Self, Self::Error> {
+        Ok(Device {
+            id: row.get(0)?,
+            platform_id: row.get(1)?,
+            name: row.get(2)?,
+        })
+    }
 }
 
 /// A device that can be inserted
@@ -77,13 +89,7 @@ impl Search for Device {
 
         let mut devices = vec![];
         while let Some(row) = rows.next()? {
-            let device = Device {
-                id: row.get(0)?,
-                platform_id: row.get(1)?,
-                name: row.get(2)?,
-            };
-
-            devices.push(device);
+            devices.push(Device::try_from(row)?);
         }
 
         Ok(devices)
@@ -95,15 +101,7 @@ impl Insert<Device> for InsertDevice {
         let device = db.query_row(
             include_str!("./sql/device/insert.sql"),
             params![self.platform_id, self.name],
-            |row| {
-                let device = Device {
-                    id: row.get(0)?,
-                    platform_id: row.get(1)?,
-                    name: row.get(2)?,
-                };
-
-                Ok(device)
-            },
+            |row| Ok(Device::try_from(row)?),
         )?;
 
         Ok(device)
