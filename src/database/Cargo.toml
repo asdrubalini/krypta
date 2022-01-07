@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies.rusqlite]
 version = "0.26"
-features = ["bundled"]
+features = [ "bundled", "chrono" ]
 
 [dependencies]
 tmp = { version = "0.1.0", path = "../tmp" }

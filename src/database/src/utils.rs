@@ -31,7 +31,7 @@ fn load_schema(db: &Database) -> DatabaseResult<()> {
 /// Create a temporary SQLite database in memory, used in tests
 pub fn create_in_memory() -> DatabaseResult<Database> {
     let connection = Connection::open_in_memory()?;
-    load_schema(&connection);
+    load_schema(&connection)?;
 
     Ok(connection)
 }
@@ -44,10 +44,12 @@ pub mod tests {
 
     use crate::{connect_or_create, utils::create_in_memory};
 
+    #[test]
     fn test_create_sqlite_connection_in_memory() {
         create_in_memory().unwrap();
     }
 
+    #[test]
     fn test_connect_and_create() {
         let tmp = Tmp::new();
 
