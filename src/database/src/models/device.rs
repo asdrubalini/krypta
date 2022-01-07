@@ -46,11 +46,6 @@ impl InsertDevice {
 }
 
 impl Device {
-    /// Build a new `Device`
-    // pub fn new(platform_id: String, name: String) -> Self {
-    // Device { platform_id, name }
-    // }
-
     /// Attempts to find the current device in the database, creating one if it doesn't
     /// exists yet
     pub async fn find_or_create_current(database: &Database) -> Result<Self, DatabaseError> {
