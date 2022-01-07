@@ -2,9 +2,9 @@ use async_trait::async_trait;
 
 use crate::{errors::DatabaseError, models, Database};
 
-use crate::traits::Insert;
+use crate::traits::{Insert, InsertMany};
 
-#[derive(sqlx::FromRow)]
+#[derive(Clone, Debug, sqlx::FromRow)]
 pub struct FileDevice {
     file_id: i64,
     device_id: i64,
@@ -42,5 +42,40 @@ impl Insert<FileDevice> for FileDevice {
                 .await?;
 
         Ok(file_device)
+    }
+}
+
+#[async_trait]
+impl InsertMany<FileDevice> for FileDevice {
+    async fn insert_many(
+        database: &Database,
+        items: &[Self],
+    ) -> Result<Vec<FileDevice>, DatabaseError> {
+        let mut transaction = database.begin().await?;
+        let mut inserted_items = vec![];
+
+        for file_device in items {
+            let file_device = file_device.to_owned();
+            log::trace!(
+                "FileDevice::InsertMany: {} {}",
+                file_device.file_id,
+                file_device.device_id
+            );
+
+            let inserted =
+                sqlx::query_as::<_, FileDevice>(include_str!("./sql/file_device/insert.sql"))
+                    .bind(file_device.file_id)
+                    .bind(file_device.device_id)
+                    .bind(file_device.is_unlocked)
+                    .bind(file_device.is_encrypted)
+                    .fetch_one(&mut transaction)
+                    .await?;
+
+            inserted_items.push(inserted);
+        }
+
+        transaction.commit().await?;
+
+        Ok(inserted_items)
     }
 }

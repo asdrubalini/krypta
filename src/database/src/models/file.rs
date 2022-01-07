@@ -124,15 +124,15 @@ impl Insert<File> for InsertFile {
 
 #[async_trait]
 impl InsertMany<File> for InsertFile {
-    async fn insert_many(database: &Database, files: &[Self]) -> Result<Vec<File>, DatabaseError> {
+    async fn insert_many(database: &Database, items: &[Self]) -> Result<Vec<File>, DatabaseError> {
         let mut transaction = database.begin().await?;
-        let mut inserted_files = vec![];
+        let mut inserted_items = vec![];
 
-        for file in files {
-            let file = file.clone();
-            log::trace!("InsertMany: {}", file.title);
+        for file in items {
+            let file = file.to_owned();
+            log::trace!("InsertFile::InsertMany: {}", file.title);
 
-            let file = sqlx::query_as::<_, File>(include_str!("./sql/file/insert.sql"))
+            let inserted = sqlx::query_as::<_, File>(include_str!("./sql/file/insert.sql"))
                 .bind(file.title)
                 .bind(file.path)
                 .bind(file.random_hash)
@@ -143,12 +143,12 @@ impl InsertMany<File> for InsertFile {
                 .fetch_one(&mut transaction)
                 .await?;
 
-            inserted_files.push(file);
+            inserted_items.push(inserted);
         }
 
         transaction.commit().await?;
 
-        Ok(inserted_files)
+        Ok(inserted_items)
     }
 }
 
