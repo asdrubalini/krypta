@@ -23,14 +23,22 @@ pub async fn sync_database_from_source_path(
     // Transform relative path into a full one
     let absolute_source_path = std::fs::canonicalize(source_path)?;
 
+    log::trace!("Start finding local files");
+
+    // Find all file paths
+    let path_finder_handle = {
+        let absolute_source_path = absolute_source_path.clone();
+
+        tokio::task::spawn_blocking(move || {
+            PathFinder::from_source_path(&absolute_source_path).unwrap()
+        })
+    };
+
     log::trace!("Start fetching paths from database");
     // Start fetching files' paths we know from database
     let database_paths = models::File::get_file_paths(database)?;
 
-    log::trace!("Start finding local files");
-    // Find all file paths
-    let mut path_finder = PathFinder::from_source_path(&absolute_source_path).unwrap();
-
+    let mut path_finder = path_finder_handle.await?;
     log::trace!("Done with finding local files");
 
     // Now that we have files already in database and all the local files,
