@@ -35,7 +35,7 @@ async fn load_schema(database: &Database) {
         .expect("Cannot load database schema");
 }
 
-/// Connect to SQLite database
+/// Create a temporary SQLite database in memory, used in tests
 pub async fn create_in_memory() -> Result<Database, sqlx::Error> {
     let options = SqliteConnectOptions::from_str("sqlite::memory:")?;
     let connection = SqlitePool::connect_with(options).await?;
