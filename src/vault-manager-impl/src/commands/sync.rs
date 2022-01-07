@@ -4,14 +4,12 @@ use database::{models, Database};
 
 use crate::actions::sync::{sync_database_from_source_path, sync_encrypted_path_from_database};
 
-pub async fn execute(database: &Database) {
+pub async fn execute(database: &mut Database) {
     // TODO: read from database or cli
     let source_path = PathBuf::new();
     let encrypted_path = PathBuf::new();
 
-    let current_device = models::Device::find_or_create_current(database)
-        .await
-        .unwrap();
+    let current_device = models::Device::find_or_create_current(database).unwrap();
 
     let database_sync_report =
         sync_database_from_source_path(database, &source_path, current_device)

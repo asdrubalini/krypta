@@ -1,15 +1,28 @@
-use async_trait::async_trait;
+use rusqlite::{params, Row};
 
 use crate::{errors::DatabaseError, models, Database};
 
 use crate::traits::{Insert, InsertMany};
 
-#[derive(Clone, Debug, sqlx::FromRow)]
+#[derive(Clone, Debug)]
 pub struct FileDevice {
     file_id: i64,
     device_id: i64,
     is_unlocked: bool,
     is_encrypted: bool,
+}
+
+impl TryFrom<&Row<'_>> for FileDevice {
+    type Error = rusqlite::Error;
+
+    fn try_from(row: &Row<'_>) -> Result<Self, Self::Error> {
+        Ok(FileDevice {
+            file_id: row.get(0)?,
+            device_id: row.get(1)?,
+            is_unlocked: row.get(2)?,
+            is_encrypted: row.get(3)?,
+        })
+    }
 }
 
 impl FileDevice {
@@ -29,52 +42,33 @@ impl FileDevice {
     }
 }
 
-#[async_trait]
 impl Insert<FileDevice> for FileDevice {
-    async fn insert(self, database: &Database) -> Result<FileDevice, DatabaseError> {
-        let file_device =
-            sqlx::query_as::<_, FileDevice>(include_str!("./sql/file_device/insert.sql"))
-                .bind(self.file_id)
-                .bind(self.device_id)
-                .bind(self.is_unlocked)
-                .bind(self.is_encrypted)
-                .fetch_one(database)
-                .await?;
+    fn insert(&self, db: &Database) -> Result<FileDevice, DatabaseError> {
+        let device = db.query_row(
+            include_str!("sql/file_device/insert.sql"),
+            params![
+                self.file_id,
+                self.device_id,
+                self.is_unlocked,
+                self.is_encrypted
+            ],
+            |row| Ok(FileDevice::try_from(row)?),
+        )?;
 
-        Ok(file_device)
+        Ok(device)
     }
 }
 
-#[async_trait]
 impl InsertMany<FileDevice> for FileDevice {
-    async fn insert_many(
-        database: &Database,
-        items: &[Self],
-    ) -> Result<Vec<FileDevice>, DatabaseError> {
-        let mut transaction = database.begin().await?;
+    fn insert_many(db: &mut Database, items: &[Self]) -> Result<Vec<FileDevice>, DatabaseError> {
+        let tx = db.transaction()?;
         let mut inserted_items = vec![];
 
-        for file_device in items {
-            let file_device = file_device.to_owned();
-            log::trace!(
-                "FileDevice::InsertMany: {} {}",
-                file_device.file_id,
-                file_device.device_id
-            );
-
-            let inserted =
-                sqlx::query_as::<_, FileDevice>(include_str!("./sql/file_device/insert.sql"))
-                    .bind(file_device.file_id)
-                    .bind(file_device.device_id)
-                    .bind(file_device.is_unlocked)
-                    .bind(file_device.is_encrypted)
-                    .fetch_one(&mut transaction)
-                    .await?;
-
-            inserted_items.push(inserted);
+        for file in items {
+            inserted_items.push(file.insert(&tx)?);
         }
 
-        transaction.commit().await?;
+        tx.commit()?;
 
         Ok(inserted_items)
     }
@@ -87,9 +81,9 @@ mod tests {
     use crate::models::{Device, InsertFile};
     use crate::traits::Insert;
 
-    #[tokio::test]
-    async fn test_insert() {
-        let database = create_in_memory().await.unwrap();
+    #[test]
+    fn test_insert() {
+        let database = create_in_memory().unwrap();
 
         // Prepare file
         let file = InsertFile::new(
@@ -99,13 +93,12 @@ mod tests {
             0,
         )
         .insert(&database)
-        .await
         .unwrap();
 
         // Prepare device
-        let device = Device::find_or_create_current(&database).await.unwrap();
+        let device = Device::find_or_create_current(&database).unwrap();
 
         let to_insert = FileDevice::new(&file, &device, false, false);
-        to_insert.insert(&database).await.unwrap();
+        to_insert.insert(&database).unwrap();
     }
 }

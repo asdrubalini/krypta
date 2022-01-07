@@ -1,2 +1,2 @@
-select file.size
-from file;
+select sum(file.size)
+from file

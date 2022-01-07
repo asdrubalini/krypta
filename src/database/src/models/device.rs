@@ -1,12 +1,15 @@
 use std::fs::File;
+use std::io::Read;
 
-use async_trait::async_trait;
+use rusqlite::{params, Row};
 
-use crate::{errors::DatabaseError, Database};
+use crate::{
+    errors::{DatabaseError, DatabaseResult},
+    traits::{Insert, Search},
+    Database,
+};
 
-use crate::traits::{Insert, Search};
-
-#[derive(Debug, sqlx::FromRow, Clone)]
+#[derive(Debug, Clone)]
 pub struct Device {
     /// Database internal id
     pub id: i64,
@@ -16,7 +19,20 @@ pub struct Device {
     pub name: String,
 }
 
+impl TryFrom<&Row<'_>> for Device {
+    type Error = rusqlite::Error;
+
+    fn try_from(row: &Row<'_>) -> Result<Self, Self::Error> {
+        Ok(Device {
+            id: row.get(0)?,
+            platform_id: row.get(1)?,
+            name: row.get(2)?,
+        })
+    }
+}
+
 /// A device that can be inserted
+#[derive(Debug, Clone)]
 pub struct InsertDevice {
     pub platform_id: String,
     pub name: String,
@@ -24,14 +40,15 @@ pub struct InsertDevice {
 
 #[cfg(target_os = "linux")]
 pub fn get_current_platform_id() -> Result<String, std::io::Error> {
-    use std::io::Read;
-
     // On Linux, platform id is `/etc/machine-id`
 
     let mut f = File::open("/etc/machine-id")?;
     let mut machine_id = String::new();
 
     f.read_to_string(&mut machine_id)?;
+
+    // Trim newline at the end
+    machine_id = machine_id.replace("\n", "");
 
     Ok(machine_id)
 }
@@ -48,14 +65,14 @@ impl InsertDevice {
 impl Device {
     /// Attempts to find the current device in the database, creating one if it doesn't
     /// exists yet
-    pub async fn find_or_create_current(database: &Database) -> Result<Self, DatabaseError> {
+    pub fn find_or_create_current(db: &Database) -> Result<Self, DatabaseError> {
         let platform_id = get_current_platform_id()?;
-        let mut results = Self::search(database, &platform_id).await?;
+        let mut results = Self::search(db, &platform_id)?;
 
         if results.is_empty() {
             // Create and insert
             let device = InsertDevice::new(&platform_id, &platform_id);
-            let device = device.insert(database).await?;
+            let device = device.insert(db)?;
 
             Ok(device)
         } else {
@@ -65,27 +82,49 @@ impl Device {
     }
 }
 
-#[async_trait]
 impl Search for Device {
-    async fn search(database: &Database, query: &str) -> Result<Vec<Device>, DatabaseError> {
-        let devices = sqlx::query_as::<_, Device>(include_str!("./sql/device/search.sql"))
-            .bind(format!("%{}%", query))
-            .fetch_all(database)
-            .await?;
+    fn search(db: &Database, query: impl AsRef<str>) -> Result<Vec<Device>, DatabaseError> {
+        let mut stmt = db.prepare(include_str!("sql/device/search.sql"))?;
+        let mut rows = stmt.query([format!("%{}%", query.as_ref())])?;
+
+        let mut devices = vec![];
+        while let Some(row) = rows.next()? {
+            devices.push(Device::try_from(row)?);
+        }
 
         Ok(devices)
     }
 }
 
-#[async_trait]
 impl Insert<Device> for InsertDevice {
-    async fn insert(self, database: &Database) -> Result<Device, DatabaseError> {
-        let device = sqlx::query_as::<_, Device>(include_str!("./sql/device/insert.sql"))
-            .bind(self.platform_id)
-            .bind(self.name)
-            .fetch_one(database)
-            .await?;
+    fn insert(&self, db: &Database) -> DatabaseResult<Device> {
+        let device = db.query_row(
+            include_str!("sql/device/insert.sql"),
+            params![self.platform_id, self.name],
+            |row| Ok(Device::try_from(row)?),
+        )?;
 
         Ok(device)
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use crate::{create_in_memory, traits::Search};
+
+    use super::Device;
+
+    #[test]
+    fn test_find_or_create_current() {
+        let db = create_in_memory().unwrap();
+        let device = Device::find_or_create_current(&db).unwrap();
+
+        let found_device = Device::search(&db, &device.platform_id).unwrap();
+
+        assert_eq!(found_device.len(), 1);
+        assert_eq!(
+            found_device.first().unwrap().platform_id,
+            device.platform_id
+        );
     }
 }
