@@ -741,15 +741,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7cf7d77f457ef8dfa11e4cd5933c5ddb5dc52a94664071951219a97710f0a32b"
 
 [[package]]
-name = "vault-manager"
+name = "vault"
 version = "0.1.0"
 dependencies = [
  "tokio",
- "vault-manager-impl",
+ "vault-impl",
 ]
 
 [[package]]
-name = "vault-manager-impl"
+name = "vault-impl"
 version = "0.1.0"
 dependencies = [
  "anyhow",

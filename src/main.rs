@@ -1,4 +1,4 @@
 #[tokio::main]
 async fn main() {
-    vault_manager_impl::start().await;
+    vault_impl::start().await;
 }
