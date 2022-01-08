@@ -11,7 +11,10 @@ pub async fn start() {
     let mut database = database::connect_or_create().expect("Cannot open database");
 
     // Parse cli arguments and execute requested operation
-    commands::execute_command(&mut database).await;
+    match commands::execute_command(&mut database).await {
+        Ok(_) => (),
+        Err(error) => println!("{:?}", error),
+    }
 
     database.close().unwrap();
 }
