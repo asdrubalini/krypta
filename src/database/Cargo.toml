@@ -8,8 +8,10 @@ version = "0.26"
 features = [ "bundled", "chrono" ]
 
 [dependencies]
-tmp = { version = "0.1.0", path = "../tmp" }
 chrono = "0.4"
 log = "0.4"
 rand = "0.8"
 thiserror = "1.0"
+
+[dev-dependencies]
+tmp = { version = "0.1.0", path = "../tmp" }
