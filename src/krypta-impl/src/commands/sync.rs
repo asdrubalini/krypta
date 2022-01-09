@@ -5,7 +5,7 @@ use database::{models, Database};
 use crate::actions::sync::{sync_database_from_source_path, sync_encrypted_path_from_database};
 
 pub async fn execute(database: &mut Database) -> anyhow::Result<()> {
-    // TODO: read from database or cli
+    // TODO: read from cli
     let source_path = PathBuf::new();
     let encrypted_path = PathBuf::new();
 
@@ -20,7 +20,8 @@ pub async fn execute(database: &mut Database) -> anyhow::Result<()> {
     );
 
     let encrypted_path_report =
-        sync_encrypted_path_from_database(database, &encrypted_path).await?;
+        sync_encrypted_path_from_database(database, &current_device, &source_path, &encrypted_path)
+            .await?;
 
     println!(
         "Added {} new files to the encrypted path",

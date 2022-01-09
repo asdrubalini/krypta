@@ -102,22 +102,14 @@ pub struct FileConcurrentDecryptor {
 }
 
 impl FileConcurrentDecryptor {
-    pub fn try_new<P: AsRef<Path>>(
-        source_paths: &[P],
-        enc_file_suffix: impl AsRef<str>,
-        key: &[u8; 32],
-    ) -> Result<Self, CryptoError> {
+    pub fn try_new<P: AsRef<Path>>(paths: &[(P, P)], key: &[u8; 32]) -> Result<Self, CryptoError> {
         let mut decryptors = vec![];
 
-        for source_path in source_paths {
-            let mut destination_path = source_path.as_ref().to_path_buf();
-            destination_path.push(enc_file_suffix.as_ref());
+        for (source_path, destination_path) in paths {
+            let source_path = source_path.as_ref();
+            let destination_path = destination_path.as_ref();
 
-            decryptors.push(FileDecryptor::try_new(
-                source_path.as_ref(),
-                &destination_path,
-                key,
-            )?);
+            decryptors.push(FileDecryptor::try_new(source_path, destination_path, key)?);
         }
 
         Ok(Self { decryptors })

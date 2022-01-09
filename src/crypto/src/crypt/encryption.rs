@@ -98,23 +98,14 @@ pub struct FileConcurrentEncryptor {
 }
 
 impl FileConcurrentEncryptor {
-    // TODO: use thiserror instead of anyhow
-    pub fn try_new<P: AsRef<Path>>(
-        source_paths: &[P],
-        enc_file_suffix: impl AsRef<str>,
-        key: &[u8; 32],
-    ) -> Result<Self, CryptoError> {
+    pub fn try_new<P: AsRef<Path>>(paths: &[(P, P)], key: &[u8; 32]) -> Result<Self, CryptoError> {
         let mut encryptors = vec![];
 
-        for source_path in source_paths {
-            let mut destination_path = source_path.as_ref().to_path_buf();
-            destination_path.push(enc_file_suffix.as_ref());
+        for (source_path, destination_path) in paths {
+            let source_path = source_path.as_ref();
+            let destination_path = destination_path.as_ref();
 
-            encryptors.push(FileEncryptor::try_new(
-                source_path.as_ref(),
-                &destination_path,
-                key,
-            )?);
+            encryptors.push(FileEncryptor::try_new(source_path, destination_path, key)?);
         }
 
         Ok(Self { encryptors })

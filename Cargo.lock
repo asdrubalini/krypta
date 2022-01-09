@@ -166,6 +166,7 @@ dependencies = [
  "file_diff",
  "num_cpus",
  "rand",
+ "rand_chacha",
  "sha2",
  "sodiumoxide",
  "thiserror",
@@ -187,6 +188,7 @@ name = "database"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "crypto",
  "log",
  "rand",
  "rusqlite",

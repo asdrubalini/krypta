@@ -1,0 +1,2 @@
+SELECT "key"
+FROM "key";

@@ -11,7 +11,10 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum CliCommand {
-    Init { path: Option<PathBuf> },
+    Init {
+        source_path: PathBuf,
+        destination_path: PathBuf,
+    },
     Sync,
     Status,
 }

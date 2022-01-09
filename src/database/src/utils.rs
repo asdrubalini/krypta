@@ -22,7 +22,7 @@ pub fn connect_or_create() -> DatabaseResult<Database> {
 
 /// Load database schema
 fn load_schema(db: &Database) -> DatabaseResult<()> {
-    log::info!("New database... loading schema");
+    log::trace!("New database... loading schema");
 
     db.execute_batch(include_str!("../schema.sql"))?;
 

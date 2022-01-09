@@ -9,6 +9,8 @@ use crate::{errors::DatabaseResult, Database};
 
 use crate::traits::{Fetch, Insert, InsertMany, Search};
 
+use super::Device;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct File {
     pub id: i64,
@@ -168,6 +170,19 @@ impl File {
     pub fn count(db: &Database) -> DatabaseResult<u32> {
         let count = db.query_row(include_str!("sql/file/count.sql"), [], |row| row.get(0))?;
         Ok(count)
+    }
+
+    /// Find files that need to be encrypted for the specified device
+    pub fn need_encryption(db: &Database, device: &Device) -> DatabaseResult<Vec<File>> {
+        let mut stmt = db.prepare(include_str!("sql/file/need_encryption.sql"))?;
+        let mut rows = stmt.query([&device.platform_id])?;
+
+        let mut files = vec![];
+        while let Some(row) = rows.next()? {
+            files.push(File::try_from(row)?);
+        }
+
+        Ok(files)
     }
 }
 

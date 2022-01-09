@@ -1,5 +1,6 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
+use crypto::crypt::FileConcurrentEncryptor;
 use crypto::{hash::Sha256ConcurrentFileHasher, traits::ConcurrentCompute};
 use database::traits::InsertMany;
 use database::{
@@ -10,8 +11,15 @@ use fs::PathFinder;
 
 /// Final report of sync job, thrown if no fatal errors are encountered
 #[derive(Debug)]
-pub struct SyncReport {
+pub struct DatabaseSyncReport {
     pub processed_files: usize,
+}
+
+/// Final report of encryption job, thrown if no fatal errors are encountered
+#[derive(Debug)]
+pub struct EncryptionReport {
+    pub processed_files: usize,
+    pub errors_count: usize,
 }
 
 /// Add missing files into database according to source folder
@@ -19,15 +27,13 @@ pub async fn sync_database_from_source_path(
     database: &mut Database,
     source_path: impl AsRef<Path>,
     current_device: &Device,
-) -> anyhow::Result<SyncReport> {
-    // Transform relative path into a full one
-    let absolute_source_path = std::fs::canonicalize(source_path)?;
-
+) -> anyhow::Result<DatabaseSyncReport> {
+    let source_path = source_path.as_ref().to_path_buf();
     log::trace!("Start finding local files");
 
     // Find all file paths
     let path_finder_handle = {
-        let absolute_source_path = absolute_source_path.clone();
+        let absolute_source_path = source_path.clone();
 
         tokio::task::spawn_blocking(move || {
             PathFinder::from_source_path(&absolute_source_path).unwrap()
@@ -64,7 +70,7 @@ pub async fn sync_database_from_source_path(
     let files_to_insert: Vec<models::InsertFile> = files_to_insert
         .map(|file| {
             // Since `crypto::Sha256ConcurrentHasher` expects absolute paths, they need to be constructed here
-            let mut absolute_file_path = absolute_source_path.clone();
+            let mut absolute_file_path = source_path.clone();
             absolute_file_path.push(&file.path);
 
             let hash = hashes.get(&absolute_file_path).unwrap_or_else(|| {
@@ -90,18 +96,51 @@ pub async fn sync_database_from_source_path(
 
     let processed_files = files_to_insert.len();
 
-    Ok(SyncReport { processed_files })
+    Ok(DatabaseSyncReport { processed_files })
 }
 
 /// Add missing files in the encrypted path, encrypting them first
 pub async fn sync_encrypted_path_from_database(
-    _database: &Database,
-    _encrypted_path: impl AsRef<Path>,
-) -> anyhow::Result<SyncReport> {
-    todo!()
+    db: &mut Database,
+    current_device: &Device,
+    source_path: impl AsRef<Path>,
+    encrypted_path: impl AsRef<Path>,
+) -> anyhow::Result<EncryptionReport> {
+    let source_path = source_path.as_ref().to_path_buf();
+    let encrypted_path = encrypted_path.as_ref().to_path_buf();
+
+    let key = models::Key::get(db)?;
+    let need_encryption = models::File::need_encryption(db, current_device)?;
+
+    // A collection of files and their own source and encrypted path
+    let to_encrypt: Vec<(PathBuf, PathBuf)> = need_encryption
+        .into_iter()
+        .map(|file| {
+            let mut source = source_path.clone();
+            source.push(file.path);
+
+            let mut encrypted = encrypted_path.clone();
+            encrypted.push(file.random_hash);
+
+            (source, encrypted)
+        })
+        .collect();
+
+    log::trace!("Encryption job started");
+    let encryptor = FileConcurrentEncryptor::try_new(&to_encrypt, &key.key)?;
+    let status = encryptor.start_all().await;
+
+    log::trace!("Done with encryption job");
+
+    let processed_files = status.len();
+    let errors_count = status.iter().filter(|(_, status)| **status).count();
+
+    Ok(EncryptionReport {
+        processed_files,
+        errors_count,
+    })
 }
 
-// TODO: uncomment and fix when sync action is fixed
 #[cfg(test)]
 mod tests {
     use std::{collections::HashSet, path::PathBuf};
