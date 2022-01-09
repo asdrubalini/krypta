@@ -337,6 +337,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "krypta"
+version = "0.1.0"
+dependencies = [
+ "krypta-impl",
+ "tokio",
+]
+
+[[package]]
+name = "krypta-impl"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "byte-unit",
+ "cli",
+ "crypto",
+ "database",
+ "dotenv",
+ "fs",
+ "log",
+ "pretty_env_logger",
+ "thiserror",
+ "tmp",
+ "tokio",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -739,32 +765,6 @@ name = "utf8-width"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7cf7d77f457ef8dfa11e4cd5933c5ddb5dc52a94664071951219a97710f0a32b"
-
-[[package]]
-name = "vault"
-version = "0.1.0"
-dependencies = [
- "tokio",
- "vault-impl",
-]
-
-[[package]]
-name = "vault-impl"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "byte-unit",
- "cli",
- "crypto",
- "database",
- "dotenv",
- "fs",
- "log",
- "pretty_env_logger",
- "thiserror",
- "tmp",
- "tokio",
-]
 
 [[package]]
 name = "vcpkg"

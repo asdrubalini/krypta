@@ -43,8 +43,8 @@ Note that the database always has all files and keeps track of which ones are pr
 
 ## Init database
 
-`vault init <source_path>`
+`krypta init <source_path>`
 
 ## Sync database
 
-`vault sync <source_path>`
+`krypta sync <source_path>`

@@ -11,7 +11,7 @@
       <sourceFolder url="file://$MODULE_DIR$/src/fs/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/fs/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/src/tmp/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/vault-impl/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/krypta-impl/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

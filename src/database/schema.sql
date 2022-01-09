@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS "device" (
 	"name" TEXT NOT NULL UNIQUE,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
-CREATE TABLE IF NOT EXISTS "vault_info" (
+CREATE TABLE IF NOT EXISTS "krypta_info" (
 	"name" TEXT NOT NULL,
 	"total_size" BLOB NOT NULL
 );
