@@ -9,11 +9,11 @@ by a single device (due to having fields like `is_remote` and `is_encrypted`)
 Maybe there can be a separated table specific to each device with `is_remote`, `is_encrypted`, and 
 something like `fs_last_modified_at`.
 
-- Create separate table of device-specific info and a way to uniquely identify a device 
-(can be MAC address, /etc/machine-id or whatever).
 - Add file's fs last modification time in database schema
 
-- Fuly implement init command
+- Actually encrypt files and update db accordingly
+- Accept encrypted folder as args
+
 - Decide if sync should detect deleted files (probably not, deletion should happen manually)
 - Switch to anyhow in the main crate
 - Use file encryption from implementationw
