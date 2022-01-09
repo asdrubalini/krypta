@@ -104,42 +104,43 @@ pub async fn sync_encrypted_path_from_database(
 // TODO: uncomment and fix when sync action is fixed
 #[cfg(test)]
 mod tests {
-    use std::fs::File;
+    use std::{collections::HashSet, path::PathBuf};
 
     use database::traits::Fetch;
+    use tmp::{RandomFill, Tmp};
 
     use super::*;
 
     #[tokio::test]
     async fn test_database_sync() {
-        let tmp = tmp::Tmp::new();
+        const FILES_COUNT: usize = 50_000;
 
-        let source_path = tmp.path();
-        let files_count = 256;
+        // Prepare
+        let tmp = Tmp::new();
+        let created_files = tmp.random_fill(FILES_COUNT, 16);
 
         let mut database = database::create_in_memory().unwrap();
-
-        for i in 0..files_count {
-            let mut filename = source_path.clone();
-            filename.push(format!("file_{}", i));
-
-            File::create(filename).unwrap();
-        }
-
         let current_device = models::Device::find_or_create_current(&database).unwrap();
 
         // Populate database
-        let report = sync_database_from_source_path(&mut database, &source_path, current_device)
+        let report = sync_database_from_source_path(&mut database, &tmp.path(), current_device)
             .await
             .unwrap();
 
-        assert_eq!(report.processed_files, files_count);
+        assert_eq!(report.processed_files, FILES_COUNT);
 
-        let files = models::File::fetch_all(&mut database).unwrap();
-        assert_eq!(files.len(), files_count);
+        let database_files = models::File::fetch_all(&mut database).unwrap();
+        assert_eq!(database_files.len(), FILES_COUNT);
 
-        for file in files {
-            assert!(file.path.starts_with("file_"));
+        let database_paths = database_files
+            .into_iter()
+            .map(|file| file.path)
+            .collect::<HashSet<_>>(); // HashSet for faster lookups (contains())
+
+        // Make sure that each created file exists in the database
+        for file in created_files {
+            let created_file = file.into_iter().skip(3).collect::<PathBuf>();
+            assert!(database_paths.contains(&created_file));
         }
     }
 }

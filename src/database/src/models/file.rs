@@ -13,7 +13,7 @@ use crate::traits::{Fetch, Insert, InsertMany, Search};
 pub struct File {
     pub id: i64,
     pub title: String,
-    pub path: String,
+    pub path: PathBuf,
     pub random_hash: String,
     pub contents_hash: String,
     pub size: u64,
@@ -28,7 +28,7 @@ impl TryFrom<&Row<'_>> for File {
         Ok(File {
             id: row.get(0)?,
             title: row.get(1)?,
-            path: row.get(2)?,
+            path: PathBuf::from(row.get::<_, String>(2)?),
             random_hash: row.get(3)?,
             contents_hash: row.get(4)?,
             size: row.get(5)?,
