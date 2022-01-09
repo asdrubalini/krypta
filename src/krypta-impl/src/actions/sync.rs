@@ -18,7 +18,7 @@ pub struct SyncReport {
 pub async fn sync_database_from_source_path(
     database: &mut Database,
     source_path: impl AsRef<Path>,
-    current_device: Device,
+    current_device: &Device,
 ) -> anyhow::Result<SyncReport> {
     // Transform relative path into a full one
     let absolute_source_path = std::fs::canonicalize(source_path)?;
@@ -123,7 +123,7 @@ mod tests {
         let current_device = models::Device::find_or_create_current(&database).unwrap();
 
         // Populate database
-        let report = sync_database_from_source_path(&mut database, &tmp.path(), current_device)
+        let report = sync_database_from_source_path(&mut database, &tmp.path(), &current_device)
             .await
             .unwrap();
 
@@ -135,12 +135,19 @@ mod tests {
         let database_paths = database_files
             .into_iter()
             .map(|file| file.path)
-            .collect::<HashSet<_>>(); // HashSet for faster lookups (contains())
+            .collect::<HashSet<_>>(); // HashSet for faster lookups
 
         // Make sure that each created file exists in the database
         for file in created_files {
             let created_file = file.into_iter().skip(3).collect::<PathBuf>();
             assert!(database_paths.contains(&created_file));
         }
+
+        // Subsequent syncs should return zero files
+        let report = sync_database_from_source_path(&mut database, &tmp.path(), &current_device)
+            .await
+            .unwrap();
+
+        assert_eq!(report.processed_files, 0);
     }
 }

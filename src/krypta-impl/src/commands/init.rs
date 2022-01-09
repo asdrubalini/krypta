@@ -17,7 +17,7 @@ pub async fn execute(
     let current_device = models::Device::find_or_create_current(database)?;
 
     // On init the database is empty, so sync::sync_database_from_source_path effectively initialized the database
-    let report = sync_database_from_source_path(database, &source_path, current_device).await?;
+    let report = sync_database_from_source_path(database, &source_path, &current_device).await?;
 
     info!("Done, report: {:?}", report);
 

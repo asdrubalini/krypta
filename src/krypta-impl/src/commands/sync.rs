@@ -12,7 +12,7 @@ pub async fn execute(database: &mut Database) -> anyhow::Result<()> {
     let current_device = models::Device::find_or_create_current(database)?;
 
     let database_sync_report =
-        sync_database_from_source_path(database, &source_path, current_device).await?;
+        sync_database_from_source_path(database, &source_path, &current_device).await?;
 
     println!(
         "Added {} new files to the database",
