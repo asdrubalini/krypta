@@ -101,7 +101,7 @@ impl Insert<Device> for InsertDevice {
         let device = db.query_row(
             include_str!("sql/device/insert.sql"),
             params![self.platform_id, self.name],
-            |row| Ok(Device::try_from(row)?),
+            |row| Device::try_from(row),
         )?;
 
         Ok(device)

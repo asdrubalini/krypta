@@ -111,7 +111,7 @@ impl Insert<File> for InsertFile {
                 self.created_at,
                 self.updated_at
             ],
-            |row| Ok(File::try_from(row)?),
+            |row| File::try_from(row),
         )?;
 
         Ok(device)

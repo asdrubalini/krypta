@@ -52,7 +52,7 @@ impl Insert<FileDevice> for FileDevice {
                 self.is_unlocked,
                 self.is_encrypted
             ],
-            |row| Ok(FileDevice::try_from(row)?),
+            |row| FileDevice::try_from(row),
         )?;
 
         Ok(device)
