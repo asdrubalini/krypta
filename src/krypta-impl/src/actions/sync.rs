@@ -89,7 +89,7 @@ pub async fn sync_database_from_source_path(
     // and not encrypted
     let file_devices = inserted_files
         .into_iter()
-        .map(|file| models::FileDevice::new(&file, &current_device, true, false))
+        .map(|file| models::FileDevice::new(&file, current_device, true, false))
         .collect::<Vec<_>>();
 
     models::FileDevice::insert_many(database, &file_devices)?;
