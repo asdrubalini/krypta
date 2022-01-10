@@ -2,7 +2,7 @@ use crypto::{hash::Blake3Concurrent, traits::ComputeBulk};
 use rand::{prelude::SmallRng, SeedableRng};
 use tmp::Tmp;
 
-use crate::common::{
+use common::{
     generate_plaintext_with_content, generate_random_plaintext_file_with_rng, BLAKE3_EMPTY_HASH,
     BLAKE3_EXPECTED_HASHES,
 };

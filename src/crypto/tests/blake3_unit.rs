@@ -1,12 +1,12 @@
 use std::{fs::remove_file, path::Path};
 
-use common::BLAKE3_EXPECTED_HASHES;
 use crypto::{hash::Blake3File, traits::ComputeUnit};
 use rand::{prelude::SmallRng, SeedableRng};
 use tmp::Tmp;
 
-use crate::common::{
+use common::{
     generate_plaintext_with_content, generate_random_plaintext_file_with_rng, BLAKE3_EMPTY_HASH,
+    BLAKE3_EXPECTED_HASHES,
 };
 
 mod common;
