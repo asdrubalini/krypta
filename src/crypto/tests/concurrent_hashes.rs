@@ -5,8 +5,8 @@ use crate::common::generate_plaintext_with_content;
 
 mod common;
 
-#[tokio::test]
-async fn empty_equal_files() {
+#[test]
+fn empty_equal_files() {
     let tmp = Tmp::new();
 
     let mut paths = vec![];
@@ -21,7 +21,7 @@ async fn empty_equal_files() {
     }
 
     let concurrent = Sha256ConcurrentFileHasher::try_new(&paths).unwrap();
-    let results = concurrent.start_all().await;
+    let results = concurrent.start_all();
 
     for i in 0..8192 {
         let mut plaintext_path = tmp.path();

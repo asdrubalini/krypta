@@ -1,6 +1,7 @@
 use std::{
     fmt::Debug,
-    io,
+    fs::File,
+    io::{self, BufReader, Read},
     path::{Path, PathBuf},
 };
 
@@ -10,13 +11,8 @@ use crate::{
     BUFFER_SIZE,
 };
 
-use async_trait::async_trait;
 use bytes::BytesMut;
 use sha2::{Digest, Sha256};
-use tokio::{
-    fs::File,
-    io::{AsyncReadExt, BufReader},
-};
 
 /// Represents a Sha256 hash
 #[derive(Default)]
@@ -76,12 +72,11 @@ impl Sha256FileHasher {
     }
 }
 
-#[async_trait]
 impl Compute for Sha256FileHasher {
     type Output = Sha256Hash;
 
-    async fn start(self) -> Result<Self::Output, CryptoError> {
-        let file_input = File::open(&self.source_path).await?;
+    fn start(self) -> Result<Self::Output, CryptoError> {
+        let file_input = File::open(&self.source_path)?;
 
         // Source file reader
         let mut reader_input = BufReader::new(file_input);
@@ -90,7 +85,8 @@ impl Compute for Sha256FileHasher {
         let mut hasher = Sha256::new();
 
         // Hash loop
-        while let Ok(size) = reader_input.read_buf(&mut buffer_input).await {
+        // TODO: make sure that read() works as a replacement for tokio::read_buf
+        while let Ok(size) = reader_input.read(&mut buffer_input) {
             // Loop until both amount of data red into buffer is zero and the buffer is empty
             if size == 0 && buffer_input.is_empty() {
                 break;
@@ -117,33 +113,33 @@ pub struct Sha256ConcurrentFileHasher {
 }
 
 impl Sha256ConcurrentFileHasher {
-    pub fn try_new<P: AsRef<Path>>(source_paths: &[P]) -> Result<Self, CryptoError> {
+    pub fn try_new<P: AsRef<Path>>(source_paths: &[P]) -> Result<Box<Self>, CryptoError> {
         let mut hashers = Vec::new();
 
         for source_path in source_paths {
             hashers.push(Sha256FileHasher::try_new(source_path)?);
         }
 
-        Ok(Self { hashers })
+        Ok(Box::new(Self { hashers }))
     }
 }
 
 impl ConcurrentCompute for Sha256ConcurrentFileHasher {
-    type Computable = Sha256FileHasher;
+    type Compute = Sha256FileHasher;
     type Output = Sha256Hash;
     type Key = PathBuf;
 
-    fn computables(&self) -> Vec<Self::Computable> {
+    fn computables(&self) -> Vec<Self::Compute> {
         self.hashers.clone()
     }
 
     fn computable_result_to_output(
-        result: Result<<Self::Computable as Compute>::Output, CryptoError>,
+        result: Result<<Self::Compute as Compute>::Output, CryptoError>,
     ) -> Self::Output {
         result.unwrap()
     }
 
-    fn computable_to_key(computable: &<Self as ConcurrentCompute>::Computable) -> Self::Key {
+    fn computable_to_key(computable: &<Self as ConcurrentCompute>::Compute) -> Self::Key {
         computable.source_path.clone()
     }
 }

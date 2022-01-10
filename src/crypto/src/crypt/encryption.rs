@@ -1,18 +1,13 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    errors::{CryptoError, SodiumOxideError},
+    errors::CryptoError,
     traits::{Compute, ConcurrentCompute},
     BUFFER_SIZE,
 };
 
-use async_trait::async_trait;
 use bytes::BytesMut;
 use sodiumoxide::crypto::secretstream::{Key, Stream, Tag};
-use tokio::{
-    fs::File,
-    io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
-};
 
 #[derive(Debug, Clone)]
 pub struct FileEncryptor {
@@ -113,21 +108,21 @@ impl FileConcurrentEncryptor {
 }
 
 impl ConcurrentCompute for FileConcurrentEncryptor {
-    type Computable = FileEncryptor;
+    type Compute = FileEncryptor;
     type Output = bool;
     type Key = PathBuf;
 
-    fn computables(&self) -> Vec<Self::Computable> {
+    fn computables(&self) -> Vec<Self::Compute> {
         self.encryptors.clone()
     }
 
     fn computable_result_to_output(
-        result: Result<<Self::Computable as Compute>::Output, CryptoError>,
+        result: Result<<Self::Compute as Compute>::Output, CryptoError>,
     ) -> Self::Output {
         result.is_ok()
     }
 
-    fn computable_to_key(computable: &<Self as ConcurrentCompute>::Computable) -> Self::Key {
+    fn computable_to_key(computable: &<Self as ConcurrentCompute>::Compute) -> Self::Key {
         computable.source_path.clone()
     }
 }

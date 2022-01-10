@@ -10,19 +10,19 @@ mod common;
 
 /// Create file with specified filename and content, write data, compute hash and then
 /// remove the file
-async fn create_plaintext_file_and_hash(content: &str, plaintext_file: impl AsRef<Path>) -> String {
+fn create_plaintext_file_and_hash(content: &str, plaintext_file: impl AsRef<Path>) -> String {
     generate_plaintext_with_content(plaintext_file.as_ref(), content);
 
     let hasher = Sha256FileHasher::try_new(plaintext_file.as_ref()).unwrap();
-    let hash = hasher.start().await.unwrap();
+    let hash = hasher.start().unwrap();
 
     remove_file(plaintext_file.as_ref()).unwrap();
 
     hash.as_hex()
 }
 
-#[tokio::test]
-async fn small_ascii_file() {
+#[test]
+fn test_small_ascii_file() {
     let tmp = Tmp::new();
 
     let mut plaintext_file = tmp.path();
@@ -30,35 +30,31 @@ async fn small_ascii_file() {
 
     // Empty string hash
     assert_eq!(
-        create_plaintext_file_and_hash("", &plaintext_file).await,
+        create_plaintext_file_and_hash("", &plaintext_file),
         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     );
 
     // Short ascii hash
     assert_eq!(
-        create_plaintext_file_and_hash("abc", &plaintext_file).await,
+        create_plaintext_file_and_hash("abc", &plaintext_file),
         "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
     );
 }
 
-async fn seeded_hash(
-    rng: &mut SmallRng,
-    length: usize,
-    plaintext_file: impl AsRef<Path>,
-) -> String {
+fn seeded_hash(rng: &mut SmallRng, length: usize, plaintext_file: impl AsRef<Path>) -> String {
     let plaintext_file = plaintext_file.as_ref();
     generate_random_plaintext_file_with_rng(rng, plaintext_file, length);
 
     let hasher = Sha256FileHasher::try_new(plaintext_file).unwrap();
-    let hash = hasher.start().await.unwrap();
+    let hash = hasher.start().unwrap();
 
     remove_file(plaintext_file).unwrap();
 
     hash.as_hex()
 }
 
-#[tokio::test]
-async fn big_random_file() {
+#[test]
+fn test_big_random_file() {
     let tmp = Tmp::new();
 
     let mut plaintext_file = tmp.path();
@@ -198,7 +194,7 @@ async fn big_random_file() {
     ];
 
     for i in 0..128 {
-        let hash = seeded_hash(&mut rng, 2usize.pow(20), &plaintext_file).await;
+        let hash = seeded_hash(&mut rng, 2usize.pow(20), &plaintext_file);
         assert_eq!(hash, expected_hashes[i]);
     }
 }

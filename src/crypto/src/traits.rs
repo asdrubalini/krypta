@@ -1,70 +1,76 @@
 use std::{collections::HashMap, hash::Hash, sync::Arc};
 
-use async_trait::async_trait;
-use tokio::sync::Semaphore;
+use crossbeam::thread;
 
 use crate::errors::CryptoError;
 
 /// Something that can be computed asynchronously
-#[async_trait]
 pub trait Compute {
     type Output: Send;
 
-    async fn start(self) -> Result<Self::Output, CryptoError>;
+    fn start(self) -> Result<Self::Output, CryptoError>;
 }
 
 /// Provide the ability to execute multiple `Computable` objects at once
-#[async_trait]
 pub trait ConcurrentCompute {
-    type Computable: Compute + Send + 'static;
-    type Key: Hash + Eq + Send + 'static;
+    // TODO: make sure that traits are really required
+    type Compute: Compute + Send;
+    type Key: Hash + Eq + Send;
     type Output: Send;
 
     /// Get a Vec of `Computable`s
-    fn computables(&self) -> Vec<Self::Computable>;
+    fn computables(&self) -> Vec<Self::Compute>;
 
     /// Map each `Computable` Result to an output
     fn computable_result_to_output(
-        result: Result<<<Self as ConcurrentCompute>::Computable as Compute>::Output, CryptoError>,
+        result: Result<<<Self as ConcurrentCompute>::Compute as Compute>::Output, CryptoError>,
     ) -> Self::Output;
 
     /// Map a computable to its key
-    fn computable_to_key(computable: &<Self as ConcurrentCompute>::Computable) -> Self::Key;
+    fn computable_to_key(computable: &<Self as ConcurrentCompute>::Compute) -> Self::Key;
 
     /// Start Computable action in a concurrent manner
-    async fn start_all(&self) -> HashMap<Self::Key, Self::Output> {
+    fn start_all(self: Box<Self>) -> HashMap<Self::Key, Self::Output> {
         let cpus_count = num_cpus::get();
-        let semaphore = Arc::new(Semaphore::new(cpus_count));
-
-        let mut handles = Vec::new();
+        // TODO: restore semaphore here
+        // let semaphore = Arc::new(Semaphore::new(cpus_count));
 
         let computables = self.computables();
 
-        for computable in computables {
-            let permit = semaphore.clone().acquire_owned().await.unwrap();
+        let scope = thread::scope(|s| {
+            let mut handles = vec![];
 
-            let handle = tokio::spawn(async move {
-                let key = Self::computable_to_key(&computable);
-                let result = computable.start().await;
+            for computable in computables {
+                // let permit = semaphore.clone().acquire_owned().await.unwrap();
 
-                drop(permit);
-                (key, result)
-            });
+                let handle = s.spawn(|_| {
+                    let key = Self::computable_to_key(&computable);
+                    let result = computable.start();
 
-            handles.push(handle);
-        }
+                    // drop(permit);
+                    (key, result)
+                });
 
-        let mut output_map: HashMap<Self::Key, Self::Output> = HashMap::new();
+                handles.push(handle);
+            }
 
-        for handle in handles {
-            let task_ret = handle.await.unwrap();
+            let mut output_map: HashMap<Self::Key, Self::Output> = HashMap::new();
 
-            let key = task_ret.0;
-            let output = Self::computable_result_to_output(task_ret.1);
+            // Collect results
+            for handle in handles {
+                // TODO: handle thread error more gracefully
+                let task_ret = handle.join().unwrap();
 
-            output_map.insert(key, output);
-        }
+                let key = task_ret.0;
+                let output = Self::computable_result_to_output(task_ret.1);
 
-        output_map
+                output_map.insert(key, output);
+            }
+
+            output_map
+        });
+
+        // TODO: handle thread error more gracefully
+        scope.unwrap()
     }
 }
