@@ -8,7 +8,7 @@ use memmap::MmapOptions;
 
 use crate::{
     errors::CryptoError,
-    traits::{Compute, ConcurrentCompute},
+    traits::{ComputeBulk, ComputeUnit},
     BUFFER_SIZE,
 };
 
@@ -29,7 +29,7 @@ impl Blake3File {
     }
 }
 
-impl Compute for Blake3File {
+impl ComputeUnit for Blake3File {
     type Output = blake3::Hash;
 
     fn start(self) -> Result<Self::Output, CryptoError> {
@@ -48,7 +48,7 @@ impl Compute for Blake3File {
 
         // Hash loop
         for chunk in mmap.chunks(BUFFER_SIZE) {
-            hasher.update_rayon(chunk);
+            hasher.update(chunk);
         }
 
         Ok(hasher.finalize())
@@ -72,27 +72,22 @@ impl Blake3Concurrent {
     }
 }
 
-impl ConcurrentCompute for Blake3Concurrent {
+impl ComputeBulk for Blake3Concurrent {
     type Compute = Blake3File;
     type Output = blake3::Hash;
     type Key = PathBuf;
 
-    fn concurrent_count() -> usize {
-        // Already using rayon, no need for additional concurrency
-        1
-    }
-
-    fn computables(&self) -> Vec<Self::Compute> {
+    fn units(&self) -> Vec<Self::Compute> {
         self.hashers.clone()
     }
 
-    fn computable_result_to_output(
-        result: Result<<Self::Compute as Compute>::Output, CryptoError>,
-    ) -> Self::Output {
-        result.unwrap()
+    fn map_key(computable: &<Self as ComputeBulk>::Compute) -> Self::Key {
+        computable.source_path.clone()
     }
 
-    fn computable_to_key(computable: &<Self as ConcurrentCompute>::Compute) -> Self::Key {
-        computable.source_path.clone()
+    fn map_output(
+        result: Result<<Self::Compute as ComputeUnit>::Output, CryptoError>,
+    ) -> Self::Output {
+        result.unwrap()
     }
 }

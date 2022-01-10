@@ -1,4 +1,4 @@
-use crypto::{hash::Blake3Concurrent, traits::ConcurrentCompute};
+use crypto::{hash::Blake3Concurrent, traits::ComputeBulk};
 use rand::{prelude::SmallRng, SeedableRng};
 use tmp::Tmp;
 

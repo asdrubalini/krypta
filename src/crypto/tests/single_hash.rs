@@ -1,7 +1,7 @@
 use std::{fs::remove_file, path::Path};
 
 use common::BLAKE3_EXPECTED_HASHES;
-use crypto::{hash::Blake3File, traits::Compute};
+use crypto::{hash::Blake3File, traits::ComputeUnit};
 use rand::{prelude::SmallRng, SeedableRng};
 use tmp::Tmp;
 
