@@ -13,23 +13,22 @@ pub trait Compute {
 
 /// Provide the ability to execute multiple `Computable` objects at once
 pub trait ConcurrentCompute {
-    // TODO: make sure that traits are really required
     type Compute: Compute + Send;
     type Key: Hash + Eq + Send;
-    type Output: Send;
+    type Output;
 
-    /// Get a Vec of `Computable`s
+    /// Get a Vec of `Compute`s
     fn computables(&self) -> Vec<Self::Compute>;
 
-    /// Map each `Computable` Result to an output
+    /// Map each `Compute` Result to an output
     fn computable_result_to_output(
         result: Result<<<Self as ConcurrentCompute>::Compute as Compute>::Output, CryptoError>,
     ) -> Self::Output;
 
-    /// Map a computable to its key
+    /// Map a `Compute` to its key
     fn computable_to_key(computable: &<Self as ConcurrentCompute>::Compute) -> Self::Key;
 
-    /// Start Computable action in a concurrent manner
+    /// Start Compute action in a concurrent manner
     fn start_all(self: Box<Self>) -> HashMap<Self::Key, Self::Output> {
         let cpus_count = num_cpus::get();
         // TODO: restore semaphore here
