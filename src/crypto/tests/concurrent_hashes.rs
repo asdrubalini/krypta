@@ -1,37 +1,66 @@
-use crypto::{hash::Sha256ConcurrentFileHasher, traits::ConcurrentCompute};
+use crypto::{hash::Blake3Concurrent, traits::ConcurrentCompute};
+use rand::{prelude::SmallRng, SeedableRng};
 use tmp::Tmp;
 
-use crate::common::generate_plaintext_with_content;
+use crate::common::{
+    generate_plaintext_with_content, generate_random_plaintext_file_with_rng, BLAKE3_EMPTY_HASH,
+    BLAKE3_EXPECTED_HASHES,
+};
 
 mod common;
 
 #[test]
-fn empty_equal_files() {
+fn test_blake3_same_file() {
     let tmp = Tmp::new();
 
     let mut paths = vec![];
 
+    // Populate with 8192 empty files
     for i in 0..8192 {
         let mut plaintext_path = tmp.path();
         plaintext_path.push(format!("{}.txt", i));
 
-        generate_plaintext_with_content(plaintext_path.to_str().unwrap(), "");
+        generate_plaintext_with_content(&plaintext_path, "");
 
         paths.push(plaintext_path);
     }
 
-    let concurrent = Sha256ConcurrentFileHasher::try_new(&paths).unwrap();
+    let concurrent = Blake3Concurrent::try_new(&paths).unwrap();
     let results = concurrent.start_all();
 
+    // Compute hashes
     for i in 0..8192 {
         let mut plaintext_path = tmp.path();
         plaintext_path.push(format!("{}.txt", i));
 
         let hash = results.get(&plaintext_path).unwrap();
-        assert_eq!(
-            hash.as_hex(),
-            // Empty string hash
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        );
+        assert_eq!(hash.to_string(), BLAKE3_EMPTY_HASH);
+    }
+}
+
+#[test]
+fn test_blake3_random_files() {
+    let tmp = Tmp::new();
+
+    let mut rng = SmallRng::seed_from_u64(0);
+    let mut generated_paths = vec![];
+
+    // Populate files
+    for i in 0..BLAKE3_EXPECTED_HASHES.len() {
+        let mut current_path = tmp.path();
+        current_path.push(format!("random_{}.txt", i));
+
+        generate_random_plaintext_file_with_rng(&mut rng, &current_path, 2usize.pow(20));
+        generated_paths.push(current_path);
+    }
+
+    let concurrent = Blake3Concurrent::try_new(&generated_paths).unwrap();
+    let results = concurrent.start_all();
+
+    for (i, generated_path) in generated_paths.into_iter().enumerate() {
+        let computed_hash = results.get(&generated_path).unwrap().to_string();
+        let expected_hash = BLAKE3_EXPECTED_HASHES[i];
+
+        assert_eq!(computed_hash, expected_hash);
     }
 }

@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crypto::crypt::FileConcurrentEncryptor;
-use crypto::{hash::Sha256ConcurrentFileHasher, traits::ConcurrentCompute};
+use crypto::{hash::Blake3Concurrent, traits::ConcurrentCompute};
 use database::traits::InsertMany;
 use database::{
     models::{self, Device},
@@ -55,7 +55,7 @@ pub async fn sync_database_from_source_path(
     path_finder.filter_out_paths(&database_paths);
 
     // Start computing new file's hashes in the background
-    let hasher = Sha256ConcurrentFileHasher::try_new(&path_finder.get_all_absolute_paths())?;
+    let hasher = Blake3Concurrent::try_new(&path_finder.get_all_absolute_paths())?;
     let hashes_join = tokio::task::spawn(async move { hasher.start_all().await });
 
     let files_to_insert = path_finder

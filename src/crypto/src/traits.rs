@@ -28,9 +28,11 @@ pub trait ConcurrentCompute {
     /// Map a `Compute` to its key
     fn computable_to_key(computable: &<Self as ConcurrentCompute>::Compute) -> Self::Key;
 
+    fn concurrent_count() -> usize;
+
     /// Start Compute action in a concurrent manner
     fn start_all(self: Box<Self>) -> HashMap<Self::Key, Self::Output> {
-        let cpus_count = num_cpus::get();
+        let concurrent_count = Self::concurrent_count();
         // TODO: restore semaphore here
         // let semaphore = Arc::new(Semaphore::new(cpus_count));
 
