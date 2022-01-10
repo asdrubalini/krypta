@@ -31,7 +31,8 @@ impl Default for Tmp {
 impl Tmp {
     /// Generate a random path in the form of "/tmp/<random chars>/"
     fn generate_random_tmp(folder_length: usize) -> PathBuf {
-        let random_name = random_string(folder_length);
+        let mut random_name = "krypta_".to_string();
+        random_name.push_str(&random_string(folder_length));
 
         let mut random_tmp = PathBuf::new();
         random_tmp.push("/tmp/");
