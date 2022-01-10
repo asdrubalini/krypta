@@ -3,7 +3,15 @@ mod commands;
 
 use dotenv::dotenv;
 
-pub async fn start() {
+pub fn entrypoint() {
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(async { start().await })
+}
+
+async fn start() {
     dotenv().ok();
     pretty_env_logger::init();
 

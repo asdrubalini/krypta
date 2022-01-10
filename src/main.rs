@@ -1,4 +1,3 @@
-#[tokio::main]
-async fn main() {
-    krypta_impl::start().await;
+fn main() {
+    krypta_impl::entrypoint();
 }

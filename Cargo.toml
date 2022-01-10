@@ -15,4 +15,4 @@ members = [
 
 [dependencies]
 krypta-impl = { version = "0.1.0", path = "src/krypta-impl" }
-tokio = { version = "1", features = [ "macros" ] }
+

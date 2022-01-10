@@ -343,7 +343,6 @@ name = "krypta"
 version = "0.1.0"
 dependencies = [
  "krypta-impl",
- "tokio",
 ]
 
 [[package]]
