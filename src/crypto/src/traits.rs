@@ -1,6 +1,7 @@
-use std::{collections::HashMap, hash::Hash};
+use std::{collections::HashMap, hash::Hash, sync::Arc};
 
-use crossbeam::thread;
+use parking_lot::Mutex;
+use rayon::ThreadPoolBuilder;
 
 use crate::errors::CryptoError;
 
@@ -15,7 +16,7 @@ pub trait Compute {
 pub trait ConcurrentCompute {
     type Compute: Compute + Send;
     type Key: Hash + Eq + Send;
-    type Output;
+    type Output: Send;
 
     /// Get a Vec of `Compute`s
     fn computables(&self) -> Vec<Self::Compute>;
@@ -33,37 +34,32 @@ pub trait ConcurrentCompute {
     /// Start Compute action in a concurrent manner
     fn start_all(self: Box<Self>) -> HashMap<Self::Key, Self::Output> {
         let concurrent_count = Self::concurrent_count();
-        // TODO: restore semaphore here
-        // let semaphore = Arc::new(Semaphore::new(cpus_count));
+        let pool = ThreadPoolBuilder::new()
+            .num_threads(concurrent_count)
+            .build()
+            .unwrap();
 
         let computables = self.computables();
+        // let mut output_map: Arc<Mutex<HashMap<Self::Key, Self::Output>>> =
+        // Arc::new(Mutex::from(HashMap::new()));
 
-        let scope = thread::scope(|s| {
-            let mut handles = vec![];
+        let output: Arc<Vec<Mutex<(Self::Key, Self::Output)>>>;
 
+        let scope = pool.scope(|s| {
             for computable in computables {
-                // let permit = semaphore.clone().acquire_owned().await.unwrap();
+                let output = Arc::clone(&output);
 
                 let handle = s.spawn(|_| {
                     let key = Self::computable_to_key(&computable);
                     let result = computable.start();
-
-                    // drop(permit);
-                    (key, result)
+                    let output = Self::computable_result_to_output(result);
                 });
-
-                handles.push(handle);
             }
-
-            let mut output_map: HashMap<Self::Key, Self::Output> = HashMap::new();
 
             // Collect results
             for handle in handles {
                 // TODO: handle thread error more gracefully
                 let task_ret = handle.join().unwrap();
-
-                let key = task_ret.0;
-                let output = Self::computable_result_to_output(task_ret.1);
 
                 output_map.insert(key, output);
             }
