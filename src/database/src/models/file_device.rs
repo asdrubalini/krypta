@@ -2,7 +2,7 @@ use rusqlite::{params, Row};
 
 use crate::{errors::DatabaseError, models, Database};
 
-use crate::traits::{Insert, InsertMany};
+use crate::traits::{Insert, InsertMany, UpdateMany};
 
 #[derive(Clone, Debug)]
 pub struct FileDevice {
@@ -71,6 +71,12 @@ impl InsertMany<FileDevice> for FileDevice {
         tx.commit()?;
 
         Ok(inserted_items)
+    }
+}
+
+impl UpdateMany for FileDevice {
+    fn update_many(db: &mut Database, updatables: &[Self]) -> crate::errors::DatabaseResult<Self> {
+        todo!()
     }
 }
 

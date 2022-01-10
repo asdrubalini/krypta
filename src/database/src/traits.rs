@@ -19,3 +19,7 @@ pub trait InsertMany<T>: Sized {
 pub trait Fetch: Sized {
     fn fetch_all(db: &Database) -> DatabaseResult<Vec<Self>>;
 }
+
+pub trait UpdateMany: Sized {
+    fn update_many(db: &mut Database, updatables: &[Self]) -> DatabaseResult<Self>;
+}

@@ -135,6 +135,8 @@ pub async fn sync_encrypted_path_from_database(
     let processed_files = status.len();
     let errors_count = status.iter().filter(|(_, status)| **status).count();
 
+    // TODO: update FileDevice
+
     Ok(EncryptionReport {
         processed_files,
         errors_count,
