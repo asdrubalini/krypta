@@ -42,6 +42,7 @@ fn test_small_ascii_file() {
 }
 
 fn seeded_hash(rng: &mut SmallRng, length: usize, plaintext_file: impl AsRef<Path>) -> String {
+    // TODO: use tmp::Tmp
     let plaintext_file = plaintext_file.as_ref();
     generate_random_plaintext_file_with_rng(rng, plaintext_file, length);
 
@@ -193,8 +194,8 @@ fn test_big_random_file() {
         "10ea94452b215226462a2bf44f585d2edc3cb3e72f4e14da16b3730246080042",
     ];
 
-    for i in 0..128 {
+    for expected_hash in expected_hashes {
         let hash = seeded_hash(&mut rng, 2usize.pow(20), &plaintext_file);
-        assert_eq!(hash, expected_hashes[i]);
+        assert_eq!(hash, expected_hash);
     }
 }

@@ -1,7 +1,7 @@
 use std::{
     fmt::Debug,
     fs::File,
-    io::{self, BufReader, Read},
+    io::{self, BufRead, BufReader, Read},
     path::{Path, PathBuf},
 };
 
@@ -79,26 +79,22 @@ impl Compute for Sha256FileHasher {
         let file_input = File::open(&self.source_path)?;
 
         // Source file reader
-        let mut reader_input = BufReader::new(file_input);
-        let mut buffer_input = BytesMut::with_capacity(BUFFER_SIZE);
+        let mut reader_input = BufReader::with_capacity(BUFFER_SIZE, file_input);
 
         let mut hasher = Sha256::new();
 
         // Hash loop
-        // TODO: make sure that read() works as a replacement for tokio::read_buf
-        while let Ok(size) = reader_input.read(&mut buffer_input) {
-            // Loop until both amount of data red into buffer is zero and the buffer is empty
-            if size == 0 && buffer_input.is_empty() {
+        loop {
+            let buffer = reader_input.fill_buf()?;
+            hasher.update(buffer);
+
+            let length = buffer.len();
+
+            if length == 0 {
                 break;
             }
 
-            // Continue reading until either the buffer is full or the amount of data red is zero
-            if buffer_input.len() < buffer_input.capacity() && size > 0 {
-                continue;
-            }
-
-            hasher.update(&buffer_input);
-            buffer_input.clear();
+            reader_input.consume(length);
         }
 
         let hash: Sha256Hash = hasher.finalize().as_slice().into();
