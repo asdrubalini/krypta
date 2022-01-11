@@ -1,4 +1,4 @@
-use std::{collections::HashMap, hash::Hash};
+use std::{collections::HashMap, fmt::Display, hash::Hash, path::PathBuf};
 
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
@@ -44,5 +44,17 @@ pub trait ComputeBulk {
             .collect::<HashMap<Self::Key, Self::Output>>();
 
         result
+    }
+}
+
+#[derive(Debug)]
+pub struct PathPair {
+    pub source: PathBuf,
+    pub destination: PathBuf,
+}
+
+impl Display for PathPair {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
     }
 }

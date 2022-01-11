@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use memmap::MmapOptions;
+use memmap2::MmapOptions;
 
 use crate::{
     errors::CryptoError,
@@ -35,7 +35,7 @@ impl ComputeUnit for Blake3File {
     fn start(self) -> Result<Self::Output, CryptoError> {
         let file_input = File::open(&self.source_path)?;
 
-        // Handle zero-sized files without mmaping them into memory
+        // Handle zero-sized files without mmapping them into memory
         if file_input.metadata()?.len() == 0 {
             let mut hasher = blake3::Hasher::new();
             hasher.update(&[]);

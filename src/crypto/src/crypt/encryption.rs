@@ -1,5 +1,6 @@
 use std::{
     fs::File,
+    io::{BufWriter, Write},
     path::{Path, PathBuf},
 };
 
@@ -7,34 +8,48 @@ use chacha20poly1305::{
     aead::{stream, NewAead},
     XChaCha20Poly1305,
 };
-use memmap::MmapOptions;
+use memmap2::MmapOptions;
 
 use crate::{
-    errors::CryptoError,
-    traits::{ComputeBulk, ComputeUnit},
+    errors::{CipherOperationError, CryptoError},
+    traits::{ComputeBulk, ComputeUnit, PathPair},
     BUFFER_SIZE,
 };
 
 #[derive(Debug, Clone)]
 pub struct FileEncryptUnit {
+    // The source file
     plaintext_path: PathBuf,
+    // The destination file
     encrypted_path: PathBuf,
     key: [u8; 32],
     nonce: [u8; 24],
 }
 
+impl From<&FileEncryptUnit> for PathPair {
+    fn from(unit: &FileEncryptUnit) -> Self {
+        PathPair {
+            source: unit.plaintext_path.clone(),
+            destination: unit.encrypted_path.clone(),
+        }
+    }
+}
+
 impl FileEncryptUnit {
     pub fn try_new<P: AsRef<Path>>(
         plaintext_path: P,
-        destination_path: P,
+        encrypted_path: P,
         key: [u8; 32],
         nonce: [u8; 24],
     ) -> Result<FileEncryptUnit, CryptoError> {
+        let plaintext_path = plaintext_path.as_ref().to_path_buf();
+
+        // Make sure that plaintext path exists
         File::open(&plaintext_path)?;
 
         Ok(FileEncryptUnit {
-            plaintext_path: plaintext_path.as_ref().to_path_buf(),
-            encrypted_path: destination_path.as_ref().to_path_buf(),
+            plaintext_path,
+            encrypted_path: encrypted_path.as_ref().to_path_buf(),
             key,
             nonce,
         })
@@ -45,12 +60,13 @@ impl ComputeUnit for FileEncryptUnit {
     type Output = ();
 
     /// Try to encrypt a file as specified in struct
+    /// TODO: rethink of names
     fn start(self) -> Result<Self::Output, CryptoError> {
-        let source_file = File::open(&self.plaintext_path)?;
+        let plaintext_file = File::open(&self.plaintext_path)?;
         let encrypted_file = File::create(&self.encrypted_path)?;
 
-        // Handle zero-sized files without mmaping them into memory
-        if source_file.metadata()?.len() == 0 {
+        // Zero-sized files cannot mmapped into memory
+        if plaintext_file.metadata()?.len() == 0 {
             panic!("Cannot encrypt zero-sized file");
         }
 
@@ -58,23 +74,33 @@ impl ComputeUnit for FileEncryptUnit {
         let mut stream_encryptor =
             stream::EncryptorBE32::from_aead(aead, self.nonce.as_ref().into());
 
-        let source_file_map = unsafe { MmapOptions::new().map(&source_file).unwrap() };
+        let source_file_map = unsafe { MmapOptions::new().map(&plaintext_file)? };
+        let mut encrypted_file_buf = BufWriter::new(encrypted_file);
 
-        // Encrypt loop
-        // for (i, chunk) in source_file_map.chunks(BUFFER_SIZE).enumerate() {
-        // let ciphertext = if i == last_chunk_index {
-        // // Last chunk
-        // let c = stream_encryptor.encrypt_last(chunk).map_err(|_err| {
-        // CryptoError::ChaChaError("Error during encryption".to_string())
-        // })?;
-        // break;
-        // c
-        // } else {
-        // stream_encryptor.encrypt_next(chunk).map_err(|_err| {
-        // CryptoError::ChaChaError("Error during encryption".to_string())
-        // })?
-        // };
-        // }
+        let mut plaintext_chunks = source_file_map.chunks(BUFFER_SIZE).peekable();
+
+        // Encrypt and write loop
+        let last_chunk = loop {
+            // This should never be None since we look ahead with peek and break early if
+            // next is the last chunk
+            let chunk = plaintext_chunks.next().unwrap();
+
+            if plaintext_chunks.peek().is_none() {
+                break chunk;
+            }
+
+            // TODO: handle error with something better than unwrap
+            let ciphertext = stream_encryptor.encrypt_next(chunk).map_err(|_| {
+                CryptoError::CipherOperationError(CipherOperationError::EncryptNext, (&self).into())
+            })?;
+            encrypted_file_buf.write_all(&ciphertext)?;
+        };
+
+        // encrypt_last consume and must be called at the very end
+        let ciphertext = stream_encryptor.encrypt_last(last_chunk).map_err(|_| {
+            CryptoError::CipherOperationError(CipherOperationError::EncryptLast, (&self).into())
+        })?;
+        encrypted_file_buf.write_all(&ciphertext)?;
 
         Ok(())
     }
@@ -90,7 +116,7 @@ impl FileEncryptBulk {
         paths: &[(P, P)],
         key: [u8; 32],
         nonce: [u8; 24],
-    ) -> Result<Self, CryptoError> {
+    ) -> Result<Box<Self>, CryptoError> {
         let mut encryptors = vec![];
 
         for (source_path, destination_path) in paths {
@@ -105,7 +131,7 @@ impl FileEncryptBulk {
             )?);
         }
 
-        Ok(Self { encryptors })
+        Ok(Box::new(Self { encryptors }))
     }
 }
 
