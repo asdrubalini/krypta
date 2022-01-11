@@ -1,4 +1,4 @@
-use crypto::crypt::generate_random_secure_key;
+use crypto::crypt::generate_random_secure_key_nonce_pair;
 use rusqlite::{params, OptionalExtension};
 
 use crate::{errors::DatabaseResult, Database};
@@ -20,7 +20,7 @@ impl Key {
             }
 
             None => {
-                Self::create(db, generate_random_secure_key())?;
+                Self::create(db, generate_random_secure_key_nonce_pair())?;
                 let key = Key {
                     key: Self::try_find_key(db)?.unwrap(),
                 };

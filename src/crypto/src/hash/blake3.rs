@@ -81,8 +81,8 @@ impl ComputeBulk for Blake3Concurrent {
         self.hashers.clone()
     }
 
-    fn map_key(computable: &<Self as ComputeBulk>::Compute) -> Self::Key {
-        computable.source_path.clone()
+    fn map_key(unit: &<Self as ComputeBulk>::Compute) -> Self::Key {
+        unit.source_path.clone()
     }
 
     fn map_output(

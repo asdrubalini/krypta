@@ -4,4 +4,6 @@ use thiserror::Error;
 pub enum CryptoError {
     #[error("Input/Output error: {0}")]
     IoError(#[from] std::io::Error),
+    #[error("ChaChaError: {0}")]
+    ChaChaError(String),
 }

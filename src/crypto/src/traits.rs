@@ -21,7 +21,7 @@ pub trait ComputeBulk {
     fn units(&self) -> Vec<Self::Compute>;
 
     /// Map a `ComputeUnit` to its key
-    fn map_key(computable: &<Self as ComputeBulk>::Compute) -> Self::Key;
+    fn map_key(unit: &<Self as ComputeBulk>::Compute) -> Self::Key;
 
     /// Map each `ComputeUnit` Result to an output
     fn map_output(

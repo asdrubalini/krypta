@@ -1,6 +1,6 @@
 const BUFFER_SIZE: usize = 32768;
 
-// pub mod crypt;
+pub mod crypt;
 pub mod hash;
 
 pub mod errors;

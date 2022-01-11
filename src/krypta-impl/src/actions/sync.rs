@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
-use crypto::crypt::FileConcurrentEncryptor;
-use crypto::{hash::Blake3Concurrent, traits::ConcurrentCompute};
+use crypto::crypt::FileEncryptBulk;
+use crypto::{hash::Blake3Concurrent, traits::ComputeBulk};
 use database::traits::InsertMany;
 use database::{
     models::{self, Device},
@@ -127,7 +127,7 @@ pub async fn sync_encrypted_path_from_database(
         .collect();
 
     log::trace!("Encryption job started");
-    let encryptor = FileConcurrentEncryptor::try_new(&to_encrypt, &key.key)?;
+    let encryptor = FileEncryptBulk::try_new(&to_encrypt, &key.key)?;
     let status = encryptor.start_all().await;
 
     log::trace!("Done with encryption job");
