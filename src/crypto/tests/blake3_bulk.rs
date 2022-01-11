@@ -17,12 +17,12 @@ fn test_blake3_same_file() {
 
     // Populate with 8192 empty files
     for i in 0..8192 {
-        let mut plaintext_path = tmp.path();
-        plaintext_path.push(format!("{}.txt", i));
+        let mut unlocked_path = tmp.path();
+        unlocked_path.push(format!("{}.txt", i));
 
-        generate_plaintext_with_content(&plaintext_path, "");
+        generate_plaintext_with_content(&unlocked_path, "");
 
-        paths.push(plaintext_path);
+        paths.push(unlocked_path);
     }
 
     let concurrent = Blake3Concurrent::try_new(&paths).unwrap();
@@ -30,10 +30,10 @@ fn test_blake3_same_file() {
 
     // Compute hashes
     for i in 0..8192 {
-        let mut plaintext_path = tmp.path();
-        plaintext_path.push(format!("{}.txt", i));
+        let mut unlocked_path = tmp.path();
+        unlocked_path.push(format!("{}.txt", i));
 
-        let hash = results.get(&plaintext_path).unwrap();
+        let hash = results.get(&unlocked_path).unwrap();
         assert_eq!(hash.to_string(), BLAKE3_EMPTY_HASH);
     }
 }

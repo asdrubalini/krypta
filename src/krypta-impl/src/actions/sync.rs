@@ -24,20 +24,20 @@ pub struct EncryptionReport {
 }
 
 /// Add missing files into database according to source folder
-pub async fn sync_database_from_source_path(
+pub async fn sync_database_from_unlocked_path(
     database: &mut Database,
-    source_path: impl AsRef<Path>,
+    unlocked_path: impl AsRef<Path>,
     current_device: &Device,
 ) -> anyhow::Result<DatabaseSyncReport> {
-    let source_path = source_path.as_ref().to_path_buf();
+    let unlocked_path = unlocked_path.as_ref().to_path_buf();
     log::trace!("Start finding local files");
 
     // Find all file paths
     let path_finder_handle = {
-        let absolute_source_path = source_path.clone();
+        let absolute_unlocked_path = unlocked_path.clone();
 
         tokio::task::spawn_blocking(move || {
-            PathFinder::from_source_path(&absolute_source_path).unwrap()
+            PathFinder::from_source_path(&absolute_unlocked_path).unwrap()
         })
     };
 
@@ -71,7 +71,7 @@ pub async fn sync_database_from_source_path(
     let files_to_insert: Vec<models::InsertFile> = files_to_insert
         .map(|file| {
             // Since `crypto::Sha256ConcurrentHasher` expects absolute paths, they need to be constructed here
-            let mut absolute_file_path = source_path.clone();
+            let mut absolute_file_path = unlocked_path.clone();
             absolute_file_path.push(&file.path);
 
             let hash = hashes.get(&absolute_file_path).unwrap_or_else(|| {
@@ -101,31 +101,31 @@ pub async fn sync_database_from_source_path(
 }
 
 /// Add missing files in the encrypted path, encrypting them first
-pub async fn sync_encrypted_path_from_database(
+pub async fn sync_locked_path_from_database(
     db: &mut Database,
     current_device: &Device,
-    plaintext_path: impl AsRef<Path>,
-    encrypted_path: impl AsRef<Path>,
+    unlocked_path: impl AsRef<Path>,
+    locked_path: impl AsRef<Path>,
 ) -> anyhow::Result<EncryptionReport> {
-    let plaintext_path = plaintext_path.as_ref().to_path_buf();
-    let encrypted_path = encrypted_path.as_ref().to_path_buf();
+    let unlocked_path = unlocked_path.as_ref().to_path_buf();
+    let locked_path = locked_path.as_ref().to_path_buf();
 
     let need_encryption = models::File::need_encryption(db, current_device)?;
 
-    // A collection of files and their own plaintext and encrypted path
+    // A collection of files and their own locked and unlocked paths
     let encryptors = need_encryption
         .iter()
         .map(|file| {
-            let mut plaintext = plaintext_path.clone();
-            plaintext.push(&file.path);
+            let mut unlocked = unlocked_path.clone();
+            unlocked.push(&file.path);
 
-            let mut encrypted = encrypted_path.clone();
-            encrypted.push(&file.random_hash);
+            let mut locked = locked_path.clone();
+            locked.push(&file.random_hash);
 
             let key: [u8; AEAD_KEY_SIZE] = file.key.to_owned().try_into().unwrap();
             let nonce: [u8; AEAD_NONCE_SIZE] = file.nonce.to_owned().try_into().unwrap();
 
-            FileEncryptUnit::try_new(plaintext, encrypted, key, nonce)
+            FileEncryptUnit::try_new(unlocked, locked, key, nonce)
         })
         .collect::<Result<Vec<_>, CryptoError>>()?;
 
@@ -166,7 +166,7 @@ mod tests {
         let current_device = models::Device::find_or_create_current(&database).unwrap();
 
         // Populate database
-        let report = sync_database_from_source_path(&mut database, &tmp.path(), &current_device)
+        let report = sync_database_from_unlocked_path(&mut database, &tmp.path(), &current_device)
             .await
             .unwrap();
 
@@ -187,7 +187,7 @@ mod tests {
         }
 
         // Subsequent syncs should return zero files
-        let report = sync_database_from_source_path(&mut database, &tmp.path(), &current_device)
+        let report = sync_database_from_unlocked_path(&mut database, &tmp.path(), &current_device)
             .await
             .unwrap();
 
