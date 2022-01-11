@@ -16,7 +16,7 @@ It has the following fields:
 - `id`: database's incremental and unique id
 - `title`: friendly file's name
 - `path`: original, unencrypted file path
-- `random_hash`: randomly-generated hash unique to each file (SHA-256)
+- `random_hash`: randomly-generated hash unique to each file
 - `contents_hash`: hash of the plaintext version
 - `size`: file size, in bytes
 - `created_at`

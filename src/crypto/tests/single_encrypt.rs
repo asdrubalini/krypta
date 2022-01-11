@@ -1,13 +1,14 @@
 use std::{fs::remove_file, path::Path};
 
 use crypto::{
-    crypt::{FileDecryptor, FileEncryptor},
-    traits::Compute,
+    crypt::{FileDecryptUnit, FileEncryptUnit, AEAD_KEY_SIZE, AEAD_NONCE_SIZE},
+    traits::ComputeUnit,
 };
 use file_diff::diff;
+use rand::{prelude::SmallRng, SeedableRng};
 use tmp::Tmp;
 
-use crate::common::{generate_random_plaintext_file, generate_seeded_key};
+use crate::common::{generate_random_plaintext_file_with_rng, generate_seeded_key};
 
 mod common;
 
@@ -15,7 +16,11 @@ const PLAINTEXT_FILE: &str = "plaintext";
 const ENCRYPTED_FILE: &str = "encrypted";
 const RECOVERED_FILE: &str = "recovered";
 
-async fn encrypt_decrypt_with_key(tmp_path: impl AsRef<Path>, key: &[u8; 32]) {
+fn encrypt_decrypt_with_key(
+    tmp_path: impl AsRef<Path>,
+    key: [u8; AEAD_KEY_SIZE],
+    nonce: [u8; AEAD_NONCE_SIZE],
+) {
     let file_path = tmp_path.as_ref().to_path_buf();
 
     let mut plaintext_path = file_path.clone();
@@ -27,13 +32,11 @@ async fn encrypt_decrypt_with_key(tmp_path: impl AsRef<Path>, key: &[u8; 32]) {
     let mut recovered_path = file_path.clone();
     recovered_path.push(RECOVERED_FILE);
 
-    let encryptor = FileEncryptor::try_new(&plaintext_path, &encrypted_path, key).unwrap();
+    let encryptor = FileEncryptUnit::try_new(&plaintext_path, &encrypted_path, key, nonce).unwrap();
+    encryptor.start().unwrap();
 
-    encryptor.start().await.unwrap();
-
-    let decryptor = FileDecryptor::try_new(&encrypted_path, &recovered_path, key).unwrap();
-
-    decryptor.start().await.unwrap();
+    let decryptor = FileDecryptUnit::try_new(&encrypted_path, &recovered_path, key, nonce).unwrap();
+    decryptor.start().unwrap();
 
     // Make sure that plaintext and recovered files are the same
     assert!(diff(
@@ -46,12 +49,13 @@ async fn encrypt_decrypt_with_key(tmp_path: impl AsRef<Path>, key: &[u8; 32]) {
     remove_file(recovered_path).unwrap();
 }
 
-#[tokio::test]
-async fn small_file_seeded_key() {
+#[test]
+fn small_file_seeded_key() {
     let tmp = Tmp::new();
+    let mut rng = SmallRng::seed_from_u64(0);
 
     let tests_file_size = [
-        0, 1, 2, 3, 8, 9, 200, 256, 512, 893, 1024, 8192, 100_000, 250_000, 1_000_000,
+        1, 2, 3, 8, 9, 200, 256, 512, 893, 1024, 8192, 100_000, 250_000, 1_000_000,
     ];
 
     for length in tests_file_size {
@@ -60,7 +64,9 @@ async fn small_file_seeded_key() {
         let mut plaintext_file = tmp.path();
         plaintext_file.push(PLAINTEXT_FILE);
 
-        generate_random_plaintext_file(plaintext_file, length);
-        encrypt_decrypt_with_key(tmp.path(), &generate_seeded_key()).await;
+        generate_random_plaintext_file_with_rng(&mut rng, plaintext_file, length);
+
+        let (key, nonce) = generate_seeded_key();
+        encrypt_decrypt_with_key(tmp.path(), key, nonce);
     }
 }

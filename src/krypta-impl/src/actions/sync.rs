@@ -1,7 +1,8 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use crypto::crypt::FileConcurrentEncryptor;
-use crypto::{hash::Sha256ConcurrentFileHasher, traits::ConcurrentCompute};
+use crypto::crypt::{FileEncryptBulk, FileEncryptUnit, AEAD_KEY_SIZE, AEAD_NONCE_SIZE};
+use crypto::errors::CryptoError;
+use crypto::{hash::Blake3Concurrent, traits::ComputeBulk};
 use database::traits::InsertMany;
 use database::{
     models::{self, Device},
@@ -55,8 +56,8 @@ pub async fn sync_database_from_source_path(
     path_finder.filter_out_paths(&database_paths);
 
     // Start computing new file's hashes in the background
-    let hasher = Sha256ConcurrentFileHasher::try_new(&path_finder.get_all_absolute_paths())?;
-    let hashes_join = tokio::task::spawn(async move { hasher.start_all().await });
+    let hasher = Blake3Concurrent::try_new(&path_finder.get_all_absolute_paths())?;
+    let hashes_join = tokio::task::spawn_blocking(move || hasher.start_all());
 
     let files_to_insert = path_finder
         .metadatas
@@ -76,7 +77,7 @@ pub async fn sync_database_from_source_path(
             let hash = hashes.get(&absolute_file_path).unwrap_or_else(|| {
                 panic!("Hash for required file {:?} cannot be found", file.path)
             });
-            file.into_insert_file(hash.as_hex())
+            file.into_insert_file(hash.to_string())
         })
         .collect();
 
@@ -103,33 +104,34 @@ pub async fn sync_database_from_source_path(
 pub async fn sync_encrypted_path_from_database(
     db: &mut Database,
     current_device: &Device,
-    source_path: impl AsRef<Path>,
+    plaintext_path: impl AsRef<Path>,
     encrypted_path: impl AsRef<Path>,
 ) -> anyhow::Result<EncryptionReport> {
-    let source_path = source_path.as_ref().to_path_buf();
+    let plaintext_path = plaintext_path.as_ref().to_path_buf();
     let encrypted_path = encrypted_path.as_ref().to_path_buf();
 
-    let key = models::Key::get(db)?;
     let need_encryption = models::File::need_encryption(db, current_device)?;
 
-    // A collection of files and their own source and encrypted path
-    let to_encrypt: Vec<(PathBuf, PathBuf)> = need_encryption
-        .into_iter()
+    // A collection of files and their own plaintext and encrypted path
+    let encryptors = need_encryption
+        .iter()
         .map(|file| {
-            let mut source = source_path.clone();
-            source.push(file.path);
+            let mut plaintext = plaintext_path.clone();
+            plaintext.push(&file.path);
 
             let mut encrypted = encrypted_path.clone();
-            encrypted.push(file.random_hash);
+            encrypted.push(&file.random_hash);
 
-            (source, encrypted)
+            let key: [u8; AEAD_KEY_SIZE] = file.key.to_owned().try_into().unwrap();
+            let nonce: [u8; AEAD_NONCE_SIZE] = file.nonce.to_owned().try_into().unwrap();
+
+            FileEncryptUnit::try_new(plaintext, encrypted, key, nonce)
         })
-        .collect();
+        .collect::<Result<Vec<_>, CryptoError>>()?;
 
     log::trace!("Encryption job started");
-    let encryptor = FileConcurrentEncryptor::try_new(&to_encrypt, &key.key)?;
-    let status = encryptor.start_all().await;
-
+    let encryptor = FileEncryptBulk::new(encryptors);
+    let status = encryptor.start_all();
     log::trace!("Done with encryption job");
 
     let processed_files = status.len();

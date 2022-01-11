@@ -1,3 +1,3 @@
-mod sha256;
+mod blake3;
 
-pub use sha256::{Sha256ConcurrentFileHasher, Sha256FileHasher};
+pub use self::blake3::{Blake3Concurrent, Blake3File};

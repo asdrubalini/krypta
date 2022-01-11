@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS "file" (
 	"size" INTEGER NOT NULL,
 	"created_at" TEXT NOT NULL,
 	"updated_at" TEXT NOT NULL,
+	"key" BLOB NOT NULL,
+	"nonce" BLOB NOT NULL,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
 CREATE TABLE IF NOT EXISTS "file_device" (
@@ -40,7 +42,6 @@ CREATE TABLE IF NOT EXISTS "endpoint" (
 	"id" INTEGER NOT NULL UNIQUE,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
-CREATE TABLE IF NOT EXISTS "key" ("key" BLOB NOT NULL);
 CREATE UNIQUE INDEX IF NOT EXISTS "tag_name" ON "tag" ("name");
 CREATE UNIQUE INDEX IF NOT EXISTS "file_title" ON "file" ("title" ASC);
 CREATE UNIQUE INDEX IF NOT EXISTS "file_random_hash" ON "file" ("random_hash");
