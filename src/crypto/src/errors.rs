@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use thiserror::Error;
 
-use crate::traits::PathPair;
+use crate::crypt::PathPair;
 
 #[derive(Error, Debug)]
 pub enum CipherOperationError {

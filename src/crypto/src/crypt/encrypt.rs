@@ -12,11 +12,11 @@ use memmap2::MmapOptions;
 
 use crate::{
     errors::{CipherOperationError, CryptoError},
-    traits::{ComputeBulk, ComputeUnit, PathPair},
+    traits::{ComputeBulk, ComputeUnit},
     BUFFER_SIZE,
 };
 
-use super::{AEAD_KEY_SIZE, AEAD_NONCE_SIZE};
+use super::{PathPair, AEAD_KEY_SIZE, AEAD_NONCE_SIZE};
 
 #[derive(Debug, Clone)]
 pub struct FileEncryptUnit {
