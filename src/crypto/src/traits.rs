@@ -32,7 +32,7 @@ pub trait ComputeBulk {
     fn start_all(self: Box<Self>) -> HashMap<Self::Key, Self::Output> {
         let computes = self.units();
 
-        let result = computes
+        computes
             .into_par_iter()
             .map(|compute| {
                 let key = Self::map_key(&compute);
@@ -41,9 +41,7 @@ pub trait ComputeBulk {
 
                 (key, output)
             })
-            .collect::<HashMap<Self::Key, Self::Output>>();
-
-        result
+            .collect()
     }
 }
 

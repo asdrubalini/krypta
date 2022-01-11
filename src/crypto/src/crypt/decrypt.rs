@@ -24,8 +24,8 @@ pub struct FileDecryptUnit {
     encrypted_path: PathBuf,
     // The destination file
     plaintext_path: PathBuf,
-    key: [u8; AEAD_KEY_SIZE],
-    nonce: [u8; AEAD_NONCE_SIZE],
+    key: Box<[u8; AEAD_KEY_SIZE]>,
+    nonce: Box<[u8; AEAD_NONCE_SIZE]>,
 }
 
 impl From<&FileDecryptUnit> for PathPair {
@@ -52,8 +52,8 @@ impl FileDecryptUnit {
         Ok(FileDecryptUnit {
             encrypted_path,
             plaintext_path: plaintext_path.as_ref().to_path_buf(),
-            key,
-            nonce,
+            key: Box::new(key),
+            nonce: Box::new(nonce),
         })
     }
 }
@@ -114,26 +114,8 @@ pub struct FileDecryptBulk {
 }
 
 impl FileDecryptBulk {
-    pub fn try_new<P: AsRef<Path>>(
-        paths: &[(P, P)],
-        key: [u8; AEAD_KEY_SIZE],
-        nonce: [u8; AEAD_NONCE_SIZE],
-    ) -> Result<Box<Self>, CryptoError> {
-        let mut decryptors = vec![];
-
-        for (encrypted_path, plaintext_path) in paths {
-            let source_path = encrypted_path.as_ref();
-            let destination_path = plaintext_path.as_ref();
-
-            decryptors.push(FileDecryptUnit::try_new(
-                source_path,
-                destination_path,
-                key,
-                nonce,
-            )?);
-        }
-
-        Ok(Box::new(Self { decryptors }))
+    pub fn new(decryptors: Vec<FileDecryptUnit>) -> Box<Self> {
+        Box::new(Self { decryptors })
     }
 }
 

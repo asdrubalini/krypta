@@ -5,9 +5,11 @@ INSERT INTO file (
     contents_hash,
     size,
     created_at,
-    updated_at
+    updated_at,
+    key,
+    nonce
   )
-VALUES (?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING id,
   title,
   path,
@@ -15,4 +17,6 @@ RETURNING id,
   contents_hash,
   size,
   created_at,
-  updated_at
+  updated_at,
+  key,
+  nonce

@@ -2,6 +2,7 @@ use std::path::Path;
 use std::{fs::Metadata, path::PathBuf};
 
 use chrono::{DateTime, Utc};
+use crypto::crypt::generate_random_secure_key_nonce_pair;
 use rand::Rng;
 use rusqlite::{params, Row};
 
@@ -21,6 +22,8 @@ pub struct File {
     pub size: u64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub key: Vec<u8>,
+    pub nonce: Vec<u8>,
 }
 
 impl TryFrom<&Row<'_>> for File {
@@ -36,6 +39,8 @@ impl TryFrom<&Row<'_>> for File {
             size: row.get(5)?,
             created_at: row.get(6)?,
             updated_at: row.get(7)?,
+            key: row.get(8)?,
+            nonce: row.get(9)?,
         })
     }
 }
@@ -49,13 +54,20 @@ pub struct InsertFile {
     pub size: u64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub key: Vec<u8>,
+    pub nonce: Vec<u8>,
 }
 
 impl InsertFile {
-    /// Build a new `InsertFile`
+    /// Build a new `InsertFile` and generate on the fly some stuff
     pub fn new(title: String, path: PathBuf, contents_hash: String, size: u64) -> Self {
-        let random_hash = File::pseudorandom_sha256_string();
+        let random_hash = File::pseudorandom_hex_string();
         let now = chrono::Utc::now();
+
+        // Key and nonce generation
+        let (key, nonce) = generate_random_secure_key_nonce_pair();
+        let key = Vec::from(key);
+        let nonce = Vec::from(nonce);
 
         InsertFile {
             title,
@@ -65,6 +77,8 @@ impl InsertFile {
             size,
             created_at: now,
             updated_at: now,
+            key,
+            nonce,
         }
     }
 }
@@ -111,7 +125,9 @@ impl Insert<File> for InsertFile {
                 self.contents_hash,
                 self.size,
                 self.created_at,
-                self.updated_at
+                self.updated_at,
+                self.key,
+                self.nonce
             ],
             |row| File::try_from(row),
         )?;
@@ -136,8 +152,8 @@ impl InsertMany<File> for InsertFile {
 }
 
 impl File {
-    /// Generate a pseudorandom sha256 hash
-    fn pseudorandom_sha256_string() -> String {
+    /// Generate a pseudorandom hex string with the same length as SHA-256
+    fn pseudorandom_hex_string() -> String {
         let mut generator = rand::thread_rng();
 
         (0..32)
@@ -221,11 +237,11 @@ mod tests {
     use super::File;
 
     #[test]
-    fn test_pseudorandom_sha256_string_is_valid_length_and_contains_valid_chars() {
+    fn test_pseudorandom_hex_string_is_valid_length_and_contains_valid_chars() {
         let valid_chars = "0123456789abcdfe";
 
         for _ in 0..10_000 {
-            let result = File::pseudorandom_sha256_string();
+            let result = File::pseudorandom_hex_string();
             assert_eq!(result.len(), 64);
 
             for chr in result.chars() {

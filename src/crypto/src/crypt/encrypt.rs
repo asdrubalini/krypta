@@ -24,8 +24,8 @@ pub struct FileEncryptUnit {
     plaintext_path: PathBuf,
     // The destination file
     encrypted_path: PathBuf,
-    key: [u8; AEAD_KEY_SIZE],
-    nonce: [u8; AEAD_NONCE_SIZE],
+    key: Box<[u8; AEAD_KEY_SIZE]>,
+    nonce: Box<[u8; AEAD_NONCE_SIZE]>,
 }
 
 impl From<&FileEncryptUnit> for PathPair {
@@ -52,8 +52,8 @@ impl FileEncryptUnit {
         Ok(FileEncryptUnit {
             plaintext_path,
             encrypted_path: encrypted_path.as_ref().to_path_buf(),
-            key,
-            nonce,
+            key: Box::new(key),
+            nonce: Box::new(nonce),
         })
     }
 }
@@ -62,7 +62,6 @@ impl ComputeUnit for FileEncryptUnit {
     type Output = ();
 
     /// Try to encrypt a file as specified in struct
-    /// TODO: rethink of names
     fn start(self) -> Result<Self::Output, CryptoError> {
         let plaintext_file = File::open(&self.plaintext_path)?;
         let encrypted_file = File::create(&self.encrypted_path)?;
@@ -113,26 +112,8 @@ pub struct FileEncryptBulk {
 }
 
 impl FileEncryptBulk {
-    pub fn try_new<P: AsRef<Path>>(
-        paths: &[(P, P)],
-        key: [u8; AEAD_KEY_SIZE],
-        nonce: [u8; AEAD_NONCE_SIZE],
-    ) -> Result<Box<Self>, CryptoError> {
-        let mut encryptors = vec![];
-
-        for (plaintext_path, encrypted_path) in paths {
-            let source_path = plaintext_path.as_ref();
-            let destination_path = encrypted_path.as_ref();
-
-            encryptors.push(FileEncryptUnit::try_new(
-                source_path,
-                destination_path,
-                key,
-                nonce,
-            )?);
-        }
-
-        Ok(Box::new(Self { encryptors }))
+    pub fn new(encryptors: Vec<FileEncryptUnit>) -> Box<Self> {
+        Box::new(Self { encryptors })
     }
 }
 

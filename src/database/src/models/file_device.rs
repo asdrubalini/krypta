@@ -75,7 +75,10 @@ impl InsertMany<FileDevice> for FileDevice {
 }
 
 impl UpdateMany for FileDevice {
-    fn update_many(db: &mut Database, updatables: &[Self]) -> crate::errors::DatabaseResult<Self> {
+    fn update_many(
+        _db: &mut Database,
+        _updatables: &[Self],
+    ) -> crate::errors::DatabaseResult<Self> {
         todo!()
     }
 }

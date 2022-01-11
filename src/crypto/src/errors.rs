@@ -24,4 +24,8 @@ pub enum CryptoError {
     CipherOperationError(CipherOperationError, PathPair),
     #[error("Length of {0:?} cannot be zero")]
     ZeroLength(PathBuf),
+    #[error("Key with length of {0} bytes is not valid")]
+    InvalidKeyLength(usize),
+    #[error("Nonce with length of {0} bytes is not valid")]
+    InvalidNonceLength(usize),
 }
