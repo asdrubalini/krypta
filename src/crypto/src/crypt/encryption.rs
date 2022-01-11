@@ -6,14 +6,14 @@ use std::{
 
 use chacha20poly1305::{
     aead::{stream, NewAead},
-    XChaCha20Poly1305,
+    Key, Nonce, XChaCha20Poly1305,
 };
 use memmap2::MmapOptions;
 
 use crate::{
     errors::{CipherOperationError, CryptoError},
     traits::{ComputeBulk, ComputeUnit, PathPair},
-    BUFFER_SIZE,
+    AEAD_KEY_SIZE, AEAD_NONCE_SIZE, BUFFER_SIZE,
 };
 
 #[derive(Debug, Clone)]
@@ -22,8 +22,8 @@ pub struct FileEncryptUnit {
     plaintext_path: PathBuf,
     // The destination file
     encrypted_path: PathBuf,
-    key: [u8; 32],
-    nonce: [u8; 24],
+    key: [u8; AEAD_KEY_SIZE],
+    nonce: [u8; AEAD_NONCE_SIZE],
 }
 
 impl From<&FileEncryptUnit> for PathPair {
@@ -39,8 +39,8 @@ impl FileEncryptUnit {
     pub fn try_new<P: AsRef<Path>>(
         plaintext_path: P,
         encrypted_path: P,
-        key: [u8; 32],
-        nonce: [u8; 24],
+        key: [u8; AEAD_KEY_SIZE],
+        nonce: [u8; AEAD_NONCE_SIZE],
     ) -> Result<FileEncryptUnit, CryptoError> {
         let plaintext_path = plaintext_path.as_ref().to_path_buf();
 
@@ -113,8 +113,8 @@ pub struct FileEncryptBulk {
 impl FileEncryptBulk {
     pub fn try_new<P: AsRef<Path>>(
         paths: &[(P, P)],
-        key: [u8; 32],
-        nonce: [u8; 24],
+        key: [u8; AEAD_KEY_SIZE],
+        nonce: [u8; AEAD_NONCE_SIZE],
     ) -> Result<Box<Self>, CryptoError> {
         let mut encryptors = vec![];
 

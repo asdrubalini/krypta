@@ -4,6 +4,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
+use crypto::{AEAD_KEY_SIZE, AEAD_NONCE_SIZE};
 use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};
 
@@ -175,10 +176,10 @@ pub fn generate_plaintext_with_content(file_path: impl AsRef<Path>, content: imp
     plaintext_file.flush().unwrap();
 }
 
-pub fn generate_seeded_key() -> ([u8; 32], [u8; 24]) {
+pub fn generate_seeded_key() -> ([u8; AEAD_KEY_SIZE], [u8; AEAD_NONCE_SIZE]) {
     let mut rng = SmallRng::seed_from_u64(0);
-    let mut key = [0u8; 32];
-    let mut nonce = [0u8; 24];
+    let mut key = [0u8; AEAD_KEY_SIZE];
+    let mut nonce = [0u8; AEAD_NONCE_SIZE];
 
     rng.fill_bytes(&mut key);
     rng.fill_bytes(&mut nonce);

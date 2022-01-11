@@ -13,7 +13,7 @@ use memmap2::MmapOptions;
 use crate::{
     errors::{CipherOperationError, CryptoError},
     traits::{ComputeBulk, ComputeUnit, PathPair},
-    AEAD_TAG_SIZE, BUFFER_SIZE,
+    AEAD_KEY_SIZE, AEAD_NONCE_SIZE, AEAD_TAG_SIZE, BUFFER_SIZE,
 };
 
 #[derive(Debug, Clone)]
@@ -22,8 +22,8 @@ pub struct FileDecryptUnit {
     encrypted_path: PathBuf,
     // The destination file
     plaintext_path: PathBuf,
-    key: [u8; 32],
-    nonce: [u8; 24],
+    key: [u8; AEAD_KEY_SIZE],
+    nonce: [u8; AEAD_NONCE_SIZE],
 }
 
 impl From<&FileDecryptUnit> for PathPair {
@@ -39,8 +39,8 @@ impl FileDecryptUnit {
     pub fn try_new<P: AsRef<Path>>(
         encrypted_path: P,
         plaintext_path: P,
-        key: [u8; 32],
-        nonce: [u8; 24],
+        key: [u8; AEAD_KEY_SIZE],
+        nonce: [u8; AEAD_NONCE_SIZE],
     ) -> Result<FileDecryptUnit, CryptoError> {
         let encrypted_path = encrypted_path.as_ref().to_path_buf();
 
@@ -114,8 +114,8 @@ pub struct FileDecryptBulk {
 impl FileDecryptBulk {
     pub fn try_new<P: AsRef<Path>>(
         paths: &[(P, P)],
-        key: [u8; 32],
-        nonce: [u8; 24],
+        key: [u8; AEAD_KEY_SIZE],
+        nonce: [u8; AEAD_NONCE_SIZE],
     ) -> Result<Box<Self>, CryptoError> {
         let mut decryptors = vec![];
 

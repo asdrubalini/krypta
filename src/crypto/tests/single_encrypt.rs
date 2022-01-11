@@ -3,6 +3,7 @@ use std::{fs::remove_file, path::Path};
 use crypto::{
     crypt::{FileDecryptUnit, FileEncryptUnit},
     traits::ComputeUnit,
+    AEAD_KEY_SIZE, AEAD_NONCE_SIZE,
 };
 use file_diff::diff;
 use tmp::Tmp;
@@ -15,7 +16,11 @@ const PLAINTEXT_FILE: &str = "plaintext";
 const ENCRYPTED_FILE: &str = "encrypted";
 const RECOVERED_FILE: &str = "recovered";
 
-fn encrypt_decrypt_with_key(tmp_path: impl AsRef<Path>, key: [u8; 32], nonce: [u8; 24]) {
+fn encrypt_decrypt_with_key(
+    tmp_path: impl AsRef<Path>,
+    key: [u8; AEAD_KEY_SIZE],
+    nonce: [u8; AEAD_NONCE_SIZE],
+) {
     let file_path = tmp_path.as_ref().to_path_buf();
 
     let mut plaintext_path = file_path.clone();
