@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
-use crypto::{AEAD_KEY_SIZE, AEAD_NONCE_SIZE};
+use crypto::crypt::{AEAD_KEY_SIZE, AEAD_NONCE_SIZE};
 use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};
 
@@ -144,14 +144,6 @@ pub const BLAKE3_EXPECTED_HASHES: [&str; 128] = [
 
 pub const BLAKE3_EMPTY_HASH: &str =
     "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262";
-
-pub fn generate_random_plaintext_file(file_path: impl AsRef<Path>, length: usize) {
-    let mut plaintext_file = File::create(file_path).unwrap();
-    let random_bytes: Vec<u8> = (0..length).map(|_| rand::random::<u8>()).collect();
-
-    plaintext_file.write_all(&random_bytes).unwrap();
-    plaintext_file.flush().unwrap();
-}
 
 pub fn generate_random_plaintext_file_with_rng(
     rng: &mut SmallRng,

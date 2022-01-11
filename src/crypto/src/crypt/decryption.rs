@@ -13,8 +13,10 @@ use memmap2::MmapOptions;
 use crate::{
     errors::{CipherOperationError, CryptoError},
     traits::{ComputeBulk, ComputeUnit, PathPair},
-    AEAD_KEY_SIZE, AEAD_NONCE_SIZE, AEAD_TAG_SIZE, BUFFER_SIZE,
+    BUFFER_SIZE,
 };
+
+use super::{AEAD_KEY_SIZE, AEAD_NONCE_SIZE, AEAD_TAG_SIZE};
 
 #[derive(Debug, Clone)]
 pub struct FileDecryptUnit {
@@ -73,10 +75,10 @@ impl ComputeUnit for FileDecryptUnit {
         let mut stream_decryptor =
             stream::DecryptorBE32::from_aead(aead, self.nonce.as_ref().into());
 
-        let plaintext_file_map = unsafe { MmapOptions::new().map(&plaintext_file)? };
-        let mut plaintext_file_buf = BufWriter::new(encrypted_file);
+        let encrypted_file_map = unsafe { MmapOptions::new().map(&encrypted_file)? };
+        let mut plaintext_file_buf = BufWriter::new(plaintext_file);
 
-        let mut encrypted_chunks = plaintext_file_map
+        let mut encrypted_chunks = encrypted_file_map
             .chunks(BUFFER_SIZE + AEAD_TAG_SIZE)
             .peekable();
 

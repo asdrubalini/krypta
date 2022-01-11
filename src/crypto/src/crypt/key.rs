@@ -1,7 +1,7 @@
 use rand::{RngCore, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 
-use crate::{AEAD_KEY_SIZE, AEAD_NONCE_SIZE};
+use super::{AEAD_KEY_SIZE, AEAD_NONCE_SIZE};
 
 pub fn generate_random_secure_key_nonce_pair() -> ([u8; AEAD_KEY_SIZE], [u8; AEAD_NONCE_SIZE]) {
     let mut rng = ChaCha20Rng::from_entropy();
@@ -17,7 +17,8 @@ pub fn generate_random_secure_key_nonce_pair() -> ([u8; AEAD_KEY_SIZE], [u8; AEA
 
 #[cfg(test)]
 mod tests {
-    use crate::{AEAD_KEY_SIZE, AEAD_NONCE_SIZE};
+
+    use crate::crypt::{AEAD_KEY_SIZE, AEAD_NONCE_SIZE};
 
     use super::generate_random_secure_key_nonce_pair;
 

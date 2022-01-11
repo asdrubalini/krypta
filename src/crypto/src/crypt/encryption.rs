@@ -6,15 +6,17 @@ use std::{
 
 use chacha20poly1305::{
     aead::{stream, NewAead},
-    Key, Nonce, XChaCha20Poly1305,
+    XChaCha20Poly1305,
 };
 use memmap2::MmapOptions;
 
 use crate::{
     errors::{CipherOperationError, CryptoError},
     traits::{ComputeBulk, ComputeUnit, PathPair},
-    AEAD_KEY_SIZE, AEAD_NONCE_SIZE, BUFFER_SIZE,
+    BUFFER_SIZE,
 };
+
+use super::{AEAD_KEY_SIZE, AEAD_NONCE_SIZE};
 
 #[derive(Debug, Clone)]
 pub struct FileEncryptUnit {

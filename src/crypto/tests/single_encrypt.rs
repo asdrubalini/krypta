@@ -1,14 +1,14 @@
 use std::{fs::remove_file, path::Path};
 
 use crypto::{
-    crypt::{FileDecryptUnit, FileEncryptUnit},
+    crypt::{FileDecryptUnit, FileEncryptUnit, AEAD_KEY_SIZE, AEAD_NONCE_SIZE},
     traits::ComputeUnit,
-    AEAD_KEY_SIZE, AEAD_NONCE_SIZE,
 };
 use file_diff::diff;
+use rand::{prelude::SmallRng, SeedableRng};
 use tmp::Tmp;
 
-use crate::common::{generate_random_plaintext_file, generate_seeded_key};
+use crate::common::{generate_random_plaintext_file_with_rng, generate_seeded_key};
 
 mod common;
 
@@ -52,6 +52,7 @@ fn encrypt_decrypt_with_key(
 #[test]
 fn small_file_seeded_key() {
     let tmp = Tmp::new();
+    let mut rng = SmallRng::seed_from_u64(0);
 
     let tests_file_size = [
         1, 2, 3, 8, 9, 200, 256, 512, 893, 1024, 8192, 100_000, 250_000, 1_000_000,
@@ -63,7 +64,7 @@ fn small_file_seeded_key() {
         let mut plaintext_file = tmp.path();
         plaintext_file.push(PLAINTEXT_FILE);
 
-        generate_random_plaintext_file(plaintext_file, length);
+        generate_random_plaintext_file_with_rng(&mut rng, plaintext_file, length);
 
         let (key, nonce) = generate_seeded_key();
         encrypt_decrypt_with_key(tmp.path(), key, nonce);
