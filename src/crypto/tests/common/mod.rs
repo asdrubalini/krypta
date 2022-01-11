@@ -175,11 +175,13 @@ pub fn generate_plaintext_with_content(file_path: impl AsRef<Path>, content: imp
     plaintext_file.flush().unwrap();
 }
 
-pub fn generate_seeded_key() -> [u8; 32] {
+pub fn generate_seeded_key() -> ([u8; 32], [u8; 24]) {
     let mut rng = SmallRng::seed_from_u64(0);
-    let mut bytes = [0u8; 32];
+    let mut key = [0u8; 32];
+    let mut nonce = [0u8; 24];
 
-    rng.fill_bytes(&mut bytes);
+    rng.fill_bytes(&mut key);
+    rng.fill_bytes(&mut nonce);
 
-    bytes
+    (key, nonce)
 }
