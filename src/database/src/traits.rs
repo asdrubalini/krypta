@@ -21,5 +21,9 @@ pub trait Fetch: Sized {
 }
 
 pub trait UpdateMany: Sized {
-    fn update_many(db: &mut Database, updatables: &[Self]) -> DatabaseResult<Self>;
+    fn update_many(db: &mut Database, updatables: &[Self]) -> DatabaseResult<Vec<Self>>;
+}
+
+pub trait Update: Sized {
+    fn update(&self, db: &Database) -> DatabaseResult<Self>;
 }

@@ -1,4 +1,6 @@
+use std::any::type_name;
 use std::path::Path;
+use std::time::Instant;
 use std::{fs::Metadata, path::PathBuf};
 
 use chrono::{DateTime, Utc};
@@ -144,11 +146,26 @@ impl InsertMany<File> for InsertFile {
         let tx = db.transaction()?;
         let mut files = vec![];
 
+        log::trace!(
+            "[{}] Start inserting {} File",
+            type_name::<Self>(),
+            items.len()
+        );
+
+        let start = Instant::now();
+
         for file in items {
             files.push(file.insert(&tx)?);
         }
 
         tx.commit()?;
+
+        log::trace!(
+            "[{:?}] Took {:?} for inserting {} items",
+            type_name::<Self>(),
+            start.elapsed(),
+            items.len()
+        );
 
         Ok(files)
     }

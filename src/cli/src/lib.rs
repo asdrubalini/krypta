@@ -13,11 +13,15 @@ pub struct Cli {
 pub enum CliCommand {
     /// Set the unlocked path for the current device
     #[clap(name = "set-unlocked")]
-    SetUnlocked { unlocked_path: PathBuf },
+    SetUnlocked {
+        unlocked_path: PathBuf,
+    },
 
     /// Set the locked path for the current device
     #[clap(name = "set-locked")]
-    SetLocked { locked_path: PathBuf },
+    SetLocked {
+        locked_path: PathBuf,
+    },
 
     /// Get the status of the current database
     Status,
@@ -36,5 +40,9 @@ pub enum CliCommand {
     Unlock,
 
     /// Find something based on file name, path or tag name
-    Find { query: String },
+    Find {
+        query: String,
+    },
+
+    Debug,
 }
