@@ -10,7 +10,6 @@ cli = { version = "0.0.0", path = "../cli" }
 database = { version = "0.0.0", path = "../database" }
 
 tokio = { version = "1", features = [ "macros", "rt", "rt-multi-thread" ] }
-crossbeam = "0.8.1"
 
 log = "0.4"
 dotenv = "0.15"
