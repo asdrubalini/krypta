@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crypto::crypt::{FileEncryptBulk, FileEncryptUnit, AEAD_KEY_SIZE, AEAD_NONCE_SIZE};
+use crypto::crypt::FileEncryptBulk;
 use crypto::errors::CryptoError;
 use crypto::{hash::Blake3Concurrent, traits::ComputeBulk};
 use database::traits::InsertMany;
@@ -114,8 +114,9 @@ pub async fn sync_locked_path_from_database(
 
     // Transform files into encryptors
     let encryptors = need_encryption
-        .iter()
-        .map(|file| models::File::into_encryptor(file.to_owned(), &locked_path, &unlocked_path))
+        .clone()
+        .into_iter()
+        .map(|file| models::File::into_encryptor(file, &locked_path, &unlocked_path))
         .collect::<Result<Vec<_>, CryptoError>>()?;
 
     log::trace!("Encryption job started");
