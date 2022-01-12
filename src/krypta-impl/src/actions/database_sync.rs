@@ -105,3 +105,55 @@ fn find_hash_for_paths(
 
     Ok(relative_result)
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{collections::HashSet, path::PathBuf};
+
+    use database::traits::Fetch;
+    use tmp::{RandomFill, Tmp};
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_database_sync() {
+        const FILES_COUNT: usize = 50_000;
+
+        // Prepare
+        let tmp = Tmp::new();
+        let created_files = tmp.random_fill(FILES_COUNT, 16);
+
+        let mut database = database::create_in_memory().unwrap();
+        let current_device = models::Device::find_or_create_current(&database).unwrap();
+
+        // Populate database
+        let processed_files =
+            sync_database_from_unlocked_path(&mut database, &tmp.path(), &current_device)
+                .await
+                .unwrap();
+
+        assert_eq!(processed_files.len(), FILES_COUNT);
+
+        let database_files = models::File::fetch_all(&mut database).unwrap();
+        assert_eq!(database_files.len(), FILES_COUNT);
+
+        let database_paths = database_files
+            .into_iter()
+            .map(|file| file.path)
+            .collect::<HashSet<_>>(); // HashSet for faster lookups
+
+        // Make sure that each created file exists in the database
+        for file in created_files {
+            let created_file = file.into_iter().skip(3).collect::<PathBuf>();
+            assert!(database_paths.contains(&created_file));
+        }
+
+        // Subsequent syncs should return zero files
+        let processed_files =
+            sync_database_from_unlocked_path(&mut database, &tmp.path(), &current_device)
+                .await
+                .unwrap();
+
+        assert_eq!(processed_files.len(), 0);
+    }
+}
