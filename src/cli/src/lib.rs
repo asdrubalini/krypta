@@ -11,21 +11,30 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum CliCommand {
+    /// Set the unlocked path for the current device
     #[clap(name = "set-unlocked")]
-    SetUnlocked {
-        unlocked_path: PathBuf,
-    },
+    SetUnlocked { unlocked_path: PathBuf },
+
+    /// Set the locked path for the current device
     #[clap(name = "set-locked")]
-    SetLocked {
-        locked_path: PathBuf,
-    },
+    SetLocked { locked_path: PathBuf },
+
+    /// Get the status of the current database
     Status,
-    Add,
+
+    /// Update the database based on the unlocked path
+    Sync,
+
+    /// Encrypt files that require encryption
     Encrypt,
+
+    /// Unlock just the folder structure in the unlocked_path, without creating files
     #[clap(name = "unlock-structure")]
     UnlockStructure,
+
+    /// Unlock specified file in the unlocked_path
     Unlock,
-    Find {
-        query: String,
-    },
+
+    /// Find something based on file name, path or tag name
+    Find { query: String },
 }

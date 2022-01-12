@@ -1,7 +1,7 @@
 use cli::{CliCommand, Parser};
 use database::Database;
 
-use super::{init, status, sync};
+use super::add::sync;
 
 /// Parse and execute command, if valid
 pub async fn execute_command(database: &mut Database) -> anyhow::Result<()> {
@@ -9,12 +9,13 @@ pub async fn execute_command(database: &mut Database) -> anyhow::Result<()> {
         CliCommand::SetUnlocked { unlocked_path } => todo!(),
         CliCommand::SetLocked { locked_path } => todo!(),
         CliCommand::Status => todo!(),
-        CliCommand::Add => todo!(),
+        CliCommand::Sync => sync(database),
         CliCommand::Encrypt => todo!(),
         CliCommand::UnlockStructure => todo!(),
         CliCommand::Unlock => todo!(),
         CliCommand::Find { query } => todo!(),
-    };
+    }
+    .await?;
 
     Ok(())
 }
