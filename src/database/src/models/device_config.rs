@@ -2,6 +2,8 @@ use std::path::PathBuf;
 
 use rusqlite::Row;
 
+use crate::{errors::DatabaseResult, Database};
+
 #[derive(Debug, Clone)]
 pub struct DeviceConfig {
     pub id: i64,
@@ -20,5 +22,17 @@ impl TryFrom<&Row<'_>> for DeviceConfig {
             locked_path: PathBuf::from(row.get::<_, String>(2)?),
             unlocked_path: PathBuf::from(row.get::<_, String>(3)?),
         })
+    }
+}
+
+impl DeviceConfig {
+    pub fn get_locked_path(_db: &Database) -> DatabaseResult<PathBuf> {
+        // TODO: read from database
+        Ok(PathBuf::from("/vault/encrypted/"))
+    }
+
+    pub fn get_unlocked_path(_db: &Database) -> DatabaseResult<PathBuf> {
+        // TODO: read from database
+        Ok(PathBuf::from("/vault/test_data/"))
     }
 }
