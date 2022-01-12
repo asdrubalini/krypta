@@ -1,6 +1,4 @@
-# krypta
-
-![Rust build](https://github.com/asdrubalini/krypta/actions/workflows/rust.yml/badge.svg)
+# krypta ![Rust build](https://github.com/asdrubalini/krypta/actions/workflows/rust.yml/badge.svg)
 
 ## Features
 
