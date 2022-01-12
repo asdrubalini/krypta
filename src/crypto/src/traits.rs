@@ -1,4 +1,4 @@
-use std::{collections::HashMap, hash::Hash};
+use std::{any::type_name, collections::HashMap, hash::Hash};
 
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
@@ -32,12 +32,20 @@ pub trait ComputeBulk {
     fn start_all(self: Box<Self>) -> HashMap<Self::Key, Self::Output> {
         let computes = self.units();
 
+        log::trace!(
+            "[{}]: Starting job of {} computes",
+            type_name::<Self::Compute>(),
+            computes.len(),
+        );
+
         computes
             .into_par_iter()
             .map(|compute| {
                 let key = Self::map_key(&compute);
                 let result = compute.start();
                 let output = Self::map_output(result);
+
+                log::trace!("[{}]: done", type_name::<Self::Compute>());
 
                 (key, output)
             })

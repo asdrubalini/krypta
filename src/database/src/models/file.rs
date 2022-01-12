@@ -2,7 +2,10 @@ use std::path::Path;
 use std::{fs::Metadata, path::PathBuf};
 
 use chrono::{DateTime, Utc};
-use crypto::crypt::generate_random_secure_key_nonce_pair;
+use crypto::crypt::{
+    generate_random_secure_key_nonce_pair, FileEncryptUnit, AEAD_KEY_SIZE, AEAD_NONCE_SIZE,
+};
+use crypto::errors::CryptoError;
 use rand::Rng;
 use rusqlite::{params, Row};
 
@@ -199,6 +202,23 @@ impl File {
         }
 
         Ok(files)
+    }
+
+    pub fn into_encryptor<P: AsRef<Path>>(
+        self,
+        locked_path: P,
+        unlocked_path: P,
+    ) -> Result<FileEncryptUnit, CryptoError> {
+        let mut unlocked = unlocked_path.as_ref().to_owned();
+        unlocked.push(self.path);
+
+        let mut locked = locked_path.as_ref().to_owned();
+        locked.push(self.random_hash);
+
+        let key: [u8; AEAD_KEY_SIZE] = self.key.try_into().unwrap();
+        let nonce: [u8; AEAD_NONCE_SIZE] = self.nonce.try_into().unwrap();
+
+        FileEncryptUnit::try_new(unlocked, locked, key, nonce)
     }
 }
 

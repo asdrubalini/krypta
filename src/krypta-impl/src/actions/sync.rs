@@ -112,21 +112,10 @@ pub async fn sync_locked_path_from_database(
 
     let need_encryption = models::File::find_need_encryption_files(db, current_device)?;
 
-    // A collection of files and their own locked and unlocked paths
+    // Transform files into encryptors
     let encryptors = need_encryption
         .iter()
-        .map(|file| {
-            let mut unlocked = unlocked_path.clone();
-            unlocked.push(&file.path);
-
-            let mut locked = locked_path.clone();
-            locked.push(&file.random_hash);
-
-            let key: [u8; AEAD_KEY_SIZE] = file.key.to_owned().try_into().unwrap();
-            let nonce: [u8; AEAD_NONCE_SIZE] = file.nonce.to_owned().try_into().unwrap();
-
-            FileEncryptUnit::try_new(unlocked, locked, key, nonce)
-        })
+        .map(|file| models::File::into_encryptor(file.to_owned(), &locked_path, &unlocked_path))
         .collect::<Result<Vec<_>, CryptoError>>()?;
 
     log::trace!("Encryption job started");
