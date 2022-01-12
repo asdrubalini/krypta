@@ -17,7 +17,7 @@ fn generate_file_with_content_and_blake3_hash(
     content: &str,
     plaintext_file: impl AsRef<Path>,
 ) -> String {
-    generate_plaintext_with_content(plaintext_file.as_ref(), content);
+    generate_plaintext_with_content(plaintext_file.as_ref(), content.as_bytes());
 
     let hasher = Blake3File::try_new(plaintext_file.as_ref()).unwrap();
     let hash = hasher.start().unwrap();

@@ -44,11 +44,13 @@ impl DeviceConfig {
     }
 
     pub fn get_locked_path(db: &Database) -> DatabaseResult<Option<PathBuf>> {
+        return Ok(Some(PathBuf::from("/vault/encrypted/")));
         let locked_path = Self::get_config(db)?;
         Ok(locked_path.map(|config| config.locked_path).flatten())
     }
 
     pub fn get_unlocked_path(db: &Database) -> DatabaseResult<Option<PathBuf>> {
+        return Ok(Some(PathBuf::from("/vault/test_data")));
         let unlocked_path = Self::get_config(db)?;
         Ok(unlocked_path.map(|config| config.unlocked_path).flatten())
     }

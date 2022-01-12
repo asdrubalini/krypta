@@ -1,7 +1,11 @@
-use std::{fs::remove_file, path::Path};
+use std::{fs::remove_file, mem::forget, path::Path};
 
+use common::generate_plaintext_with_content;
 use crypto::{
-    crypt::{FileDecryptUnit, FileEncryptUnit, AEAD_KEY_SIZE, AEAD_NONCE_SIZE},
+    crypt::{
+        generate_random_secure_key_nonce_pair, FileDecryptUnit, FileEncryptUnit, AEAD_KEY_SIZE,
+        AEAD_NONCE_SIZE,
+    },
     traits::ComputeUnit,
 };
 use file_diff::diff;
@@ -69,4 +73,29 @@ fn small_file_seeded_key() {
         let (key, nonce) = generate_seeded_key();
         encrypt_decrypt_with_key(tmp.path(), key, nonce);
     }
+}
+
+#[test]
+fn test_entropy() {
+    let tmp = Tmp::new();
+
+    let mut blank_path = tmp.path();
+    blank_path.push("blank.txt");
+
+    let mut locked_path = tmp.path();
+    locked_path.push("out.txt");
+
+    println!("out: {:?}",locked_path);
+
+    let plaintext_content = (0..256).into_iter().map(|_| 0x0).collect::<Vec<u8>>();
+
+    generate_plaintext_with_content(&blank_path, plaintext_content.as_slice());
+
+    let (key, nonce) = generate_random_secure_key_nonce_pair();
+
+    let crypto = FileEncryptUnit::try_new(&blank_path, &locked_path, key, nonce).unwrap();
+    crypto.start().unwrap();
+
+    // TODO: check entropy here
+    forget(tmp);
 }

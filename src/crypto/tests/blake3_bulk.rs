@@ -20,7 +20,7 @@ fn test_blake3_same_file() {
         let mut unlocked_path = tmp.path();
         unlocked_path.push(format!("{}.txt", i));
 
-        generate_plaintext_with_content(&unlocked_path, "");
+        generate_plaintext_with_content(&unlocked_path, "".as_bytes());
 
         paths.push(unlocked_path);
     }

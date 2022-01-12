@@ -159,12 +159,10 @@ pub fn generate_random_plaintext_file_with_rng(
     plaintext_file.flush().unwrap();
 }
 
-pub fn generate_plaintext_with_content(file_path: impl AsRef<Path>, content: impl AsRef<str>) {
+pub fn generate_plaintext_with_content(file_path: impl AsRef<Path>, content: &[u8]) {
     let mut plaintext_file = File::create(file_path).unwrap();
 
-    plaintext_file
-        .write_all(content.as_ref().as_bytes())
-        .unwrap();
+    plaintext_file.write_all(content).unwrap();
     plaintext_file.flush().unwrap();
 }
 
