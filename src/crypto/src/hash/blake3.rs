@@ -12,6 +12,8 @@ use crate::{
     BUFFER_SIZE,
 };
 
+pub type Blake3Hash = blake3::Hash;
+
 #[derive(Debug, Clone)]
 pub struct Blake3File {
     source_path: PathBuf,

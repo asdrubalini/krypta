@@ -27,3 +27,7 @@ pub trait UpdateMany: Sized {
 pub trait Update: Sized {
     fn update(&self, db: &Database) -> DatabaseResult<Self>;
 }
+
+pub trait Count: Sized {
+    fn count(db: &Database) -> DatabaseResult<i64>;
+}

@@ -13,7 +13,7 @@ use rusqlite::{params, Row};
 
 use crate::{errors::DatabaseResult, Database};
 
-use crate::traits::{Fetch, Insert, InsertMany, Search};
+use crate::traits::{Count, Fetch, Insert, InsertMany, Search};
 
 use super::Device;
 
@@ -171,6 +171,13 @@ impl InsertMany<File> for InsertFile {
     }
 }
 
+impl Count for File {
+    fn count(db: &Database) -> DatabaseResult<i64> {
+        let count = db.query_row(include_str!("sql/file/count.sql"), [], |row| row.get(0))?;
+        Ok(count)
+    }
+}
+
 impl File {
     /// Generate a pseudorandom hex string with the same length as SHA-256
     fn pseudorandom_hex_string() -> String {
@@ -201,11 +208,6 @@ impl File {
     pub fn archive_size(db: &Database) -> DatabaseResult<u64> {
         let size = db.query_row(include_str!("sql/file/size.sql"), [], |row| row.get(0))?;
         Ok(size)
-    }
-
-    pub fn count(db: &Database) -> DatabaseResult<u32> {
-        let count = db.query_row(include_str!("sql/file/count.sql"), [], |row| row.get(0))?;
-        Ok(count)
     }
 
     /// Find files that need to be encrypted for the specified device
@@ -268,7 +270,7 @@ impl MetadataFile {
 mod tests {
     use std::path::PathBuf;
 
-    use crate::traits::{Fetch, Insert, InsertMany};
+    use crate::traits::{Count, Fetch, Insert, InsertMany};
     use crate::{create_in_memory, models::file::InsertFile};
 
     use super::File;
