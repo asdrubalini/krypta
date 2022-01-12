@@ -1,3 +1,4 @@
+#![deprecated]
 use std::path::Path;
 
 use crypto::crypt::FileEncryptBulk;
