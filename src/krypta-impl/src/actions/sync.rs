@@ -3,7 +3,8 @@ use std::path::Path;
 use crypto::crypt::FileEncryptBulk;
 use crypto::errors::CryptoError;
 use crypto::{hash::Blake3Concurrent, traits::ComputeBulk};
-use database::traits::InsertMany;
+use database::models::FileDevice;
+use database::traits::{InsertMany, UpdateMany};
 use database::{
     models::{self, Device},
     Database,
@@ -110,24 +111,51 @@ pub async fn sync_locked_path_from_database(
     let unlocked_path = unlocked_path.as_ref().to_path_buf();
     let locked_path = locked_path.as_ref().to_path_buf();
 
-    let need_encryption = models::File::find_need_encryption_files(db, current_device)?;
+    let need_encryption = models::File::find_need_encryption(db, current_device)?;
 
     // Transform files into encryptors
     let encryptors = need_encryption
         .clone()
         .into_iter()
-        .map(|file| models::File::into_encryptor(file, &locked_path, &unlocked_path))
+        .map(|file| models::File::try_into_encryptor(file, &locked_path, &unlocked_path))
         .collect::<Result<Vec<_>, CryptoError>>()?;
 
     log::trace!("Encryption job started");
     let encryptor = FileEncryptBulk::new(encryptors);
-    let status = encryptor.start_all();
+    let encryption_status = encryptor.start_all();
     log::trace!("Done with encryption job");
 
-    let processed_files = status.len();
-    let errors_count = status.iter().filter(|(_, status)| **status).count();
+    let processed_files = encryption_status.len();
+    let errors_count = encryption_status
+        .iter()
+        .filter(|(_, status)| **status)
+        .count();
 
-    // TODO: update FileDevice
+    // Filter out only paths that have been encrypted successfully
+    let paths_need_update = encryption_status
+        .iter()
+        .filter_map(|(unlocked_path, is_ok)| {
+            if *is_ok {
+                // TODO: convert to relative path here
+                Some(unlocked_path)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+
+    log::trace!("paths_need_update: {}", paths_need_update.len());
+
+    // Turn paths into FileDevice and mark those as encrypted
+    let file_device_need_update = models::FileDevice::find_by_path(db, &paths_need_update)?
+        .into_iter()
+        .map(|mut file_device| {
+            file_device.is_encrypted = true;
+            file_device
+        })
+        .collect::<Vec<FileDevice>>();
+
+    models::FileDevice::update_many(db, &file_device_need_update)?;
 
     Ok(EncryptionReport {
         processed_files,

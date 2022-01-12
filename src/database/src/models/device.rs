@@ -4,7 +4,7 @@ use std::io::Read;
 use rusqlite::{params, Row};
 
 use crate::{
-    errors::{DatabaseError, DatabaseResult},
+    errors::DatabaseResult,
     traits::{Insert, Search},
     Database,
 };
@@ -70,7 +70,7 @@ impl InsertDevice {
 impl Device {
     /// Attempts to find the current device in the database, creating one if it doesn't
     /// exists yet
-    pub fn find_or_create_current(db: &Database) -> Result<Self, DatabaseError> {
+    pub fn find_or_create_current(db: &Database) -> DatabaseResult<Self> {
         let platform_id = get_current_platform_id()?;
         let mut results = Self::search(db, &platform_id)?;
 
@@ -88,7 +88,7 @@ impl Device {
 }
 
 impl Search for Device {
-    fn search(db: &Database, query: impl AsRef<str>) -> Result<Vec<Device>, DatabaseError> {
+    fn search(db: &Database, query: impl AsRef<str>) -> DatabaseResult<Vec<Device>> {
         let mut stmt = db.prepare(include_str!("sql/device/search.sql"))?;
         let mut rows = stmt.query([format!("%{}%", query.as_ref())])?;
 

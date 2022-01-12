@@ -1,9 +1,11 @@
 use std::any::type_name;
+use std::path::Path;
 use std::time::Instant;
 
 use rusqlite::{params, Row};
 
-use crate::{errors::DatabaseError, models, Database};
+use crate::errors::DatabaseResult;
+use crate::{models, Database};
 
 use crate::traits::{Insert, InsertMany, Update, UpdateMany};
 
@@ -11,8 +13,8 @@ use crate::traits::{Insert, InsertMany, Update, UpdateMany};
 pub struct FileDevice {
     file_id: i64,
     device_id: i64,
-    is_unlocked: bool,
-    is_encrypted: bool,
+    pub is_unlocked: bool,
+    pub is_encrypted: bool,
 }
 
 impl TryFrom<&Row<'_>> for FileDevice {
@@ -43,10 +45,31 @@ impl FileDevice {
             is_encrypted,
         }
     }
+
+    pub fn find_by_path(
+        db: &mut Database,
+        paths: &[impl AsRef<Path>],
+    ) -> DatabaseResult<Vec<Self>> {
+        let tx = db.transaction()?;
+        let mut items = vec![];
+
+        for path in paths {
+            let path = path.as_ref().to_string_lossy();
+            let device = tx.query_row(
+                include_str!("sql/file_device/find_by_path.sql"),
+                params![path],
+                |row| FileDevice::try_from(row),
+            )?;
+            items.push(device);
+        }
+
+        tx.commit()?;
+        Ok(items)
+    }
 }
 
 impl Insert<FileDevice> for FileDevice {
-    fn insert(&self, db: &Database) -> Result<FileDevice, DatabaseError> {
+    fn insert(&self, db: &Database) -> DatabaseResult<FileDevice> {
         let device = db.query_row(
             include_str!("sql/file_device/insert.sql"),
             params![
@@ -63,7 +86,7 @@ impl Insert<FileDevice> for FileDevice {
 }
 
 impl InsertMany<FileDevice> for FileDevice {
-    fn insert_many(db: &mut Database, items: &[Self]) -> Result<Vec<FileDevice>, DatabaseError> {
+    fn insert_many(db: &mut Database, items: &[Self]) -> DatabaseResult<Vec<FileDevice>> {
         let tx = db.transaction()?;
         let mut inserted_items = vec![];
 
@@ -93,7 +116,7 @@ impl InsertMany<FileDevice> for FileDevice {
 }
 
 impl Update for FileDevice {
-    fn update(&self, db: &Database) -> crate::errors::DatabaseResult<Self> {
+    fn update(&self, db: &Database) -> DatabaseResult<Self> {
         let file_device = db.query_row(
             include_str!("sql/file_device/update.sql"),
             params![
@@ -110,10 +133,7 @@ impl Update for FileDevice {
 }
 
 impl UpdateMany for FileDevice {
-    fn update_many(
-        db: &mut Database,
-        updatables: &[Self],
-    ) -> crate::errors::DatabaseResult<Vec<Self>> {
+    fn update_many(db: &mut Database, updatables: &[Self]) -> DatabaseResult<Vec<Self>> {
         let tx = db.transaction()?;
         let mut results = vec![];
 
