@@ -62,9 +62,11 @@ fn find_paths_requiring_insertion(
     db: &Database,
     unlocked_path: impl AsRef<Path>,
 ) -> anyhow::Result<HashMap<PathBuf, Metadata>> {
-    // TODO: execute this two concurrently
-    let mut path_finder = PathFinder::from_source_path(unlocked_path)?;
+    let unlocked_path = unlocked_path.as_ref().to_path_buf();
+    let path_finder_handle = std::thread::spawn(|| PathFinder::from_source_path(unlocked_path));
+
     let database_paths = models::File::get_file_paths(db)?;
+    let mut path_finder = path_finder_handle.join().unwrap()?;
 
     path_finder.filter_out_paths(&database_paths);
 
