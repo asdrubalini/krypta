@@ -6,9 +6,9 @@ pub async fn execute(db: &mut Database) -> anyhow::Result<()> {
     let current_device = models::Device::find_or_create_current(db)?;
 
     let unlocked_path = models::DeviceConfig::get_unlocked_path(db, &current_device)?
-        .expect("Cannot find unlocked_path.");
+        .expect("Cannot find unlocked_path, please set it before proceding.");
     let _locked_path = models::DeviceConfig::get_locked_path(db, &current_device)?
-        .expect("Cannot find locked_path.");
+        .expect("Cannot find locked_path, please set it before proceding.");
 
     let inserted_files =
         sync_database_from_unlocked_path(db, unlocked_path, &current_device).await?;

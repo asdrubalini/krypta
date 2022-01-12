@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS `device_config` (
 	PRIMARY KEY(`id` AUTOINCREMENT)
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS `device_config_device_id` ON `device_config` (`device_id`);
+
 CREATE TABLE IF NOT EXISTS `krypta_info` (
 	`name` TEXT NOT NULL,
 	`total_size` BLOB NOT NULL

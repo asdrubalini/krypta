@@ -9,7 +9,7 @@ use super::Device;
 #[derive(Debug, Clone)]
 pub struct DeviceConfig {
     pub id: i64,
-    pub device_id: String,
+    pub device_id: i64,
     pub locked_path: Option<PathBuf>,
     pub unlocked_path: Option<PathBuf>,
 }
@@ -18,8 +18,8 @@ impl TryFrom<&Row<'_>> for DeviceConfig {
     type Error = rusqlite::Error;
 
     fn try_from(row: &Row<'_>) -> Result<Self, Self::Error> {
-        let locked_path = row.get::<_, String>(2).optional()?.map(PathBuf::from);
-        let unlocked_path = row.get::<_, String>(3).optional()?.map(PathBuf::from);
+        let locked_path = row.get::<_, Option<String>>(2)?.map(PathBuf::from);
+        let unlocked_path = row.get::<_, Option<String>>(3)?.map(PathBuf::from);
 
         Ok(DeviceConfig {
             id: row.get(0)?,
@@ -53,11 +53,28 @@ impl Update for DeviceConfig {
 
 impl DeviceConfig {
     fn find_or_create_current(db: &Database, device: &Device) -> DatabaseResult<Self> {
-        let config = db.query_row(
-            include_str!("sql/device_config/find_or_create_current.sql"),
-            params![device.id],
-            |row| DeviceConfig::try_from(row),
-        )?;
+        let maybe_config = Self::find_by_device(db, device)?;
+
+        let config = match maybe_config {
+            Some(config) => config,
+            None => db.query_row(
+                include_str!("sql/device_config/create_empty.sql"),
+                params![device.id],
+                |row| DeviceConfig::try_from(row),
+            )?,
+        };
+
+        Ok(config)
+    }
+
+    fn find_by_device(db: &Database, device: &Device) -> DatabaseResult<Option<Self>> {
+        let config = db
+            .query_row(
+                include_str!("sql/device_config/find_by_device.sql"),
+                params![device.id],
+                |row| DeviceConfig::try_from(row),
+            )
+            .optional()?;
 
         Ok(config)
     }
