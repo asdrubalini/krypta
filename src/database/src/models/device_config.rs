@@ -2,7 +2,11 @@ use std::path::{Path, PathBuf};
 
 use rusqlite::{params, OptionalExtension, Row};
 
-use crate::{errors::DatabaseResult, traits::Update, Database};
+use crate::{
+    errors::DatabaseResult,
+    traits::{Count, Update},
+    Database,
+};
 
 use super::Device;
 
@@ -48,6 +52,15 @@ impl Update for DeviceConfig {
         )?;
 
         Ok(device_config)
+    }
+}
+
+impl Count for DeviceConfig {
+    fn count(db: &Database) -> DatabaseResult<i64> {
+        let count = db.query_row(include_str!("sql/device_config/count.sql"), [], |row| {
+            row.get(0)
+        })?;
+        Ok(count)
     }
 }
 
@@ -113,5 +126,24 @@ impl DeviceConfig {
         config.unlocked_path = Some(unlocked_path.as_ref().to_path_buf());
         config.update(db)?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DeviceConfig;
+    use crate::{create_in_memory, models::Device, traits::Count};
+
+    #[test]
+    fn test_find_or_create_current() {
+        let database = create_in_memory().unwrap();
+        let device = Device::find_or_create_current(&database).unwrap();
+
+        DeviceConfig::find_or_create_current(&database, &device).unwrap();
+        assert_eq!(DeviceConfig::count(&database).unwrap(), 1);
+
+        DeviceConfig::find_or_create_current(&database, &device).unwrap();
+        // Subsequent access should not create more rows
+        assert_eq!(DeviceConfig::count(&database).unwrap(), 1);
     }
 }
