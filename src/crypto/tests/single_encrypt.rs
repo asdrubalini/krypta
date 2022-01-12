@@ -23,29 +23,29 @@ fn encrypt_decrypt_with_key(
 ) {
     let file_path = tmp_path.as_ref().to_path_buf();
 
-    let mut plaintext_path = file_path.clone();
-    plaintext_path.push(PLAINTEXT_FILE);
+    let mut unlocked_path = file_path.clone();
+    unlocked_path.push(PLAINTEXT_FILE);
 
-    let mut encrypted_path = file_path.clone();
-    encrypted_path.push(ENCRYPTED_FILE);
+    let mut locked_path = file_path.clone();
+    locked_path.push(ENCRYPTED_FILE);
 
     let mut recovered_path = file_path.clone();
     recovered_path.push(RECOVERED_FILE);
 
-    let encryptor = FileEncryptUnit::try_new(&plaintext_path, &encrypted_path, key, nonce).unwrap();
+    let encryptor = FileEncryptUnit::try_new(&unlocked_path, &locked_path, key, nonce).unwrap();
     encryptor.start().unwrap();
 
-    let decryptor = FileDecryptUnit::try_new(&encrypted_path, &recovered_path, key, nonce).unwrap();
+    let decryptor = FileDecryptUnit::try_new(&locked_path, &recovered_path, key, nonce).unwrap();
     decryptor.start().unwrap();
 
     // Make sure that plaintext and recovered files are the same
     assert!(diff(
-        &plaintext_path.as_os_str().to_string_lossy().to_string(),
+        &unlocked_path.as_os_str().to_string_lossy().to_string(),
         &recovered_path.as_os_str().to_string_lossy().to_string()
     ));
 
-    remove_file(plaintext_path).unwrap();
-    remove_file(encrypted_path).unwrap();
+    remove_file(unlocked_path).unwrap();
+    remove_file(locked_path).unwrap();
     remove_file(recovered_path).unwrap();
 }
 

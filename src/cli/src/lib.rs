@@ -11,10 +11,21 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum CliCommand {
-    Init {
-        source_path: PathBuf,
-        destination_path: PathBuf,
+    #[clap(name = "set-unlocked")]
+    SetUnlocked {
+        unlocked_path: PathBuf,
     },
-    Sync,
+    #[clap(name = "set-locked")]
+    SetLocked {
+        locked_path: PathBuf,
+    },
     Status,
+    Add,
+    Encrypt,
+    #[clap(name = "unlock-structure")]
+    UnlockStructure,
+    Unlock,
+    Find {
+        query: String,
+    },
 }

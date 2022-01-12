@@ -38,13 +38,3 @@ A file that is only in the local storage must be synchronized.
 A file that is only on the cloud can be downloaded if requested.
 
 Note that the database always has all files and keeps track of which ones are present on the remote host and which ones are present in the local storage.
-
-# Commands
-
-## Init database
-
-`krypta init <source_path>`
-
-## Sync database
-
-`krypta sync <source_path>`
