@@ -110,7 +110,7 @@ pub async fn sync_locked_path_from_database(
     let unlocked_path = unlocked_path.as_ref().to_path_buf();
     let locked_path = locked_path.as_ref().to_path_buf();
 
-    let need_encryption = models::File::need_encryption(db, current_device)?;
+    let need_encryption = models::File::find_need_encryption_files(db, current_device)?;
 
     // A collection of files and their own locked and unlocked paths
     let encryptors = need_encryption

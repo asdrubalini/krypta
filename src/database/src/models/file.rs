@@ -189,7 +189,7 @@ impl File {
     }
 
     /// Find files that need to be encrypted for the specified device
-    pub fn need_encryption(db: &Database, device: &Device) -> DatabaseResult<Vec<File>> {
+    pub fn find_need_encryption_files(db: &Database, device: &Device) -> DatabaseResult<Vec<File>> {
         let mut stmt = db.prepare(include_str!("sql/file/need_encryption.sql"))?;
         let mut rows = stmt.query([&device.platform_id])?;
 
