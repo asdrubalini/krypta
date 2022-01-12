@@ -1,4 +1,9 @@
-use std::{fs::remove_file, mem::forget, path::Path};
+use std::{
+    fs::{remove_file, File},
+    io::Read,
+    mem::forget,
+    path::Path,
+};
 
 use common::generate_plaintext_with_content;
 use crypto::{
@@ -85,7 +90,7 @@ fn test_entropy() {
     let mut locked_path = tmp.path();
     locked_path.push("out.txt");
 
-    println!("out: {:?}",locked_path);
+    println!("out: {:?}", locked_path);
 
     let plaintext_content = (0..256).into_iter().map(|_| 0x0).collect::<Vec<u8>>();
 
@@ -96,6 +101,9 @@ fn test_entropy() {
     let crypto = FileEncryptUnit::try_new(&blank_path, &locked_path, key, nonce).unwrap();
     crypto.start().unwrap();
 
-    // TODO: check entropy here
-    forget(tmp);
+    let mut encrypted_file = File::open(locked_path).unwrap();
+    let mut encrypted_contents = vec![];
+    encrypted_file.read_to_end(&mut encrypted_contents).unwrap();
+
+    assert_ne!(plaintext_content, encrypted_contents);
 }
