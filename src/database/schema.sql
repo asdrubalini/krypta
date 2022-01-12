@@ -46,13 +46,13 @@ CREATE TABLE IF NOT EXISTS "device" (
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
 
-CREATE TABLE IF NOT EXISTS "device_config" {
+CREATE TABLE IF NOT EXISTS "device_config" (
 	"id" INTEGER NOT NULL UNIQUE,
 	"device_id" INTEGER NOT NULL,
 	"locked_path" TEXT NOT NULL,
 	"unlocked_path" TEXT NOT NULL,
 	PRIMARY KEY("id" AUTOINCREMENT)
-};
+);
 
 CREATE TABLE IF NOT EXISTS "krypta_info" (
 	"name" TEXT NOT NULL,
