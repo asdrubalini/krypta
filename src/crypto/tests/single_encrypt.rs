@@ -89,14 +89,11 @@ fn test_entropy() {
     let mut locked_path = tmp.path();
     locked_path.push("out.txt");
 
-    println!("out: {:?}", locked_path);
-
     let plaintext_content = (0..256).into_iter().map(|_| 0x0).collect::<Vec<u8>>();
 
     generate_plaintext_with_content(&blank_path, plaintext_content.as_slice());
 
     let (key, nonce) = generate_random_secure_key_nonce_pair();
-
     let crypto = FileEncryptUnit::try_new(&blank_path, &locked_path, key, nonce).unwrap();
     crypto.start().unwrap();
 
