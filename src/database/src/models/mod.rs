@@ -2,6 +2,7 @@ mod device;
 mod file;
 mod file_device;
 mod tag;
+mod device_config;
 // mod krypta_info;
 
 pub use device::Device;
