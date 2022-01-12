@@ -67,6 +67,7 @@ impl PathFinder {
     }
 
     /// Get all paths as absolute
+    #[deprecated]
     pub fn get_all_absolute_paths(&self) -> Vec<PathBuf> {
         self.metadatas
             .iter()

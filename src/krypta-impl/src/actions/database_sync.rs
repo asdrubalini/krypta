@@ -4,44 +4,39 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crypto::hash::Blake3Hash;
+use crypto::{
+    hash::{Blake3Concurrent, Blake3Hash},
+    traits::ComputeBulk,
+};
 use database::{
     models::{self, Device},
     traits::InsertMany,
     Database,
 };
+use fs::PathFinder;
 
 pub async fn sync_database_from_unlocked_path(
     db: &mut Database,
     unlocked_path: impl AsRef<Path>,
     device: &Device,
 ) -> anyhow::Result<Vec<models::File>> {
-    // Find paths that need to be inserted into the database
-    let paths_requiring_insertion = find_paths_requiring_insertion(db, unlocked_path)?;
+    let unlocked_path = unlocked_path.as_ref();
 
-    let (metadatas, hashes) = crossbeam::thread::scope(|s| {
-        // Find Metadata for paths that need to be inserted
-        let metadatas_handle = s.spawn(|_| find_metadata_for_paths(&paths_requiring_insertion));
-        // Compute hash for paths that need to be inserted
-        let hashes_handle = s.spawn(|_| find_hash_for_paths(&paths_requiring_insertion));
+    let path_metadata_map = find_paths_requiring_insertion(db, unlocked_path)?;
+    let relative_paths_requiring_insertion = path_metadata_map
+        .iter()
+        .map(|(path, _metadata)| path.to_owned())
+        .collect::<Vec<_>>();
 
-        (
-            metadatas_handle.join().unwrap(),
-            hashes_handle.join().unwrap(),
-        )
-    })
-    .unwrap();
-
-    let metadatas = metadatas?;
-    let hashes = hashes?;
+    let path_hash_map = find_hash_for_paths(unlocked_path, &relative_paths_requiring_insertion)?;
 
     // Obtain models::InsertFile and populate the database
-    let insert_files = paths_requiring_insertion
+    let insert_files = relative_paths_requiring_insertion
         .into_iter()
         .map(|path| {
             // Should always be Some
-            let metadata = metadatas.get(&path).unwrap();
-            let hash = hashes.get(&path).unwrap();
+            let metadata = path_metadata_map.get(&path).unwrap();
+            let hash = path_hash_map.get(&path).unwrap();
 
             models::MetadataFile::new(&path, metadata).into_insert_file(hash.to_string())
         })
@@ -62,23 +57,51 @@ pub async fn sync_database_from_unlocked_path(
 }
 
 /// Find all files in `unlocked_path` that need to be inserted into the database
+/// returned paths are relative and do not contain host-specific bits
 fn find_paths_requiring_insertion(
     db: &Database,
     unlocked_path: impl AsRef<Path>,
-) -> anyhow::Result<Vec<PathBuf>> {
-    todo!()
-}
-
-// TODO: consider using &Path instead of PathBuf
-fn find_metadata_for_paths<P: AsRef<Path>>(
-    paths: &[P],
 ) -> anyhow::Result<HashMap<PathBuf, Metadata>> {
-    todo!()
+    // TODO: execute this two concurrently
+    let mut path_finder = PathFinder::from_source_path(unlocked_path)?;
+    let database_paths = models::File::get_file_paths(db)?;
+
+    path_finder.filter_out_paths(&database_paths);
+
+    Ok(path_finder.metadatas)
 }
 
-// TODO: consider using &Path instead of PathBuf
-fn find_hash_for_paths<P: AsRef<Path>>(
-    paths: &[P],
+/// Compute BLAKE3 hashes for files in `unlocked_path`
+/// returned paths are relative and do not contain host-specific bits
+fn find_hash_for_paths(
+    unlocked_path: impl AsRef<Path>,
+    relative_paths: &[impl AsRef<Path>],
 ) -> anyhow::Result<HashMap<PathBuf, Blake3Hash>> {
-    todo!()
+    let unlocked_path = unlocked_path.as_ref();
+
+    let absolute_paths = relative_paths
+        .iter()
+        .map(|relative| {
+            let mut path = unlocked_path.to_path_buf();
+            path.push(relative);
+            path
+        })
+        .collect::<Vec<_>>();
+
+    let hasher = Blake3Concurrent::try_new(&absolute_paths)?;
+    let result = hasher.start_all();
+
+    let unlocked_path_len = unlocked_path.iter().count();
+    let relative_result = result
+        .into_iter()
+        .map(|(absolute_path, hash)| {
+            // Skip hosts bits
+            let relative_path: PathBuf =
+                absolute_path.into_iter().skip(unlocked_path_len).collect();
+
+            (relative_path, hash)
+        })
+        .collect::<HashMap<_, _>>();
+
+    Ok(relative_result)
 }
