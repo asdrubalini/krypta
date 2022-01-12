@@ -1,7 +1,6 @@
 use std::{
     fs::{remove_file, File},
     io::Read,
-    mem::forget,
     path::Path,
 };
 
