@@ -53,6 +53,11 @@ pub fn get_current_platform_id() -> Result<String, std::io::Error> {
     Ok(machine_id)
 }
 
+#[cfg(target_os = "windows")]
+pub fn get_current_platform_id() -> Result<String, std::io::Error> {
+    Ok("no-platform-id-on-windows".to_string())
+}
+
 impl InsertDevice {
     pub fn new<S: AsRef<str>>(platform_id: S, name: S) -> Self {
         let platform_id = platform_id.as_ref().to_owned();
