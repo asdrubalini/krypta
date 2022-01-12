@@ -80,7 +80,7 @@ fn small_file_seeded_key() {
 }
 
 #[test]
-fn test_entropy() {
+fn test_locked_file_is_different_than_unlocked() {
     let tmp = Tmp::new();
 
     let mut blank_path = tmp.path();
