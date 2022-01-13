@@ -32,6 +32,15 @@ pub trait ComputeBulk {
     fn start_all(self: Box<Self>) -> HashMap<Self::Key, Self::Output> {
         let computes = self.units();
 
+        if computes.is_empty() {
+            log::trace!(
+                "[{}]: zero computes found, not starting job",
+                type_name::<Self::Compute>(),
+            );
+
+            return HashMap::new();
+        }
+
         log::trace!(
             "[{}]: Starting job of {} computes",
             type_name::<Self::Compute>(),
