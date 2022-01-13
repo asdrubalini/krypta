@@ -13,6 +13,7 @@ pub async fn execute_command(database: &mut Database) -> anyhow::Result<()> {
         CliCommand::Status => todo!(),
         CliCommand::Sync => sync::execute(database).await,
         CliCommand::Encrypt => encrypt::execute(database).await,
+        CliCommand::ForceScan => todo!(),
         CliCommand::UnlockStructure => todo!(),
         CliCommand::Unlock => todo!(),
         CliCommand::Find { query: _ } => todo!(),
