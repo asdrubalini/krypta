@@ -17,12 +17,14 @@ fn exec(command: impl AsRef<str>) {
     let bin = command.next().unwrap();
     let arg = command.collect::<Vec<_>>();
 
-    Command::new(bin)
+    let status = Command::new(bin)
         .args(&arg)
         .spawn()
         .unwrap_or_else(|_| panic!("failed to execute {bin}"))
-        .wait_with_output()
+        .wait()
         .unwrap();
+
+    assert!(status.success());
 }
 
 fn test_full() {
@@ -33,9 +35,9 @@ fn test_full() {
 
     [
         "cargo build --release",
-        "target/release/krypta debug",
-        "target/release/krypta sync",
-        "target/release/krypta encrypt",
+        "cargo run --release -q -- debug",
+        "cargo run --release -q -- sync",
+        "cargo run --release -q -- encrypt",
     ]
     .into_iter()
     .map(exec)
