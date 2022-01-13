@@ -131,6 +131,8 @@ impl DeviceConfig {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use super::DeviceConfig;
     use crate::{create_in_memory, models::Device, traits::Count};
 
@@ -145,5 +147,45 @@ mod tests {
         DeviceConfig::find_or_create_current(&database, &device).unwrap();
         // Subsequent access should not create more rows
         assert_eq!(DeviceConfig::count(&database).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_get_and_set_paths() {
+        let database = create_in_memory().unwrap();
+        let device = Device::find_or_create_current(&database).unwrap();
+
+        let locked_path = DeviceConfig::get_locked_path(&database, &device).unwrap();
+        assert_eq!(locked_path, None);
+
+        let unlocked_path = DeviceConfig::get_unlocked_path(&database, &device).unwrap();
+        assert_eq!(unlocked_path, None);
+
+        DeviceConfig::set_locked_path(
+            &database,
+            PathBuf::from("/test/locked_path/foo/bar"),
+            &device,
+        )
+        .unwrap();
+        assert_eq!(DeviceConfig::count(&database).unwrap(), 1);
+
+        DeviceConfig::set_unlocked_path(
+            &database,
+            PathBuf::from("/test/unlocked_path/foo/bar"),
+            &device,
+        )
+        .unwrap();
+        assert_eq!(DeviceConfig::count(&database).unwrap(), 1);
+
+        let locked_path = DeviceConfig::get_locked_path(&database, &device).unwrap();
+        assert_eq!(
+            locked_path,
+            Some(PathBuf::from("/test/locked_path/foo/bar"))
+        );
+
+        let unlocked_path = DeviceConfig::get_unlocked_path(&database, &device).unwrap();
+        assert_eq!(
+            unlocked_path,
+            Some(PathBuf::from("/test/unlocked_path/foo/bar"))
+        );
     }
 }

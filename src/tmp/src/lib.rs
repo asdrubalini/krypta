@@ -121,7 +121,7 @@ mod tests {
             let path = Tmp::generate_random_tmp(length);
             let generated_folder = path.into_iter().last().unwrap();
 
-            assert_eq!(generated_folder.len() - 7, length);
+            assert_eq!(generated_folder.len() - "krypta_".len(), length);
         }
     }
 
