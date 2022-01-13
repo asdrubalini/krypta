@@ -122,7 +122,7 @@ impl InsertMany<FileDevice> for FileDevice {
         tx.commit()?;
 
         log::trace!(
-            "[{:?}] Took {:?} for updating {} items",
+            "[{}] Took {:?} for updating {} items",
             type_name::<Self>(),
             start.elapsed(),
             items.len()
@@ -170,7 +170,7 @@ impl UpdateMany for FileDevice {
         tx.commit()?;
 
         log::trace!(
-            "[{:?}] Took {:?} for updating {} items",
+            "[{}] Took {:?} for updating {} items",
             type_name::<Self>(),
             start.elapsed(),
             updatables.len()

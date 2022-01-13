@@ -161,7 +161,7 @@ impl InsertMany<File> for InsertFile {
         tx.commit()?;
 
         log::trace!(
-            "[{:?}] Took {:?} for inserting {} items",
+            "[{}] Took {:?} for inserting {} items",
             type_name::<Self>(),
             start.elapsed(),
             items.len()

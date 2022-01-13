@@ -61,7 +61,7 @@ pub trait ComputeBulk {
             .collect::<HashMap<Self::Key, Self::Output>>();
 
         log::trace!(
-            "[{:?}] Took {:?} for processing {} items",
+            "[{}] Took {:?} for processing {} items",
             type_name::<Self::Compute>(),
             start.elapsed(),
             results.len()
