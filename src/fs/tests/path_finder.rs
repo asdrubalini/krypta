@@ -1,18 +1,22 @@
 use fs::PathFinder;
-use tmp::Tmp;
-
-mod common;
+use tmp::{RandomFill, Tmp};
 
 #[test]
 fn test_path_finder() {
-    let tmp = Tmp::new();
+    for files_count in 100..150 {
+        for files_len in 10..15 {
+            println!("files_count: {} files_len: {}", files_count, files_len);
 
-    common::generate_files(tmp.path(), 128, 0);
+            let tmp = Tmp::new();
+            tmp.random_fill(files_count, files_len);
 
-    let path_finder = PathFinder::from_source_path(tmp.path()).unwrap();
+            let path_finder = PathFinder::from_source_path(tmp.path()).unwrap();
 
-    for (path, metadata) in path_finder.metadatas {
-        assert!(path.to_string_lossy().to_string().starts_with("file_"));
-        assert_eq!(metadata.len(), 0);
+            assert_eq!(path_finder.metadatas.len(), files_count);
+
+            for (_path, metadata) in path_finder.metadatas {
+                assert_eq!(metadata.len(), files_len as u64);
+            }
+        }
     }
 }
