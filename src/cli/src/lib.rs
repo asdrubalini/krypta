@@ -33,8 +33,8 @@ pub enum CliCommand {
     Encrypt,
 
     /// Force a scan to happen in the unlocked_path, looking for updated files via their hash
-    #[clap(name = "force-scan")]
-    ForceScan,
+    #[clap(name = "force-sync")]
+    ForceSync,
 
     /// Unlock just the folder structure in the unlocked_path, without creating files
     #[clap(name = "unlock-structure")]

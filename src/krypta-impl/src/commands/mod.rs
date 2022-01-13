@@ -4,6 +4,7 @@ mod execute;
 mod config;
 mod debug;
 mod encrypt;
+mod force_sync;
 mod sync;
 
 pub use execute::execute_command;

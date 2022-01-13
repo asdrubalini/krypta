@@ -1,7 +1,7 @@
 use cli::{CliCommand, Parser};
 use database::Database;
 
-use super::{config, debug, encrypt, sync};
+use super::{config, debug, encrypt, force_sync, sync};
 
 /// Parse and execute command, if valid
 pub async fn execute_command(database: &mut Database) -> anyhow::Result<()> {
@@ -13,7 +13,7 @@ pub async fn execute_command(database: &mut Database) -> anyhow::Result<()> {
         CliCommand::Status => todo!(),
         CliCommand::Sync => sync::execute(database).await,
         CliCommand::Encrypt => encrypt::execute(database).await,
-        CliCommand::ForceScan => todo!(),
+        CliCommand::ForceSync => force_sync::execute(database).await,
         CliCommand::UnlockStructure => todo!(),
         CliCommand::Unlock => todo!(),
         CliCommand::Find { query: _ } => todo!(),
