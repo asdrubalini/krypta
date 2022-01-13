@@ -22,11 +22,8 @@ pub async fn sync_database_from_unlocked_path(
 ) -> anyhow::Result<Vec<models::File>> {
     let unlocked_path = unlocked_path.as_ref();
 
-    let path_metadata_map = find_paths_requiring_insertion(db, unlocked_path)?;
-    let relative_paths_requiring_insertion = path_metadata_map
-        .iter()
-        .map(|(path, _metadata)| path.to_owned())
-        .collect::<Vec<_>>();
+    let (path_metadata_map, relative_paths_requiring_insertion) =
+        find_paths_requiring_insertion(db, unlocked_path)?;
 
     let path_hash_map = find_hash_for_paths(unlocked_path, &relative_paths_requiring_insertion)?;
 
@@ -61,7 +58,7 @@ pub async fn sync_database_from_unlocked_path(
 fn find_paths_requiring_insertion(
     db: &Database,
     unlocked_path: impl AsRef<Path>,
-) -> anyhow::Result<HashMap<PathBuf, Metadata>> {
+) -> anyhow::Result<(HashMap<PathBuf, Metadata>, Vec<PathBuf>)> {
     let unlocked_path = unlocked_path.as_ref().to_path_buf();
     let path_finder_handle = std::thread::spawn(|| PathFinder::from_source_path(unlocked_path));
 
@@ -70,7 +67,10 @@ fn find_paths_requiring_insertion(
 
     path_finder.filter_out_paths(&database_paths);
 
-    Ok(path_finder.metadatas)
+    let relative_paths = path_finder.relative_paths();
+    let metadatas = path_finder.metadatas;
+
+    Ok((metadatas, relative_paths))
 }
 
 /// Compute BLAKE3 hashes for files in `unlocked_path`
