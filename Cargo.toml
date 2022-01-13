@@ -5,6 +5,7 @@ edition = "2021"
 
 [workspace]
 members = [
+    "src/xtask",
     "src/krypta-impl",
     "src/crypto",
     "src/fs",
@@ -15,4 +16,3 @@ members = [
 
 [dependencies]
 krypta-impl = { version = "0.0.0", path = "src/krypta-impl" }
-

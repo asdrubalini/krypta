@@ -29,3 +29,6 @@ jobs:
 
       - name: Run tests
         run: cargo test --all --release -- --nocapture
+      
+      - name: Run full tests
+        run: cargo xtask test-full
