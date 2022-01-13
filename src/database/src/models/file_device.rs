@@ -1,6 +1,7 @@
 use std::any::type_name;
+use std::fs::Metadata;
 use std::path::Path;
-use std::time::Instant;
+use std::time::{Instant, UNIX_EPOCH};
 
 use rusqlite::{params, Row};
 
@@ -9,12 +10,24 @@ use crate::{models, Database};
 
 use crate::traits::{Insert, InsertMany, Update, UpdateMany};
 
+/// Convert a std::fs::Metadata into a UNIX epoch u64
+#[cfg(target_os = "linux")]
+pub fn metadata_to_last_modified(metadata: &Metadata) -> u64 {
+    metadata
+        .modified()
+        .unwrap()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+}
+
 #[derive(Clone, Debug)]
 pub struct FileDevice {
     file_id: i64,
     device_id: i64,
     pub is_unlocked: bool,
     pub is_encrypted: bool,
+    pub last_modified: u64,
 }
 
 impl TryFrom<&Row<'_>> for FileDevice {
@@ -26,6 +39,7 @@ impl TryFrom<&Row<'_>> for FileDevice {
             device_id: row.get(1)?,
             is_unlocked: row.get(2)?,
             is_encrypted: row.get(3)?,
+            last_modified: row.get(4)?,
         })
     }
 }
@@ -37,12 +51,14 @@ impl FileDevice {
         device: &models::Device,
         is_unlocked: bool,
         is_encrypted: bool,
+        last_modified: u64,
     ) -> Self {
         FileDevice {
             file_id: file.id,
             device_id: device.id,
             is_unlocked,
             is_encrypted,
+            last_modified,
         }
     }
 
@@ -76,7 +92,8 @@ impl Insert<FileDevice> for FileDevice {
                 self.file_id,
                 self.device_id,
                 self.is_unlocked,
-                self.is_encrypted
+                self.is_encrypted,
+                self.last_modified
             ],
             |row| FileDevice::try_from(row),
         )?;
@@ -122,6 +139,7 @@ impl Update for FileDevice {
             params![
                 self.is_unlocked,
                 self.is_encrypted,
+                self.last_modified,
                 self.file_id,
                 self.device_id
             ],
@@ -186,7 +204,7 @@ mod tests {
         // Prepare device
         let device = Device::find_or_create_current(&database).unwrap();
 
-        let to_insert = FileDevice::new(&file, &device, false, false);
+        let to_insert = FileDevice::new(&file, &device, false, false, 0);
         to_insert.insert(&database).unwrap();
     }
 }

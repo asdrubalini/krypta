@@ -9,7 +9,7 @@ use crypto::{
     traits::ComputeBulk,
 };
 use database::{
-    models::{self, Device},
+    models::{self, metadata_to_last_modified, Device},
     traits::InsertMany,
     Database,
 };
@@ -44,7 +44,17 @@ pub async fn sync_database_from_unlocked_path(
 
     let file_devices = inserted_files
         .iter()
-        .map(|file| models::FileDevice::new(&file, device, true, false))
+        .map(|file| {
+            // Should never fail
+            let metadata = path_metadata_map.get(&file.path).unwrap();
+            models::FileDevice::new(
+                &file,
+                device,
+                true,
+                false,
+                metadata_to_last_modified(metadata),
+            )
+        })
         .collect::<Vec<_>>();
 
     // Insert models::FileDevice
