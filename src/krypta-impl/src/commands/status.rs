@@ -7,12 +7,12 @@ pub async fn execute(database: &Database) -> anyhow::Result<()> {
 
     let archive_count = models::File::count(database)?;
 
-    println!(
+    log::info!(
         "The total size of the archive is {}",
         archive_size.get_appropriate_unit(false)
     );
 
-    println!("The archive has {} files", archive_count);
+    log::info!("The archive has {} files", archive_count);
 
     Ok(())
 }

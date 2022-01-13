@@ -10,7 +10,7 @@ pub async fn execute(db: &mut Database) -> anyhow::Result<()> {
     let inserted_files =
         sync_database_from_unlocked_path(db, unlocked_path, &current_device).await?;
 
-    println!(
+    log::info!(
         "{} files have been added into the database",
         inserted_files.len()
     );
