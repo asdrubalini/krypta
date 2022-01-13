@@ -357,6 +357,7 @@ name = "fs"
 version = "0.0.0"
 dependencies = [
  "chrono",
+ "log",
  "rand",
  "thiserror",
  "tmp",

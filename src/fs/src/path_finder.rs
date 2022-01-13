@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     fs::Metadata,
     path::{Path, PathBuf},
+    time::Instant,
 };
 
 use walkdir::WalkDir;
@@ -19,6 +20,9 @@ impl PathFinder {
     pub fn from_source_path<P: AsRef<Path>>(source_path: P) -> Result<Self, FsError> {
         let source_path = source_path.as_ref().to_owned().canonicalize()?;
         let source_path_length = source_path.iter().count();
+
+        log::trace!("starting with search in {:?}", source_path);
+        let start = Instant::now();
 
         // Find paths and relative metadata
         let paths_metadata = WalkDir::new(&source_path)
@@ -45,6 +49,12 @@ impl PathFinder {
             .into_iter()
             .filter(|(_, metadata)| metadata.is_file())
             .collect::<HashMap<_, _>>();
+
+        log::trace!(
+            "took {:?} to find {} files",
+            start.elapsed(),
+            metadatas.len()
+        );
 
         Ok(Self { metadatas })
     }

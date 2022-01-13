@@ -1,8 +1,9 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crypto::{crypt::FileEncryptBulk, errors::CryptoError, traits::ComputeBulk};
 use database::{
     models::{self, Device},
+    traits::UpdateMany,
     Database,
 };
 
@@ -20,13 +21,14 @@ pub async fn sync_locked_path_from_database(
 
     // Start encryption job
     log::trace!("Encryption job started");
-    let encryptor = into_encryptor(need_encryption, locked_path, unlocked_path)?;
+    let encryptor = files_into_encryptor(need_encryption, locked_path, unlocked_path)?;
     let encryption_status = encryptor.start_all();
     log::trace!("Done with encryption job");
 
+    // Error check
     let errors_count = encryption_status
         .iter()
-        .filter(|(_, status)| **status)
+        .filter(|(_, status)| **status == false)
         .count();
     log::info!(
         "Encrypted {} files, with {} errors",
@@ -34,13 +36,23 @@ pub async fn sync_locked_path_from_database(
         errors_count
     );
 
-    // Filter out successfully encrypted files
-    // Update models::FileDevice is_encrypted = 1
+    // Get file_device(s) and mark them as encrypted
+    let file_devices = encryption_status_into_file_device(db, encryption_status, unlocked_path)?;
+    let file_devices: Vec<models::FileDevice> = file_devices
+        .into_iter()
+        .map(|mut file_device| {
+            file_device.is_encrypted = true;
+            file_device
+        })
+        .collect();
+
+    models::FileDevice::update_many(db, &file_devices)?;
 
     Ok(())
 }
 
-fn into_encryptor(
+/// Convert a bunch of file into bulk encryptor
+fn files_into_encryptor(
     need_encryption: impl IntoIterator<Item = models::File>,
     locked_path: &Path,
     unlocked_path: &Path,
@@ -51,4 +63,29 @@ fn into_encryptor(
         .collect::<Result<Vec<_>, CryptoError>>()?;
 
     Ok(FileEncryptBulk::new(encryptors))
+}
+
+/// Turn the encryption status into models::FileDevice(s)
+fn encryption_status_into_file_device(
+    db: &mut Database,
+    encryption_status: impl IntoIterator<Item = (PathBuf, bool)>,
+    unlocked_path: &Path,
+) -> anyhow::Result<Vec<models::FileDevice>> {
+    // Filter out only file paths that were encrypted successfully
+    let successfully_encrypted_paths: Vec<PathBuf> = encryption_status
+        .into_iter()
+        .filter_map(|(path, is_ok)| if is_ok { Some(path) } else { None })
+        .collect();
+
+    // Turn paths into relative
+    let unlocked_path_len = unlocked_path.iter().count();
+    let successfully_encrypted_paths_relative: Vec<PathBuf> = successfully_encrypted_paths
+        .into_iter()
+        .map(|path| path.into_iter().skip(unlocked_path_len).collect())
+        .collect();
+
+    Ok(models::FileDevice::find_by_paths(
+        db,
+        &successfully_encrypted_paths_relative,
+    )?)
 }

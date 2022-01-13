@@ -46,7 +46,7 @@ impl FileDevice {
         }
     }
 
-    pub fn find_by_path(
+    pub fn find_by_paths(
         db: &mut Database,
         paths: &[impl AsRef<Path>],
     ) -> DatabaseResult<Vec<Self>> {
