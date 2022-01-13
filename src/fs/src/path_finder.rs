@@ -24,7 +24,6 @@ impl CanonicalizeAndSkipPath<PathBuf> for &Path {
 /// Holds the information about the found files (paths are excluded)
 #[derive(Debug)]
 pub struct PathFinder {
-    source_path: PathBuf,
     pub metadatas: HashMap<PathBuf, Metadata>,
 }
 
@@ -53,29 +52,13 @@ impl PathFinder {
             .filter(|(_, metadata)| metadata.is_file())
             .collect::<HashMap<_, _>>();
 
-        Ok(Self {
-            metadatas,
-            source_path,
-        })
+        Ok(Self { metadatas })
     }
 
-    /// Filter out paths based on `path_to_filter`, mutating the struct
+    /// Filter out paths based on `relative_paths_to_filter`, mutating the struct
     pub fn filter_out_paths(&mut self, relative_paths_to_filter: &[PathBuf]) {
         for path in relative_paths_to_filter {
             self.metadatas.remove(path);
         }
-    }
-
-    /// Get all paths as absolute
-    #[deprecated]
-    pub fn get_all_absolute_paths(&self) -> Vec<PathBuf> {
-        self.metadatas
-            .iter()
-            .map(|(path, _)| {
-                let mut absolute = self.source_path.clone();
-                absolute.push(path);
-                absolute
-            })
-            .collect()
     }
 }
