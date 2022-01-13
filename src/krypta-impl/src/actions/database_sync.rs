@@ -23,7 +23,7 @@ pub async fn sync_database_from_unlocked_path(
     let unlocked_path = unlocked_path.as_ref();
 
     let (path_metadata_map, relative_paths_requiring_insertion) =
-        find_paths_requiring_insertion(db, unlocked_path)?;
+        find_paths_requiring_insertion(db, unlocked_path, device)?;
 
     let path_hash_map = find_hash_for_paths(unlocked_path, &relative_paths_requiring_insertion)?;
 
@@ -58,11 +58,12 @@ pub async fn sync_database_from_unlocked_path(
 fn find_paths_requiring_insertion(
     db: &Database,
     unlocked_path: impl AsRef<Path>,
+    device: &Device,
 ) -> anyhow::Result<(HashMap<PathBuf, Metadata>, Vec<PathBuf>)> {
     let unlocked_path = unlocked_path.as_ref().to_path_buf();
     let path_finder_handle = std::thread::spawn(|| PathFinder::from_source_path(unlocked_path));
 
-    let database_paths = models::File::get_file_paths(db)?;
+    let database_paths = models::File::get_file_paths_local(db, device)?;
     let mut path_finder = path_finder_handle.join().unwrap()?;
 
     path_finder.filter_out_paths(&database_paths);

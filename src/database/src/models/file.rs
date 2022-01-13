@@ -192,9 +192,9 @@ impl File {
             .collect()
     }
 
-    pub fn get_file_paths(db: &Database) -> DatabaseResult<Vec<PathBuf>> {
-        let mut stmt = db.prepare(include_str!("sql/file/find_paths.sql"))?;
-        let mut rows = stmt.query([])?;
+    pub fn get_file_paths_local(db: &Database, device: &Device) -> DatabaseResult<Vec<PathBuf>> {
+        let mut stmt = db.prepare(include_str!("sql/file/find_paths_local.sql"))?;
+        let mut rows = stmt.query([device.to_owned().platform_id])?;
 
         let mut paths = vec![];
         while let Some(row) = rows.next()? {
