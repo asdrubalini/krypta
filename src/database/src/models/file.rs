@@ -300,7 +300,9 @@ mod tests {
             0,
         );
 
+        assert_eq!(File::count(&database).unwrap(), 0);
         assert!(file1.insert(&database).is_ok());
+        assert_eq!(File::count(&database).unwrap(), 1);
 
         let file2 = InsertFile::new(
             "foobar".to_string(),
@@ -310,6 +312,7 @@ mod tests {
         );
 
         assert!(file2.insert(&database).is_err());
+        assert_eq!(File::count(&database).unwrap(), 1);
     }
 
     #[test]
@@ -330,6 +333,7 @@ mod tests {
         let files = files.unwrap();
 
         assert_eq!(files.len(), 1);
+        assert_eq!(File::count(&database).unwrap(), 1);
 
         let fetched_file = files.get(0).unwrap().to_owned();
 
