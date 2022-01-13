@@ -114,8 +114,10 @@ pub struct FileDecryptBulk {
 }
 
 impl FileDecryptBulk {
-    pub fn new(decryptors: Vec<FileDecryptUnit>) -> Box<Self> {
-        Box::new(Self { decryptors })
+    pub fn new(decryptors: impl IntoIterator<Item = FileDecryptUnit>) -> Box<Self> {
+        Box::new(Self {
+            decryptors: decryptors.into_iter().collect(),
+        })
     }
 }
 

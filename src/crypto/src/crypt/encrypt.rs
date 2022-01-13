@@ -112,8 +112,10 @@ pub struct FileEncryptBulk {
 }
 
 impl FileEncryptBulk {
-    pub fn new(encryptors: Vec<FileEncryptUnit>) -> Box<Self> {
-        Box::new(Self { encryptors })
+    pub fn new(encryptors: impl IntoIterator<Item = FileEncryptUnit>) -> Box<Self> {
+        Box::new(Self {
+            encryptors: encryptors.into_iter().collect(),
+        })
     }
 }
 
