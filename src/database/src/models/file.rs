@@ -181,6 +181,8 @@ impl Count for File {
 
 impl Update for File {
     fn update(&self, db: &Database) -> DatabaseResult<Self> {
+        let now = chrono::Utc::now();
+
         let file = db.query_row(
             include_str!("sql/file/update.sql"),
             params![
@@ -190,7 +192,7 @@ impl Update for File {
                 self.contents_hash,
                 self.size,
                 self.created_at,
-                self.updated_at,
+                now,
                 self.key,
                 self.nonce,
                 self.id
