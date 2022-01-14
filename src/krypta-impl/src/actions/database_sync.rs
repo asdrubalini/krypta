@@ -6,7 +6,7 @@ use std::{
 
 use crypto::{hash::Blake3Concurrent, traits::ComputeBulk};
 use database::{
-    models::{self, metadata_to_last_modified, Device},
+    models::{self, metadata_to_last_modified, Device, UpdateFileDevice},
     traits::{InsertMany, UpdateMany},
     Database,
 };
@@ -69,37 +69,38 @@ pub async fn sync_database_from_unlocked_path(
         .map(|(item, _)| item)
         .collect::<Vec<_>>();
 
-    let mut files_to_update = models::File::find_files_from_paths(db, &update_paths)?
+    let files_to_update = models::File::find_files_from_paths(db, &update_paths)?
         .into_iter()
         .map(|mut file| {
             // Should never fail
             let hash = hashes.get(&file.path).unwrap();
             file.contents_hash = hash.to_owned();
-            file
+            models::UpdateFile::from(file)
         })
         .collect::<Vec<_>>();
 
-    let updated_files = models::File::update_many(db, &files_to_update)?;
+    let mut updated_files = models::UpdateFile::update_many(db, &files_to_update)?;
 
-    let file_devices_to_update = updated_files
-        .iter()
-        .map(|file| {
+    let file_devices_to_update = models::FileDevice::find_by_files(db, &updated_files)?
+        .clone()
+        .into_iter()
+        .zip(updated_files.iter())
+        .map(|(file_device, file)| {
             // Should never fail
             let metadata = paths_requiring_update.get(&file.path).unwrap();
-            models::FileDevice::new(
-                &file,
-                device,
-                true,
-                false, // TODO: use the same value as existing here
-                metadata_to_last_modified(metadata),
-            )
+
+            // Convert into UpdateFileDevice and mutate last_modified
+            let mut update_file_device = UpdateFileDevice::from(file_device);
+            update_file_device.last_modified = metadata_to_last_modified(metadata);
+
+            update_file_device
         })
         .collect::<Vec<_>>();
 
-    models::FileDevice::update_many(db, &file_devices_to_update)?;
+    models::UpdateFileDevice::update_many(db, &file_devices_to_update)?;
 
     let mut affected_files = inserted_files;
-    affected_files.append(&mut files_to_update);
+    affected_files.append(&mut updated_files);
     Ok(affected_files)
 }
 

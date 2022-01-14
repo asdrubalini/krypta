@@ -179,20 +179,57 @@ impl Count for File {
     }
 }
 
-impl Update for File {
-    fn update(&self, db: &Database) -> DatabaseResult<Self> {
-        let now = chrono::Utc::now();
+#[derive(Debug, Clone)]
+pub struct UpdateFile {
+    pub id: i64,
+    pub title: String,
+    pub path: String,
+    pub random_hash: String,
+    pub contents_hash: String,
+    pub size: u64,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub key: Vec<u8>,
+    pub nonce: Vec<u8>,
+}
 
+impl UpdateFile {
+    fn update_updated_at(&mut self) {
+        self.updated_at = Utc::now();
+    }
+}
+
+impl From<File> for UpdateFile {
+    fn from(file: File) -> Self {
+        let mut f = UpdateFile {
+            id: file.id,
+            title: file.title,
+            path: file.path.to_string_lossy().to_string(),
+            random_hash: file.random_hash,
+            contents_hash: file.contents_hash,
+            size: file.size,
+            created_at: file.created_at,
+            updated_at: file.updated_at,
+            key: file.key,
+            nonce: file.nonce,
+        };
+        f.update_updated_at();
+        f
+    }
+}
+
+impl Update<File> for UpdateFile {
+    fn update(&self, db: &Database) -> DatabaseResult<File> {
         let file = db.query_row(
             include_str!("sql/file/update.sql"),
             params![
                 self.title,
-                self.path.to_string_lossy(),
+                self.path,
                 self.random_hash,
                 self.contents_hash,
                 self.size,
                 self.created_at,
-                now,
+                self.updated_at,
                 self.key,
                 self.nonce,
                 self.id
@@ -204,8 +241,8 @@ impl Update for File {
     }
 }
 
-impl UpdateMany for File {
-    fn update_many(db: &mut Database, updatables: &[Self]) -> DatabaseResult<Vec<Self>> {
+impl UpdateMany<File> for UpdateFile {
+    fn update_many(db: &mut Database, updatables: &[Self]) -> DatabaseResult<Vec<File>> {
         let tx = db.transaction()?;
         let mut results = vec![];
 

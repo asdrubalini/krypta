@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use crypto::{crypt::FileEncryptBulk, errors::CryptoError, traits::ComputeBulk};
 use database::{
-    models::{self, Device},
+    models::{self, Device, UpdateFileDevice},
     traits::UpdateMany,
     Database,
 };
@@ -38,15 +38,16 @@ pub async fn sync_locked_path_from_database(
 
     // Get file_device(s) and mark them as encrypted
     let file_devices = encryption_status_into_file_device(db, encryption_status, unlocked_path)?;
-    let file_devices: Vec<models::FileDevice> = file_devices
+    let file_devices: Vec<models::UpdateFileDevice> = file_devices
         .into_iter()
-        .map(|mut file_device| {
-            file_device.is_encrypted = true;
-            file_device
+        .map(|file_device| {
+            let mut update_file_device: UpdateFileDevice = file_device.into();
+            update_file_device.is_encrypted = true;
+            update_file_device
         })
         .collect();
 
-    models::FileDevice::update_many(db, &file_devices)?;
+    models::UpdateFileDevice::update_many(db, &file_devices)?;
 
     Ok(())
 }
