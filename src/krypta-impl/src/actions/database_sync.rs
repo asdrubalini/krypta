@@ -69,7 +69,7 @@ pub async fn sync_database_from_unlocked_path(
         .map(|(item, _)| item)
         .collect::<Vec<_>>();
 
-    let update_files = models::File::find_files_from_paths(db, &update_paths)?
+    let mut update_files = models::File::find_files_from_paths(db, &update_paths)?
         .into_iter()
         .map(|mut file| {
             // Should never fail
@@ -98,7 +98,9 @@ pub async fn sync_database_from_unlocked_path(
 
     models::FileDevice::update_many(db, &file_devices_to_update)?;
 
-    Ok(inserted_files)
+    let mut affected_files = inserted_files;
+    affected_files.append(&mut update_files);
+    Ok(affected_files)
 }
 
 /// Find all files in `unlocked_path` that need to be inserted into the database
