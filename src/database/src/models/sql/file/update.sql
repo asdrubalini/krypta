@@ -7,9 +7,7 @@ SET `title` = ?,
     `created_at` = ?,
     `updated_at` = ?,
     `key` = ?,
-    `nonce` = ?,
+    `nonce` = ?
 WHERE 
     `id` = ?
-RETURNING `id`, `title`, `path`, `random_hash`, 
-        `contents_hash`, `size` `created_at`, 
-        `updated_at`, `key`, `nonce`;
+RETURNING *;

@@ -182,7 +182,7 @@ impl Count for File {
 impl Update for File {
     fn update(&self, db: &Database) -> DatabaseResult<Self> {
         let file = db.query_row(
-            include_str!("sql/file/insert.sql"),
+            include_str!("sql/file/update.sql"),
             params![
                 self.title,
                 self.path.to_string_lossy(),
