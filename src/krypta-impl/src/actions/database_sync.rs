@@ -22,18 +22,18 @@ pub async fn sync_database_from_unlocked_path(
     let (paths_requiring_insertion, paths_requiring_update) =
         find_paths_requiring_insertion_or_update(db, unlocked_path, device)?;
 
-    let local_paths = paths_requiring_insertion
+    let involved_paths = paths_requiring_insertion
         .iter()
         .chain(paths_requiring_update.iter())
         .map(|(item, _)| item)
         .collect::<Vec<_>>();
 
     // Compute all hashes for files that have been updated or just inserted
-    let hashes = find_hashes_for_local_paths(unlocked_path, &local_paths)?;
+    let hashes = find_hashes_for_local_paths(unlocked_path, &involved_paths)?;
 
     // First handle newly created files
     // Obtain models::InsertFile and populate the database
-    let insert_files = paths_requiring_insertion
+    let files_to_insert = paths_requiring_insertion
         .iter()
         .map(|(path, metadata)| {
             // Should always be Some
@@ -43,7 +43,7 @@ pub async fn sync_database_from_unlocked_path(
         .collect::<Vec<models::InsertFile>>();
 
     // Insert models::File
-    let inserted_files = models::InsertFile::insert_many(db, &insert_files)?;
+    let inserted_files = models::InsertFile::insert_many(db, &files_to_insert)?;
 
     let file_devices_to_insert = inserted_files
         .iter()
@@ -69,7 +69,7 @@ pub async fn sync_database_from_unlocked_path(
         .map(|(item, _)| item)
         .collect::<Vec<_>>();
 
-    let mut update_files = models::File::find_files_from_paths(db, &update_paths)?
+    let mut files_to_update = models::File::find_files_from_paths(db, &update_paths)?
         .into_iter()
         .map(|mut file| {
             // Should never fail
@@ -79,7 +79,7 @@ pub async fn sync_database_from_unlocked_path(
         })
         .collect::<Vec<_>>();
 
-    let updated_files = models::File::update_many(db, &update_files)?;
+    let updated_files = models::File::update_many(db, &files_to_update)?;
 
     let file_devices_to_update = updated_files
         .iter()
@@ -90,7 +90,7 @@ pub async fn sync_database_from_unlocked_path(
                 &file,
                 device,
                 true,
-                false,
+                false, // TODO: use the same value as existing here
                 metadata_to_last_modified(metadata),
             )
         })
@@ -99,7 +99,7 @@ pub async fn sync_database_from_unlocked_path(
     models::FileDevice::update_many(db, &file_devices_to_update)?;
 
     let mut affected_files = inserted_files;
-    affected_files.append(&mut update_files);
+    affected_files.append(&mut files_to_update);
     Ok(affected_files)
 }
 
@@ -112,7 +112,7 @@ fn find_paths_requiring_insertion_or_update(
 ) -> anyhow::Result<(HashMap<PathBuf, Metadata>, HashMap<PathBuf, Metadata>)> {
     let unlocked_path = unlocked_path.as_ref();
 
-    let local_paths_metadata = find_paths_and_metadata(unlocked_path)?;
+    let local_paths_metadata = find_local_paths_and_metadata(unlocked_path)?;
     let database_paths_last_modified =
         models::File::find_known_paths_with_last_modified(db, device)?;
 
@@ -141,7 +141,9 @@ fn find_paths_requiring_insertion_or_update(
     Ok((require_insertion, require_update))
 }
 
-fn find_paths_and_metadata(unlocked_path: &Path) -> anyhow::Result<HashMap<PathBuf, Metadata>> {
+fn find_local_paths_and_metadata(
+    unlocked_path: &Path,
+) -> anyhow::Result<HashMap<PathBuf, Metadata>> {
     let path_finder = PathFinder::from_source_path(unlocked_path)?;
     Ok(path_finder.metadatas)
 }
