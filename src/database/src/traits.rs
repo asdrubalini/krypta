@@ -20,14 +20,17 @@ pub trait Fetch: Sized {
     fn fetch_all(db: &Database) -> DatabaseResult<Vec<Self>>;
 }
 
-pub trait UpdateMany: Sized {
-    fn update_many(db: &mut Database, updatables: &[Self]) -> DatabaseResult<Vec<Self>>;
+/// A model that can be updated
+pub trait Update<T>: Sized {
+    fn update(&self, db: &Database) -> DatabaseResult<T>;
 }
 
-pub trait Update: Sized {
-    fn update(&self, db: &Database) -> DatabaseResult<Self>;
+/// A model that can be mass-updated
+pub trait UpdateMany<T>: Sized {
+    fn update_many(db: &mut Database, updatables: &[Self]) -> DatabaseResult<Vec<T>>;
 }
 
+/// A model that can be counted
 pub trait Count: Sized {
     fn count(db: &Database) -> DatabaseResult<i64>;
 }

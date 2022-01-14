@@ -10,15 +10,17 @@ use crate::{models, Database};
 
 use crate::traits::{Insert, InsertMany, Update, UpdateMany};
 
+use super::File;
+
 /// Convert a std::fs::Metadata into a UNIX epoch u64
 #[cfg(target_os = "linux")]
-pub fn metadata_to_last_modified(metadata: &Metadata) -> u64 {
+pub fn metadata_to_last_modified(metadata: &Metadata) -> i64 {
     metadata
         .modified()
         .unwrap()
         .duration_since(UNIX_EPOCH)
         .unwrap()
-        .as_secs()
+        .as_secs() as i64
 }
 
 #[derive(Clone, Debug)]
@@ -27,7 +29,7 @@ pub struct FileDevice {
     device_id: i64,
     pub is_unlocked: bool,
     pub is_encrypted: bool,
-    pub last_modified: u64,
+    pub last_modified: i64,
 }
 
 impl TryFrom<&Row<'_>> for FileDevice {
@@ -51,7 +53,7 @@ impl FileDevice {
         device: &models::Device,
         is_unlocked: bool,
         is_encrypted: bool,
-        last_modified: u64,
+        last_modified: i64,
     ) -> Self {
         FileDevice {
             file_id: file.id,
@@ -74,6 +76,23 @@ impl FileDevice {
             let device = tx.query_row(
                 include_str!("sql/file_device/find_by_path.sql"),
                 params![path],
+                |row| FileDevice::try_from(row),
+            )?;
+            items.push(device);
+        }
+
+        tx.commit()?;
+        Ok(items)
+    }
+
+    pub fn find_by_files(db: &mut Database, files: &[File]) -> DatabaseResult<Vec<Self>> {
+        let tx = db.transaction()?;
+        let mut items = vec![];
+
+        for file in files {
+            let device = tx.query_row(
+                include_str!("sql/file_device/find_by_file.sql"),
+                params![file.id],
                 |row| FileDevice::try_from(row),
             )?;
             items.push(device);
@@ -132,8 +151,28 @@ impl InsertMany<FileDevice> for FileDevice {
     }
 }
 
-impl Update for FileDevice {
-    fn update(&self, db: &Database) -> DatabaseResult<Self> {
+pub struct UpdateFileDevice {
+    file_id: i64,
+    device_id: i64,
+    pub is_unlocked: bool,
+    pub is_encrypted: bool,
+    pub last_modified: i64,
+}
+
+impl From<FileDevice> for UpdateFileDevice {
+    fn from(file_device: FileDevice) -> Self {
+        UpdateFileDevice {
+            file_id: file_device.file_id,
+            device_id: file_device.device_id,
+            is_unlocked: file_device.is_unlocked,
+            is_encrypted: file_device.is_encrypted,
+            last_modified: file_device.last_modified,
+        }
+    }
+}
+
+impl Update<FileDevice> for UpdateFileDevice {
+    fn update(&self, db: &Database) -> DatabaseResult<FileDevice> {
         let file_device = db.query_row(
             include_str!("sql/file_device/update.sql"),
             params![
@@ -150,8 +189,8 @@ impl Update for FileDevice {
     }
 }
 
-impl UpdateMany for FileDevice {
-    fn update_many(db: &mut Database, updatables: &[Self]) -> DatabaseResult<Vec<Self>> {
+impl UpdateMany<FileDevice> for UpdateFileDevice {
+    fn update_many(db: &mut Database, updatables: &[Self]) -> DatabaseResult<Vec<FileDevice>> {
         let tx = db.transaction()?;
         let mut results = vec![];
 

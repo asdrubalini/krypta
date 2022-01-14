@@ -1,4 +1,5 @@
 use std::any::type_name;
+use std::collections::HashMap;
 use std::path::Path;
 use std::time::Instant;
 use std::{fs::Metadata, path::PathBuf};
@@ -13,7 +14,7 @@ use rusqlite::{params, Row};
 
 use crate::{errors::DatabaseResult, Database};
 
-use crate::traits::{Count, Fetch, Insert, InsertMany, Search};
+use crate::traits::{Count, Fetch, Insert, InsertMany, Search, Update, UpdateMany};
 
 use super::Device;
 
@@ -121,7 +122,7 @@ impl Search for File {
 impl Insert<File> for InsertFile {
     /// Insert a new file into the database
     fn insert(&self, db: &Database) -> DatabaseResult<File> {
-        let device = db.query_row(
+        let file = db.query_row(
             include_str!("sql/file/insert.sql"),
             params![
                 self.title,
@@ -137,7 +138,7 @@ impl Insert<File> for InsertFile {
             |row| File::try_from(row),
         )?;
 
-        Ok(device)
+        Ok(file)
     }
 }
 
@@ -178,6 +179,98 @@ impl Count for File {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct UpdateFile {
+    pub id: i64,
+    pub title: String,
+    pub path: String,
+    pub random_hash: String,
+    pub contents_hash: String,
+    pub size: u64,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub key: Vec<u8>,
+    pub nonce: Vec<u8>,
+}
+
+impl UpdateFile {
+    fn update_updated_at(&mut self) {
+        self.updated_at = Utc::now();
+    }
+}
+
+impl From<File> for UpdateFile {
+    fn from(file: File) -> Self {
+        let mut f = UpdateFile {
+            id: file.id,
+            title: file.title,
+            path: file.path.to_string_lossy().to_string(),
+            random_hash: file.random_hash,
+            contents_hash: file.contents_hash,
+            size: file.size,
+            created_at: file.created_at,
+            updated_at: file.updated_at,
+            key: file.key,
+            nonce: file.nonce,
+        };
+        f.update_updated_at();
+        f
+    }
+}
+
+impl Update<File> for UpdateFile {
+    fn update(&self, db: &Database) -> DatabaseResult<File> {
+        let file = db.query_row(
+            include_str!("sql/file/update.sql"),
+            params![
+                self.title,
+                self.path,
+                self.random_hash,
+                self.contents_hash,
+                self.size,
+                self.created_at,
+                self.updated_at,
+                self.key,
+                self.nonce,
+                self.id
+            ],
+            |row| File::try_from(row),
+        )?;
+
+        Ok(file)
+    }
+}
+
+impl UpdateMany<File> for UpdateFile {
+    fn update_many(db: &mut Database, updatables: &[Self]) -> DatabaseResult<Vec<File>> {
+        let tx = db.transaction()?;
+        let mut results = vec![];
+
+        log::trace!(
+            "[{}] Start updading {} File",
+            type_name::<Self>(),
+            updatables.len()
+        );
+
+        let start = Instant::now();
+
+        for updatable in updatables {
+            results.push(updatable.update(&tx)?);
+        }
+
+        tx.commit()?;
+
+        log::trace!(
+            "[{}] Took {:?} for updating {} items",
+            type_name::<Self>(),
+            start.elapsed(),
+            updatables.len()
+        );
+
+        Ok(results)
+    }
+}
+
 impl File {
     /// Generate a pseudorandom hex string with the same length as SHA-256
     fn pseudorandom_hex_string() -> String {
@@ -192,17 +285,66 @@ impl File {
             .collect()
     }
 
-    pub fn get_file_paths_local(db: &Database, device: &Device) -> DatabaseResult<Vec<PathBuf>> {
-        let mut stmt = db.prepare(include_str!("sql/file/find_paths_local.sql"))?;
+    pub fn find_known_paths_with_last_modified(
+        db: &Database,
+        device: &Device,
+    ) -> DatabaseResult<HashMap<PathBuf, i64>> {
+        let mut stmt = db.prepare(include_str!(
+            "sql/file/find_known_paths_with_last_modified.sql"
+        ))?;
         let mut rows = stmt.query([device.to_owned().platform_id])?;
 
-        let mut paths = vec![];
+        let mut items = HashMap::new();
         while let Some(row) = rows.next()? {
             let path = PathBuf::from(row.get::<_, String>(0)?);
-            paths.push(path);
+            let last_modified = row.get::<_, i64>(1)?;
+
+            items.insert(path, last_modified);
         }
 
-        Ok(paths)
+        Ok(items)
+    }
+
+    fn find_file_from_path(db: &Database, path: &Path) -> DatabaseResult<File> {
+        let file = db.query_row(
+            include_str!("sql/file/find_file_from_path.sql"),
+            params![path.to_string_lossy()],
+            |row| File::try_from(row),
+        )?;
+
+        Ok(file)
+    }
+
+    pub fn find_files_from_paths(
+        db: &mut Database,
+        paths: &[impl AsRef<Path>],
+    ) -> DatabaseResult<Vec<Self>> {
+        let tx = db.transaction()?;
+        let mut results = vec![];
+
+        log::trace!(
+            "[{}] Start finding {} paths",
+            type_name::<Self>(),
+            paths.len()
+        );
+
+        let start = Instant::now();
+
+        for path in paths {
+            let path = path.as_ref();
+            results.push(Self::find_file_from_path(&tx, path)?);
+        }
+
+        tx.commit()?;
+
+        log::trace!(
+            "[{}] Took {:?} for finding {} items",
+            type_name::<Self>(),
+            start.elapsed(),
+            paths.len()
+        );
+
+        Ok(results)
     }
 
     pub fn archive_size(db: &Database) -> DatabaseResult<u64> {
