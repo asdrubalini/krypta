@@ -4,13 +4,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crypto::{
-    hash::{Blake3Concurrent, Blake3Hash},
-    traits::ComputeBulk,
-};
+use crypto::{hash::Blake3Concurrent, traits::ComputeBulk};
 use database::{
     models::{self, metadata_to_last_modified, Device},
-    traits::InsertMany,
+    traits::{InsertMany, UpdateMany},
     Database,
 };
 use fs::PathFinder;
@@ -22,31 +19,37 @@ pub async fn sync_database_from_unlocked_path(
 ) -> anyhow::Result<Vec<models::File>> {
     let unlocked_path = unlocked_path.as_ref();
 
-    let (path_metadata_map, relative_paths_requiring_insertion) =
-        find_paths_requiring_insertion(db, unlocked_path, device)?;
+    let (paths_requiring_insertion, paths_requiring_update) =
+        find_paths_requiring_insertion_or_update(db, unlocked_path, device)?;
 
-    let path_hash_map = find_hash_for_paths(unlocked_path, &relative_paths_requiring_insertion)?;
+    let local_paths = paths_requiring_insertion
+        .iter()
+        .chain(paths_requiring_update.iter())
+        .map(|(item, _)| item)
+        .collect::<Vec<_>>();
 
+    // Compute all hashes for files that have been updated or just inserted
+    let hashes = find_hashes_for_local_paths(unlocked_path, &local_paths)?;
+
+    // First handle newly created files
     // Obtain models::InsertFile and populate the database
-    let insert_files = relative_paths_requiring_insertion
-        .into_iter()
-        .map(|path| {
+    let insert_files = paths_requiring_insertion
+        .iter()
+        .map(|(path, metadata)| {
             // Should always be Some
-            let metadata = path_metadata_map.get(&path).unwrap();
-            let hash = path_hash_map.get(&path).unwrap();
-
-            models::MetadataFile::new(&path, metadata).into_insert_file(hash.to_string())
+            let hash = hashes.get(path).unwrap();
+            models::MetadataFile::new(path, metadata).into_insert_file(hash.to_string())
         })
         .collect::<Vec<models::InsertFile>>();
 
-    // Insert models::FileDevice
+    // Insert models::File
     let inserted_files = models::InsertFile::insert_many(db, &insert_files)?;
 
-    let file_devices = inserted_files
+    let file_devices_to_insert = inserted_files
         .iter()
         .map(|file| {
             // Should never fail
-            let metadata = path_metadata_map.get(&file.path).unwrap();
+            let metadata = paths_requiring_insertion.get(&file.path).unwrap();
             models::FileDevice::new(
                 &file,
                 device,
@@ -58,38 +61,95 @@ pub async fn sync_database_from_unlocked_path(
         .collect::<Vec<_>>();
 
     // Insert models::FileDevice
-    models::FileDevice::insert_many(db, &file_devices)?;
+    models::FileDevice::insert_many(db, &file_devices_to_insert)?;
+
+    // Then handle files that have been updated
+    let update_paths = paths_requiring_update
+        .iter()
+        .map(|(item, _)| item)
+        .collect::<Vec<_>>();
+
+    let update_files = models::File::find_files_from_paths(db, &update_paths)?
+        .into_iter()
+        .map(|mut file| {
+            // Should never fail
+            let hash = hashes.get(&file.path).unwrap();
+            file.contents_hash = hash.to_owned();
+            file
+        })
+        .collect::<Vec<_>>();
+
+    let updated_files = models::File::update_many(db, &update_files)?;
+
+    let file_devices_to_update = updated_files
+        .iter()
+        .map(|file| {
+            // Should never fail
+            let metadata = paths_requiring_update.get(&file.path).unwrap();
+            models::FileDevice::new(
+                &file,
+                device,
+                true,
+                false,
+                metadata_to_last_modified(metadata),
+            )
+        })
+        .collect::<Vec<_>>();
+
+    models::FileDevice::update_many(db, &file_devices_to_update)?;
 
     Ok(inserted_files)
 }
 
 /// Find all files in `unlocked_path` that need to be inserted into the database
 /// returned paths are relative and do not contain host-specific bits
-fn find_paths_requiring_insertion(
+fn find_paths_requiring_insertion_or_update(
     db: &Database,
     unlocked_path: impl AsRef<Path>,
     device: &Device,
-) -> anyhow::Result<(HashMap<PathBuf, Metadata>, Vec<PathBuf>)> {
-    let unlocked_path = unlocked_path.as_ref().to_path_buf();
-    let path_finder_handle = std::thread::spawn(|| PathFinder::from_source_path(unlocked_path));
+) -> anyhow::Result<(HashMap<PathBuf, Metadata>, HashMap<PathBuf, Metadata>)> {
+    let unlocked_path = unlocked_path.as_ref();
 
-    let database_paths = models::File::get_file_paths_local(db, device)?;
-    let mut path_finder = path_finder_handle.join().unwrap()?;
+    let local_paths_metadata = find_paths_and_metadata(unlocked_path)?;
+    let database_paths_last_modified =
+        models::File::find_known_paths_with_last_modified(db, device)?;
 
-    path_finder.filter_out_paths(&database_paths);
+    let mut require_insertion: HashMap<PathBuf, Metadata> = HashMap::new();
+    let mut require_update: HashMap<PathBuf, Metadata> = HashMap::new();
 
-    let relative_paths = path_finder.relative_paths();
-    let metadatas = path_finder.metadatas;
+    for (relative_local_path, metadata) in local_paths_metadata {
+        // New path never seen in database
+        if !database_paths_last_modified.contains_key(&relative_local_path) {
+            require_insertion.insert(relative_local_path, metadata);
+            continue;
+        }
 
-    Ok((metadatas, relative_paths))
+        let device_last_modified = metadata_to_last_modified(&metadata);
+        let db_last_modified = *database_paths_last_modified
+            .get(&relative_local_path)
+            .unwrap();
+
+        // Updated path already present in database
+        if device_last_modified > db_last_modified {
+            require_update.insert(relative_local_path, metadata);
+            continue;
+        }
+    }
+
+    Ok((require_insertion, require_update))
+}
+
+fn find_paths_and_metadata(unlocked_path: &Path) -> anyhow::Result<HashMap<PathBuf, Metadata>> {
+    let path_finder = PathFinder::from_source_path(unlocked_path)?;
+    Ok(path_finder.metadatas)
 }
 
 /// Compute BLAKE3 hashes for files in `unlocked_path`
 /// returned paths are relative and do not contain host-specific bits
-fn find_hash_for_paths(
+fn find_hashes_for_local_paths(
     unlocked_path: impl AsRef<Path>,
     relative_paths: &[impl AsRef<Path>],
-) -> anyhow::Result<HashMap<PathBuf, Blake3Hash>> {
+) -> anyhow::Result<HashMap<PathBuf, String>> {
     let unlocked_path = unlocked_path.as_ref();
 
     let absolute_paths = relative_paths
@@ -112,7 +172,7 @@ fn find_hash_for_paths(
             let relative_path: PathBuf =
                 absolute_path.into_iter().skip(unlocked_path_len).collect();
 
-            (relative_path, hash)
+            (relative_path, hash.to_string())
         })
         .collect::<HashMap<_, _>>();
 
@@ -123,10 +183,10 @@ fn find_hash_for_paths(
 mod tests {
     use std::{collections::HashSet, path::PathBuf};
 
-    use database::traits::Fetch;
+    use database::{models, traits::Fetch};
     use tmp::{RandomFill, Tmp};
 
-    use super::*;
+    use crate::actions::database_sync::sync_database_from_unlocked_path;
 
     #[tokio::test]
     async fn test_database_sync() {

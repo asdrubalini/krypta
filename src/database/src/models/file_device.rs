@@ -12,13 +12,13 @@ use crate::traits::{Insert, InsertMany, Update, UpdateMany};
 
 /// Convert a std::fs::Metadata into a UNIX epoch u64
 #[cfg(target_os = "linux")]
-pub fn metadata_to_last_modified(metadata: &Metadata) -> u64 {
+pub fn metadata_to_last_modified(metadata: &Metadata) -> i64 {
     metadata
         .modified()
         .unwrap()
         .duration_since(UNIX_EPOCH)
         .unwrap()
-        .as_secs()
+        .as_secs() as i64
 }
 
 #[derive(Clone, Debug)]
@@ -27,7 +27,7 @@ pub struct FileDevice {
     device_id: i64,
     pub is_unlocked: bool,
     pub is_encrypted: bool,
-    pub last_modified: u64,
+    pub last_modified: i64,
 }
 
 impl TryFrom<&Row<'_>> for FileDevice {
@@ -51,7 +51,7 @@ impl FileDevice {
         device: &models::Device,
         is_unlocked: bool,
         is_encrypted: bool,
-        last_modified: u64,
+        last_modified: i64,
     ) -> Self {
         FileDevice {
             file_id: file.id,
