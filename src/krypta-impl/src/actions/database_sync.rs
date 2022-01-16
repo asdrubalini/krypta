@@ -186,7 +186,7 @@ fn find_hashes_for_local_paths(
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashSet, path::PathBuf};
+    use std::{collections::HashSet, fs::OpenOptions, io::Write, path::PathBuf};
 
     use database::{models, traits::Fetch};
     use tmp::{RandomFill, Tmp};
@@ -194,8 +194,8 @@ mod tests {
     use crate::actions::database_sync::sync_database_from_unlocked_path;
 
     #[tokio::test]
-    async fn test_database_sync() {
-        const FILES_COUNT: usize = 50_000;
+    async fn test_standard_database_sync() {
+        const FILES_COUNT: usize = 10_000;
 
         // Prepare
         let tmp = Tmp::new();
@@ -221,7 +221,7 @@ mod tests {
             .collect::<HashSet<_>>(); // HashSet for faster lookups
 
         // Make sure that each created file exists in the database
-        for file in created_files {
+        for file in created_files.iter() {
             let created_file = file.into_iter().skip(3).collect::<PathBuf>();
             assert!(database_paths.contains(&created_file));
         }
@@ -233,5 +233,41 @@ mod tests {
                 .unwrap();
 
         assert_eq!(processed_files.len(), 0);
+
+        // Create a new file and make sure that it gets detected
+        let new_file = tmp.random_fill(1, 128).first().unwrap().to_owned();
+        let new_file_relative: PathBuf = new_file
+            .into_iter()
+            .skip(tmp.path().iter().count())
+            .collect();
+
+        let processed_files =
+            sync_database_from_unlocked_path(&mut database, &tmp.path(), &current_device)
+                .await
+                .unwrap();
+
+        assert_eq!(processed_files.len(), 1);
+        assert_eq!(processed_files.first().unwrap().path, new_file_relative);
+
+        // Mutate random file and make sure that it gets detected
+        let rand_file = created_files.get(1337).unwrap().to_owned();
+        let rand_file_relative: PathBuf = rand_file
+            .into_iter()
+            .skip(tmp.path().iter().count())
+            .collect();
+
+        // Write "random" data to file
+        let mut rand_file = OpenOptions::new().write(true).open(&rand_file).unwrap();
+        rand_file.write_all(&[0]).unwrap();
+        rand_file.flush().unwrap();
+        drop(rand_file);
+
+        let processed_files =
+            sync_database_from_unlocked_path(&mut database, &tmp.path(), &current_device)
+                .await
+                .unwrap();
+
+        assert_eq!(processed_files.len(), 1);
+        assert_eq!(processed_files.first().unwrap().path, rand_file_relative);
     }
 }
