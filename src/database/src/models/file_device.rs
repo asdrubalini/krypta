@@ -14,13 +14,13 @@ use super::File;
 
 /// Convert a std::fs::Metadata into a UNIX epoch u64
 #[cfg(target_os = "linux")]
-pub fn metadata_to_last_modified(metadata: &Metadata) -> i64 {
+pub fn metadata_to_last_modified(metadata: &Metadata) -> f64 {
     metadata
         .modified()
         .unwrap()
         .duration_since(UNIX_EPOCH)
         .unwrap()
-        .as_secs() as i64
+        .as_secs_f64()
 }
 
 #[derive(Clone, Debug)]
@@ -29,7 +29,7 @@ pub struct FileDevice {
     device_id: i64,
     pub is_unlocked: bool,
     pub is_encrypted: bool,
-    pub last_modified: i64,
+    pub last_modified: f64,
 }
 
 impl TryFrom<&Row<'_>> for FileDevice {
@@ -53,7 +53,7 @@ impl FileDevice {
         device: &models::Device,
         is_unlocked: bool,
         is_encrypted: bool,
-        last_modified: i64,
+        last_modified: f64,
     ) -> Self {
         FileDevice {
             file_id: file.id,
@@ -156,7 +156,7 @@ pub struct UpdateFileDevice {
     device_id: i64,
     pub is_unlocked: bool,
     pub is_encrypted: bool,
-    pub last_modified: i64,
+    pub last_modified: f64,
 }
 
 impl From<FileDevice> for UpdateFileDevice {
@@ -243,7 +243,7 @@ mod tests {
         // Prepare device
         let device = Device::find_or_create_current(&database).unwrap();
 
-        let to_insert = FileDevice::new(&file, &device, false, false, 0);
+        let to_insert = FileDevice::new(&file, &device, false, false, 0.0);
         to_insert.insert(&database).unwrap();
     }
 }

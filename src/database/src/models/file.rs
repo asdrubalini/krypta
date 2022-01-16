@@ -288,7 +288,7 @@ impl File {
     pub fn find_known_paths_with_last_modified(
         db: &Database,
         device: &Device,
-    ) -> DatabaseResult<HashMap<PathBuf, i64>> {
+    ) -> DatabaseResult<HashMap<PathBuf, f64>> {
         let mut stmt = db.prepare(include_str!(
             "sql/file/find_known_paths_with_last_modified.sql"
         ))?;
@@ -297,7 +297,7 @@ impl File {
         let mut items = HashMap::new();
         while let Some(row) = rows.next()? {
             let path = PathBuf::from(row.get::<_, String>(0)?);
-            let last_modified = row.get::<_, i64>(1)?;
+            let last_modified = row.get::<_, f64>(1)?;
 
             items.insert(path, last_modified);
         }
