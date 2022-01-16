@@ -236,10 +236,7 @@ mod tests {
 
         // Create a new file and make sure that it gets detected
         let new_file = tmp.random_fill(1, 128).first().unwrap().to_owned();
-        let new_file_relative: PathBuf = new_file
-            .into_iter()
-            .skip(tmp.path().iter().count())
-            .collect();
+        let new_file_relative = tmp.to_relative(&new_file);
 
         let processed_files =
             sync_database_from_unlocked_path(&mut database, &tmp.path(), &current_device)
@@ -251,14 +248,11 @@ mod tests {
 
         // Mutate random file and make sure that it gets detected
         let rand_file = created_files.get(1337).unwrap().to_owned();
-        let rand_file_relative: PathBuf = rand_file
-            .into_iter()
-            .skip(tmp.path().iter().count())
-            .collect();
+        let rand_file_relative = tmp.to_relative(&rand_file);
 
         // Write "random" data to file
         let mut rand_file = OpenOptions::new().write(true).open(&rand_file).unwrap();
-        rand_file.write_all(&[0]).unwrap();
+        rand_file.write_all(&[0]).unwrap(); // TODO: don't write zero
         rand_file.flush().unwrap();
         drop(rand_file);
 

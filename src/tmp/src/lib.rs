@@ -2,7 +2,7 @@
 use std::{
     fs::{create_dir, remove_dir_all, File},
     io::Write,
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 use rand::{distributions::Alphanumeric, Rng};
@@ -55,6 +55,14 @@ impl Tmp {
 
     pub fn path(&self) -> PathBuf {
         self.path.clone()
+    }
+
+    pub fn to_relative(&self, absolute_path: impl AsRef<Path>) -> PathBuf {
+        let absolute_path = absolute_path.as_ref().to_owned();
+        absolute_path
+            .into_iter()
+            .skip(self.path().iter().count())
+            .collect()
     }
 }
 
