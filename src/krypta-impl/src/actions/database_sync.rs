@@ -252,7 +252,7 @@ mod tests {
 
         // Write "random" data to file
         let mut rand_file = OpenOptions::new().write(true).open(&rand_file).unwrap();
-        rand_file.write_all(&[0]).unwrap(); // TODO: don't write zero
+        rand_file.write_all(&[0u8; 128]).unwrap();
         rand_file.flush().unwrap();
         drop(rand_file);
 
