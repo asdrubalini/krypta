@@ -1,5 +1,5 @@
 use byte_unit::Byte;
-use database::{models, Database};
+use database::{models, traits::Count, Database};
 
 pub async fn execute(database: &Database) -> anyhow::Result<()> {
     let archive_size_bytes = models::File::archive_size(database)?;
