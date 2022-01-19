@@ -61,8 +61,6 @@ impl TryFromRow for File {
     }
 }
 
-impl FetchAll for File {}
-
 impl Search for File {
     /// Search files stored in database
     fn search(db: &Database, query: impl AsRef<str>) -> DatabaseResult<Vec<Self>> {
@@ -96,7 +94,7 @@ impl Insert for File {
                 ":key": self.key,
                 ":nonce": self.nonce
             },
-            |row| File::try_from(row),
+            |row| File::try_from_row(row),
         )?;
 
         Ok(file)
@@ -104,8 +102,6 @@ impl Insert for File {
 }
 
 impl InsertMany for File {}
-
-impl Count for File {}
 
 impl Update for File {
     fn update(mut self, db: &Database) -> DatabaseResult<File> {
@@ -125,7 +121,7 @@ impl Update for File {
                 ":nonce": self.nonce,
                 ":id": self.id
             },
-            |row| File::try_from(row),
+            |row| File::try_from_row(row),
         )?;
 
         Ok(file)
@@ -202,7 +198,7 @@ impl File {
         let file = db.query_row(
             include_str!("sql/file/find_file_from_path.sql"),
             named_params! { ":path":path.to_string_lossy() },
-            |row| File::try_from(row),
+            |row| File::try_from_row(row),
         )?;
 
         Ok(file)
