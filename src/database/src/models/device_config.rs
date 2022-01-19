@@ -74,11 +74,8 @@ impl Update<DeviceConfig> for UpdateDeviceConfig {
 }
 
 impl Count for DeviceConfig {
-    fn count(db: &Database) -> DatabaseResult<i64> {
-        let count = db.query_row(include_str!("sql/device_config/count.sql"), [], |row| {
-            row.get(0)
-        })?;
-        Ok(count)
+    fn table_name() -> &'static str {
+        "device_config"
     }
 }
 
