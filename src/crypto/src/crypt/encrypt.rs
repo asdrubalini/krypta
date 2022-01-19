@@ -66,14 +66,23 @@ impl ComputeUnit for FileEncryptUnit {
         let unlocked_file = File::open(&self.unlocked_path)?;
         let locked_file = File::create(&self.locked_path)?;
 
-        // Zero-sized files cannot mmapped into memory
-        if unlocked_file.metadata()?.len() == 0 {
-            return Err(CryptoError::ZeroLength(self.locked_path));
-        }
-
         let aead = XChaCha20Poly1305::new(self.key.as_ref().into());
         let mut stream_encryptor =
             stream::EncryptorBE32::from_aead(aead, self.nonce.as_ref().into());
+
+        // Zero-sized files cannot be mmapped into memory
+        if unlocked_file.metadata()?.len() == 0 {
+            let mut locked_file_buf = BufWriter::new(locked_file);
+            let empty: &[u8] = &[];
+
+            let ciphertext = stream_encryptor.encrypt_last(empty).map_err(|_| {
+                CryptoError::CipherOperationError(CipherOperationError::EncryptLast, (&self).into())
+            })?;
+
+            locked_file_buf.write_all(&ciphertext)?;
+
+            return Ok(());
+        }
 
         let unlocked_file_map = unsafe { MmapOptions::new().map(&unlocked_file)? };
         let mut locked_file_buf = BufWriter::new(locked_file);

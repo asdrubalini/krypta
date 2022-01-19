@@ -66,14 +66,22 @@ impl ComputeUnit for FileDecryptUnit {
         let locked_file = File::open(&self.locked_path)?;
         let unlocked_file = File::create(&self.unlocked_path)?;
 
-        // Zero-sized files cannot mmapped into memory
-        if locked_file.metadata()?.len() == 0 {
-            return Err(CryptoError::ZeroLength(self.locked_path));
-        }
-
         let aead = XChaCha20Poly1305::new(self.key.as_ref().into());
         let mut stream_decryptor =
             stream::DecryptorBE32::from_aead(aead, self.nonce.as_ref().into());
+
+        // Zero-sized files cannot be mmapped into memory
+        if locked_file.metadata()?.len() == 0 {
+            let mut unlocked_file_buf = BufWriter::new(unlocked_file);
+            let empty: &[u8] = &[];
+
+            let plaintext = stream_decryptor.decrypt_next(empty).map_err(|_| {
+                CryptoError::CipherOperationError(CipherOperationError::DecryptNext, (&self).into())
+            })?;
+            unlocked_file_buf.write_all(&plaintext)?;
+
+            return Ok(());
+        }
 
         let locked_file_map = unsafe { MmapOptions::new().map(&locked_file)? };
         let mut unlocked_file_buf = BufWriter::new(unlocked_file);
