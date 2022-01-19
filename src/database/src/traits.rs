@@ -2,6 +2,10 @@ use rusqlite::Row;
 
 use crate::{errors::DatabaseResult, Database};
 
+pub trait TableName {
+    fn table_name() -> &'static str;
+}
+
 /// Convert Row into Self
 pub trait TryFromRow: Sized {
     fn try_from_row(row: &Row) -> Result<Self, rusqlite::Error>;
@@ -23,9 +27,7 @@ pub trait InsertMany<T>: Sized {
 }
 
 /// A model that can be fetched
-pub trait Fetch: Sized + TryFromRow {
-    fn table_name() -> &'static str;
-
+pub trait FetchAll: Sized + TryFromRow + TableName {
     fn fetch_all(db: &Database) -> DatabaseResult<Vec<Self>> {
         let table = Self::table_name();
 
@@ -52,9 +54,7 @@ pub trait UpdateMany<T>: Sized {
 }
 
 /// A model that can be counted
-pub trait Count: Sized {
-    fn table_name() -> &'static str;
-
+pub trait Count: Sized + TableName {
     fn count(db: &Database) -> DatabaseResult<i64> {
         let table = Self::table_name();
 

@@ -188,7 +188,7 @@ fn find_hashes_for_local_paths(
 mod tests {
     use std::{collections::HashSet, fs::OpenOptions, io::Write, path::PathBuf};
 
-    use database::{models, traits::Fetch};
+    use database::{models, traits::FetchAll};
     use tmp::{RandomFill, Tmp};
 
     use crate::actions::database_sync::sync_database_from_unlocked_path;

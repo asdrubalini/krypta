@@ -14,7 +14,9 @@ use rusqlite::{params, Row};
 
 use crate::{errors::DatabaseResult, Database};
 
-use crate::traits::{Count, Fetch, Insert, InsertMany, Search, TryFromRow, Update, UpdateMany};
+use crate::traits::{
+    Count, FetchAll, Insert, InsertMany, Search, TableName, TryFromRow, Update, UpdateMany,
+};
 
 use super::Device;
 
@@ -31,6 +33,16 @@ pub struct File {
     pub key: Vec<u8>,
     pub nonce: Vec<u8>,
 }
+
+impl TableName for File {
+    fn table_name() -> &'static str {
+        "file"
+    }
+}
+
+impl Count for File {}
+
+impl FetchAll for File {}
 
 impl TryFromRow for File {
     fn try_from_row(row: &Row<'_>) -> Result<Self, rusqlite::Error> {
@@ -84,12 +96,6 @@ impl InsertFile {
             key,
             nonce,
         }
-    }
-}
-
-impl Fetch for File {
-    fn table_name() -> &'static str {
-        "file"
     }
 }
 
@@ -158,12 +164,6 @@ impl InsertMany<File> for InsertFile {
         );
 
         Ok(files)
-    }
-}
-
-impl Count for File {
-    fn table_name() -> &'static str {
-        "file"
     }
 }
 
@@ -400,7 +400,7 @@ impl MetadataFile {
 mod tests {
     use std::path::PathBuf;
 
-    use crate::traits::{Count, Fetch, Insert, InsertMany};
+    use crate::traits::{Count, FetchAll, Insert, InsertMany};
     use crate::{create_in_memory, models::file::InsertFile};
 
     use super::File;
