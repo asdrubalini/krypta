@@ -6,13 +6,13 @@ pub trait Search: Sized {
 }
 
 /// A model that can be inserted
-pub trait Insert<T>: Sized {
-    fn insert(&self, db: &Database) -> DatabaseResult<T>;
+pub trait Insert: Sized {
+    fn insert(&self, db: &Database) -> DatabaseResult<Self>;
 }
 
 /// A model that can be mass-inserted
-pub trait InsertMany<T>: Sized {
-    fn insert_many(db: &mut Database, insertables: &[Self]) -> DatabaseResult<Vec<T>>;
+pub trait InsertMany: Sized {
+    fn insert_many(db: &mut Database, insertables: Vec<Self>) -> DatabaseResult<Vec<Self>>;
 }
 
 /// A model that can be fetched
@@ -21,13 +21,13 @@ pub trait Fetch: Sized {
 }
 
 /// A model that can be updated
-pub trait Update<T>: Sized {
-    fn update(&self, db: &Database) -> DatabaseResult<T>;
+pub trait Update: Sized {
+    fn update(self, db: &Database) -> DatabaseResult<Self>;
 }
 
 /// A model that can be mass-updated
-pub trait UpdateMany<T>: Sized {
-    fn update_many(db: &mut Database, updatables: &[Self]) -> DatabaseResult<Vec<T>>;
+pub trait UpdateMany: Sized {
+    fn update_many(db: &mut Database, updatables: Vec<Self>) -> DatabaseResult<Vec<Self>>;
 }
 
 /// A model that can be counted

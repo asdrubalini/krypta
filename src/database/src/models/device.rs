@@ -12,7 +12,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Device {
     /// Database internal id
-    pub id: i64,
+    pub id: Option<i64>,
     /// Platform specific id
     pub platform_id: String,
     /// Friendly name
@@ -29,13 +29,6 @@ impl TryFrom<&Row<'_>> for Device {
             name: row.get(2)?,
         })
     }
-}
-
-/// A device that can be inserted
-#[derive(Debug, Clone)]
-pub struct InsertDevice {
-    pub platform_id: String,
-    pub name: String,
 }
 
 #[cfg(target_os = "linux")]
@@ -58,16 +51,18 @@ pub fn get_current_platform_id() -> Result<String, std::io::Error> {
     Ok("no-platform-id-on-windows".to_string())
 }
 
-impl InsertDevice {
+impl Device {
     pub fn new<S: AsRef<str>>(platform_id: S, name: S) -> Self {
         let platform_id = platform_id.as_ref().to_owned();
         let name = name.as_ref().to_owned();
 
-        InsertDevice { platform_id, name }
+        Device {
+            id: None,
+            platform_id,
+            name,
+        }
     }
-}
 
-impl Device {
     /// Attempts to find the current device in the database, creating one if it doesn't
     /// exists yet
     pub fn find_or_create_current(db: &Database) -> DatabaseResult<Self> {
@@ -76,7 +71,7 @@ impl Device {
 
         if results.is_empty() {
             // Create and insert
-            let device = InsertDevice::new(&platform_id, &platform_id);
+            let device = Device::new(&platform_id, &platform_id);
             let device = device.insert(db)?;
 
             Ok(device)
@@ -101,7 +96,7 @@ impl Search for Device {
     }
 }
 
-impl Insert<Device> for InsertDevice {
+impl Insert for Device {
     fn insert(&self, db: &Database) -> DatabaseResult<Device> {
         let device = db.query_row(
             include_str!("sql/device/insert.sql"),

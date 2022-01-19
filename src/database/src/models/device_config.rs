@@ -34,26 +34,8 @@ impl TryFrom<&Row<'_>> for DeviceConfig {
     }
 }
 
-pub struct UpdateDeviceConfig {
-    pub id: i64,
-    pub device_id: i64,
-    pub locked_path: Option<PathBuf>,
-    pub unlocked_path: Option<PathBuf>,
-}
-
-impl From<DeviceConfig> for UpdateDeviceConfig {
-    fn from(device_config: DeviceConfig) -> Self {
-        UpdateDeviceConfig {
-            id: device_config.id,
-            device_id: device_config.device_id,
-            locked_path: device_config.locked_path,
-            unlocked_path: device_config.unlocked_path,
-        }
-    }
-}
-
-impl Update<DeviceConfig> for UpdateDeviceConfig {
-    fn update(&self, db: &Database) -> DatabaseResult<DeviceConfig> {
+impl Update for DeviceConfig {
+    fn update(self, db: &Database) -> DatabaseResult<DeviceConfig> {
         let locked_path = self
             .locked_path
             .to_owned()
@@ -128,7 +110,7 @@ impl DeviceConfig {
         locked_path: impl AsRef<Path>,
         device: &Device,
     ) -> DatabaseResult<()> {
-        let mut config: UpdateDeviceConfig = Self::find_or_create_current(db, device)?.into();
+        let mut config: DeviceConfig = Self::find_or_create_current(db, device)?.into();
         config.locked_path = Some(locked_path.as_ref().to_path_buf());
         config.update(db)?;
         Ok(())
@@ -140,7 +122,7 @@ impl DeviceConfig {
         unlocked_path: impl AsRef<Path>,
         device: &Device,
     ) -> DatabaseResult<()> {
-        let mut config: UpdateDeviceConfig = Self::find_or_create_current(db, device)?.into();
+        let mut config: DeviceConfig = Self::find_or_create_current(db, device)?.into();
         config.unlocked_path = Some(unlocked_path.as_ref().to_path_buf());
         config.update(db)?;
         Ok(())

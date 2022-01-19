@@ -56,8 +56,8 @@ impl FileDevice {
         last_modified: f64,
     ) -> Self {
         FileDevice {
-            file_id: file.id,
-            device_id: device.id,
+            file_id: file.id.expect("missing file_id"),
+            device_id: device.id.expect("missing device_id"),
             is_unlocked,
             is_encrypted,
             last_modified,
@@ -103,7 +103,7 @@ impl FileDevice {
     }
 }
 
-impl Insert<FileDevice> for FileDevice {
+impl Insert for FileDevice {
     fn insert(&self, db: &Database) -> DatabaseResult<FileDevice> {
         let device = db.query_row(
             include_str!("sql/file_device/insert.sql"),
@@ -121,8 +121,8 @@ impl Insert<FileDevice> for FileDevice {
     }
 }
 
-impl InsertMany<FileDevice> for FileDevice {
-    fn insert_many(db: &mut Database, items: &[Self]) -> DatabaseResult<Vec<FileDevice>> {
+impl InsertMany for FileDevice {
+    fn insert_many(db: &mut Database, items: Vec<Self>) -> DatabaseResult<Vec<FileDevice>> {
         let tx = db.transaction()?;
         let mut inserted_items = vec![];
 
@@ -144,35 +144,15 @@ impl InsertMany<FileDevice> for FileDevice {
             "[{}] Took {:?} for updating {} items",
             type_name::<Self>(),
             start.elapsed(),
-            items.len()
+            inserted_items.len()
         );
 
         Ok(inserted_items)
     }
 }
 
-pub struct UpdateFileDevice {
-    file_id: i64,
-    device_id: i64,
-    pub is_unlocked: bool,
-    pub is_encrypted: bool,
-    pub last_modified: f64,
-}
-
-impl From<FileDevice> for UpdateFileDevice {
-    fn from(file_device: FileDevice) -> Self {
-        UpdateFileDevice {
-            file_id: file_device.file_id,
-            device_id: file_device.device_id,
-            is_unlocked: file_device.is_unlocked,
-            is_encrypted: file_device.is_encrypted,
-            last_modified: file_device.last_modified,
-        }
-    }
-}
-
-impl Update<FileDevice> for UpdateFileDevice {
-    fn update(&self, db: &Database) -> DatabaseResult<FileDevice> {
+impl Update for FileDevice {
+    fn update(self, db: &Database) -> DatabaseResult<FileDevice> {
         let file_device = db.query_row(
             include_str!("sql/file_device/update.sql"),
             params![
@@ -189,8 +169,8 @@ impl Update<FileDevice> for UpdateFileDevice {
     }
 }
 
-impl UpdateMany<FileDevice> for UpdateFileDevice {
-    fn update_many(db: &mut Database, updatables: &[Self]) -> DatabaseResult<Vec<FileDevice>> {
+impl UpdateMany for FileDevice {
+    fn update_many(db: &mut Database, updatables: Vec<Self>) -> DatabaseResult<Vec<FileDevice>> {
         let tx = db.transaction()?;
         let mut results = vec![];
 
@@ -212,7 +192,7 @@ impl UpdateMany<FileDevice> for UpdateFileDevice {
             "[{}] Took {:?} for updating {} items",
             type_name::<Self>(),
             start.elapsed(),
-            updatables.len()
+            results.len()
         );
 
         Ok(results)
@@ -223,7 +203,7 @@ impl UpdateMany<FileDevice> for UpdateFileDevice {
 mod tests {
     use super::FileDevice;
     use crate::create_in_memory;
-    use crate::models::{Device, InsertFile};
+    use crate::models::{Device, File};
     use crate::traits::Insert;
 
     #[test]
@@ -231,7 +211,7 @@ mod tests {
         let database = create_in_memory().unwrap();
 
         // Prepare file
-        let file = InsertFile::new(
+        let file = File::new(
             "random title".to_string(),
             Default::default(),
             "random unique hash".to_string(),
