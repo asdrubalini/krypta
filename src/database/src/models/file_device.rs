@@ -1,7 +1,6 @@
-use std::any::type_name;
 use std::fs::Metadata;
 use std::path::Path;
-use std::time::{Instant, UNIX_EPOCH};
+use std::time::UNIX_EPOCH;
 
 use rusqlite::{params, Row};
 
@@ -121,35 +120,7 @@ impl Insert for FileDevice {
     }
 }
 
-impl InsertMany for FileDevice {
-    fn insert_many(db: &mut Database, items: Vec<Self>) -> DatabaseResult<Vec<FileDevice>> {
-        let tx = db.transaction()?;
-        let mut inserted_items = vec![];
-
-        log::trace!(
-            "[{}] Start inserting {} FileDevice",
-            type_name::<Self>(),
-            items.len()
-        );
-
-        let start = Instant::now();
-
-        for file in items {
-            inserted_items.push(file.insert(&tx)?);
-        }
-
-        tx.commit()?;
-
-        log::trace!(
-            "[{}] Took {:?} for updating {} items",
-            type_name::<Self>(),
-            start.elapsed(),
-            inserted_items.len()
-        );
-
-        Ok(inserted_items)
-    }
-}
+impl InsertMany for FileDevice {}
 
 impl Update for FileDevice {
     fn update(self, db: &Database) -> DatabaseResult<FileDevice> {
@@ -169,35 +140,7 @@ impl Update for FileDevice {
     }
 }
 
-impl UpdateMany for FileDevice {
-    fn update_many(db: &mut Database, updatables: Vec<Self>) -> DatabaseResult<Vec<FileDevice>> {
-        let tx = db.transaction()?;
-        let mut results = vec![];
-
-        log::trace!(
-            "[{}] Start updading {} FileDevice",
-            type_name::<Self>(),
-            updatables.len()
-        );
-
-        let start = Instant::now();
-
-        for updatable in updatables {
-            results.push(updatable.update(&tx)?);
-        }
-
-        tx.commit()?;
-
-        log::trace!(
-            "[{}] Took {:?} for updating {} items",
-            type_name::<Self>(),
-            start.elapsed(),
-            results.len()
-        );
-
-        Ok(results)
-    }
-}
+impl UpdateMany for FileDevice {}
 
 #[cfg(test)]
 mod tests {

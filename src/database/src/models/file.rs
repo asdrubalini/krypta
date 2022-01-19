@@ -106,35 +106,7 @@ impl Insert for File {
     }
 }
 
-impl InsertMany for File {
-    fn insert_many(db: &mut Database, items: Vec<Self>) -> DatabaseResult<Vec<File>> {
-        let tx = db.transaction()?;
-        let mut files = vec![];
-
-        log::trace!(
-            "[{}] Start inserting {} File",
-            type_name::<Self>(),
-            items.len()
-        );
-
-        let start = Instant::now();
-
-        for file in items {
-            files.push(file.insert(&tx)?);
-        }
-
-        tx.commit()?;
-
-        log::trace!(
-            "[{}] Took {:?} for inserting {} items",
-            type_name::<Self>(),
-            start.elapsed(),
-            files.len()
-        );
-
-        Ok(files)
-    }
-}
+impl InsertMany for File {}
 
 impl Count for File {
     fn count(db: &Database) -> DatabaseResult<i64> {
@@ -168,35 +140,7 @@ impl Update for File {
     }
 }
 
-impl UpdateMany for File {
-    fn update_many(db: &mut Database, updatables: Vec<Self>) -> DatabaseResult<Vec<File>> {
-        let tx = db.transaction()?;
-        let mut results = vec![];
-
-        log::trace!(
-            "[{}] Start updading {} File",
-            type_name::<Self>(),
-            updatables.len()
-        );
-
-        let start = Instant::now();
-
-        for updatable in updatables {
-            results.push(updatable.update(&tx)?);
-        }
-
-        tx.commit()?;
-
-        log::trace!(
-            "[{}] Took {:?} for updating {} items",
-            type_name::<Self>(),
-            start.elapsed(),
-            results.len()
-        );
-
-        Ok(results)
-    }
-}
+impl UpdateMany for File {}
 
 impl File {
     /// Build a new `InsertFile` and generate on the fly some stuff
