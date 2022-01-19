@@ -20,7 +20,7 @@ pub trait Search: Sized {
 
 /// A model that can be inserted
 pub trait Insert: Sized {
-    fn insert(&self, db: &Database) -> DatabaseResult<Self>;
+    fn insert(self, db: &Database) -> DatabaseResult<Self>;
 }
 
 /// A model that can be mass-inserted

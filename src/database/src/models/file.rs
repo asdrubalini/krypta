@@ -80,7 +80,7 @@ impl Search for File {
 
 impl Insert for File {
     /// Insert a new file into the database
-    fn insert(&self, db: &Database) -> DatabaseResult<Self> {
+    fn insert(self, db: &Database) -> DatabaseResult<Self> {
         let file = db.query_row(
             include_str!("sql/file/insert.sql"),
             named_params! {

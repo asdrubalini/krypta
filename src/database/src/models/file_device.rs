@@ -103,7 +103,7 @@ impl FileDevice {
 }
 
 impl Insert for FileDevice {
-    fn insert(&self, db: &Database) -> DatabaseResult<FileDevice> {
+    fn insert(self, db: &Database) -> DatabaseResult<FileDevice> {
         let device = db.query_row(
             include_str!("sql/file_device/insert.sql"),
             named_params! {

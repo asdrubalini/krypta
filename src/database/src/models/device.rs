@@ -98,7 +98,7 @@ impl Search for Device {
 }
 
 impl Insert for Device {
-    fn insert(&self, db: &Database) -> DatabaseResult<Device> {
+    fn insert(self, db: &Database) -> DatabaseResult<Device> {
         let device = db.query_row(
             include_str!("sql/device/insert.sql"),
             named_params! { ":platform_id": self.platform_id, ":name": self.name },
