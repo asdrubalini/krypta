@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::Read;
 
-use rusqlite::{params, Row};
+use rusqlite::{named_params, Row};
 
 use crate::{
     errors::DatabaseResult,
@@ -85,7 +85,8 @@ impl Device {
 impl Search for Device {
     fn search(db: &Database, query: impl AsRef<str>) -> DatabaseResult<Vec<Device>> {
         let mut stmt = db.prepare(include_str!("sql/device/search.sql"))?;
-        let mut rows = stmt.query([format!("%{}%", query.as_ref())])?;
+        let mut rows =
+            stmt.query(named_params! { ":platform_id": format!("%{}%", query.as_ref()) })?;
 
         let mut devices = vec![];
         while let Some(row) = rows.next()? {
@@ -100,7 +101,7 @@ impl Insert for Device {
     fn insert(&self, db: &Database) -> DatabaseResult<Device> {
         let device = db.query_row(
             include_str!("sql/device/insert.sql"),
-            params![self.platform_id, self.name],
+            named_params! { ":platform_id": self.platform_id, ":name": self.name },
             |row| Device::try_from(row),
         )?;
 
