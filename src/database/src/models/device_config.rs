@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use rusqlite::{params, OptionalExtension, Row};
+use rusqlite::{named_params, OptionalExtension, Row};
 
 use crate::{
     errors::DatabaseResult,
@@ -47,7 +47,12 @@ impl Update for DeviceConfig {
 
         let device_config = db.query_row(
             include_str!("sql/device_config/update.sql"),
-            params![self.device_id, locked_path, unlocked_path, self.id],
+            named_params! {
+                ":device_id": self.device_id,
+                ":locked_path": locked_path,
+                ":unlocked_path": unlocked_path,
+                ":id": self.id
+            },
             |row| DeviceConfig::try_from(row),
         )?;
 
@@ -72,7 +77,7 @@ impl DeviceConfig {
             Some(config) => config,
             None => db.query_row(
                 include_str!("sql/device_config/create_empty.sql"),
-                params![device.id],
+                named_params! {":device_id": device.id },
                 |row| DeviceConfig::try_from(row),
             )?,
         };
@@ -84,7 +89,7 @@ impl DeviceConfig {
         let config = db
             .query_row(
                 include_str!("sql/device_config/find_by_device.sql"),
-                params![device.id],
+                named_params! {":device_id": device.id },
                 |row| DeviceConfig::try_from(row),
             )
             .optional()?;
