@@ -1,3 +1,3 @@
 SELECT `file`.*
 FROM `file`
-WHERE `file`.`path` = ?;
+WHERE `file`.`path` = :path;

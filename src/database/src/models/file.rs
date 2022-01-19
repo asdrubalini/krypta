@@ -10,7 +10,7 @@ use crypto::crypt::{
 };
 use crypto::errors::CryptoError;
 use rand::Rng;
-use rusqlite::{params, Row};
+use rusqlite::{named_params, Row};
 
 use crate::{errors::DatabaseResult, Database};
 
@@ -22,7 +22,7 @@ use super::Device;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct File {
-    pub id: i64,
+    pub id: Option<i64>,
     pub title: String,
     pub path: PathBuf,
     pub random_hash: String,
@@ -61,49 +61,15 @@ impl TryFromRow for File {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct InsertFile {
-    pub title: String,
-    pub path: String,
-    pub random_hash: String,
-    pub contents_hash: String,
-    pub size: u64,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    pub key: Vec<u8>,
-    pub nonce: Vec<u8>,
-}
-
-impl InsertFile {
-    /// Build a new `InsertFile` and generate on the fly some stuff
-    pub fn new(title: String, path: PathBuf, contents_hash: String, size: u64) -> Self {
-        let random_hash = File::pseudorandom_hex_string();
-        let now = chrono::Utc::now();
-
-        // Key and nonce generation
-        let (key, nonce) = generate_random_secure_key_nonce_pair();
-        let key = Vec::from(key);
-        let nonce = Vec::from(nonce);
-
-        InsertFile {
-            title,
-            path: path.to_string_lossy().to_string(),
-            random_hash,
-            contents_hash,
-            size,
-            created_at: now,
-            updated_at: now,
-            key,
-            nonce,
-        }
-    }
-}
+impl FetchAll for File {}
 
 impl Search for File {
     /// Search files stored in database
     fn search(db: &Database, query: impl AsRef<str>) -> DatabaseResult<Vec<Self>> {
         let mut stmt = db.prepare(include_str!("sql/file/search.sql"))?;
-        let mut rows = stmt.query([format!("%{}%", query.as_ref())])?;
+        let mut rows = stmt.query(named_params! {
+            ":query": format!("%{}%",query.as_ref())
+        })?;
 
         let mut files = vec![];
         while let Some(row) = rows.next()? {
@@ -114,152 +80,85 @@ impl Search for File {
     }
 }
 
-impl Insert<File> for InsertFile {
+impl Insert for File {
     /// Insert a new file into the database
-    fn insert(&self, db: &Database) -> DatabaseResult<File> {
+    fn insert(&self, db: &Database) -> DatabaseResult<Self> {
         let file = db.query_row(
             include_str!("sql/file/insert.sql"),
-            params![
-                self.title,
-                self.path,
-                self.random_hash,
-                self.contents_hash,
-                self.size,
-                self.created_at,
-                self.updated_at,
-                self.key,
-                self.nonce
-            ],
-            |row| File::try_from_row(row),
+            named_params! {
+                ":title": self.title,
+                ":path": self.path.to_string_lossy().to_string(),
+                ":random_hash": self.random_hash,
+                ":contents_hash": self.contents_hash,
+                ":size": self.size,
+                ":created_at": self.created_at,
+                ":updated_at": self.updated_at,
+                ":key": self.key,
+                ":nonce": self.nonce
+            },
+            |row| File::try_from(row),
         )?;
 
         Ok(file)
     }
 }
 
-impl InsertMany<File> for InsertFile {
-    fn insert_many(db: &mut Database, items: &[Self]) -> DatabaseResult<Vec<File>> {
-        let tx = db.transaction()?;
-        let mut files = vec![];
+impl InsertMany for File {}
 
-        log::trace!(
-            "[{}] Start inserting {} File",
-            type_name::<Self>(),
-            items.len()
-        );
+impl Count for File {}
 
-        let start = Instant::now();
+impl Update for File {
+    fn update(mut self, db: &Database) -> DatabaseResult<File> {
+        self.update_updated_at(); // Make sure that updated_at is up to date
 
-        for file in items {
-            files.push(file.insert(&tx)?);
-        }
-
-        tx.commit()?;
-
-        log::trace!(
-            "[{}] Took {:?} for inserting {} items",
-            type_name::<Self>(),
-            start.elapsed(),
-            items.len()
-        );
-
-        Ok(files)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct UpdateFile {
-    pub id: i64,
-    pub title: String,
-    pub path: String,
-    pub random_hash: String,
-    pub contents_hash: String,
-    pub size: u64,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    pub key: Vec<u8>,
-    pub nonce: Vec<u8>,
-}
-
-impl UpdateFile {
-    fn update_updated_at(&mut self) {
-        self.updated_at = Utc::now();
-    }
-}
-
-impl From<File> for UpdateFile {
-    fn from(file: File) -> Self {
-        let mut f = UpdateFile {
-            id: file.id,
-            title: file.title,
-            path: file.path.to_string_lossy().to_string(),
-            random_hash: file.random_hash,
-            contents_hash: file.contents_hash,
-            size: file.size,
-            created_at: file.created_at,
-            updated_at: file.updated_at,
-            key: file.key,
-            nonce: file.nonce,
-        };
-        f.update_updated_at();
-        f
-    }
-}
-
-impl Update<File> for UpdateFile {
-    fn update(&self, db: &Database) -> DatabaseResult<File> {
         let file = db.query_row(
             include_str!("sql/file/update.sql"),
-            params![
-                self.title,
-                self.path,
-                self.random_hash,
-                self.contents_hash,
-                self.size,
-                self.created_at,
-                self.updated_at,
-                self.key,
-                self.nonce,
-                self.id
-            ],
-            |row| File::try_from_row(row),
+            named_params! {
+                ":title": self.title,
+                ":path": self.path.to_string_lossy().to_string(),
+                ":random_hash": self.random_hash,
+                ":contents_hash": self.contents_hash,
+                ":size": self.size,
+                ":created_at": self.created_at,
+                ":updated_at": self.updated_at,
+                ":key": self.key,
+                ":nonce": self.nonce,
+                ":id": self.id
+            },
+            |row| File::try_from(row),
         )?;
 
         Ok(file)
     }
 }
 
-impl UpdateMany<File> for UpdateFile {
-    fn update_many(db: &mut Database, updatables: &[Self]) -> DatabaseResult<Vec<File>> {
-        let tx = db.transaction()?;
-        let mut results = vec![];
-
-        log::trace!(
-            "[{}] Start updading {} File",
-            type_name::<Self>(),
-            updatables.len()
-        );
-
-        let start = Instant::now();
-
-        for updatable in updatables {
-            results.push(updatable.update(&tx)?);
-        }
-
-        tx.commit()?;
-
-        log::trace!(
-            "[{}] Took {:?} for updating {} items",
-            type_name::<Self>(),
-            start.elapsed(),
-            updatables.len()
-        );
-
-        Ok(results)
-    }
-}
+impl UpdateMany for File {}
 
 impl File {
+    /// Build a new `InsertFile` and generate on the fly some stuff
+    pub fn new(title: String, path: PathBuf, contents_hash: String, size: u64) -> Self {
+        let random_hash = File::pseudorandom_hex_string();
+        let now = chrono::Utc::now();
+
+        // Key and nonce generation
+        let (key, nonce) = generate_random_secure_key_nonce_pair();
+        let key = Vec::from(key);
+        let nonce = Vec::from(nonce);
+
+        File {
+            id: None,
+            title,
+            path,
+            random_hash,
+            contents_hash,
+            size,
+            created_at: now,
+            updated_at: now,
+            key,
+            nonce,
+        }
+    }
+
     /// Generate a pseudorandom hex string with the same length as SHA-256
     fn pseudorandom_hex_string() -> String {
         let mut generator = rand::thread_rng();
@@ -273,6 +172,10 @@ impl File {
             .collect()
     }
 
+    fn update_updated_at(&mut self) {
+        self.updated_at = Utc::now();
+    }
+
     pub fn find_known_paths_with_last_modified(
         db: &Database,
         device: &Device,
@@ -280,7 +183,9 @@ impl File {
         let mut stmt = db.prepare(include_str!(
             "sql/file/find_known_paths_with_last_modified.sql"
         ))?;
-        let mut rows = stmt.query([device.to_owned().platform_id])?;
+        let mut rows = stmt.query(named_params! {
+            ":platform_id": device.to_owned().platform_id
+        })?;
 
         let mut items = HashMap::new();
         while let Some(row) = rows.next()? {
@@ -296,8 +201,8 @@ impl File {
     fn find_file_from_path(db: &Database, path: &Path) -> DatabaseResult<File> {
         let file = db.query_row(
             include_str!("sql/file/find_file_from_path.sql"),
-            params![path.to_string_lossy()],
-            |row| File::try_from_row(row),
+            named_params! { ":path":path.to_string_lossy() },
+            |row| File::try_from(row),
         )?;
 
         Ok(file)
@@ -343,7 +248,7 @@ impl File {
     /// Find files that need to be encrypted for the specified device
     pub fn find_need_encryption(db: &Database, device: &Device) -> DatabaseResult<Vec<File>> {
         let mut stmt = db.prepare(include_str!("sql/file/need_encryption.sql"))?;
-        let mut rows = stmt.query([&device.platform_id])?;
+        let mut rows = stmt.query(named_params! { ":platform_id": &device.platform_id })?;
 
         let mut files = vec![];
         while let Some(row) = rows.next()? {
@@ -391,8 +296,8 @@ impl MetadataFile {
 
     /// Converts a `MetadataFile` into a `File` with some additional fields that are
     /// not present in a `Metadata` struct
-    pub fn into_insert_file(self, contents_hash: String) -> InsertFile {
-        InsertFile::new(self.title, self.path, contents_hash, self.size)
+    pub fn into_file(self, contents_hash: String) -> File {
+        File::new(self.title, self.path, contents_hash, self.size)
     }
 }
 
@@ -400,8 +305,8 @@ impl MetadataFile {
 mod tests {
     use std::path::PathBuf;
 
+    use crate::create_in_memory;
     use crate::traits::{Count, FetchAll, Insert, InsertMany};
-    use crate::{create_in_memory, models::file::InsertFile};
 
     use super::File;
 
@@ -423,7 +328,7 @@ mod tests {
     fn test_insert_unique() {
         let database = create_in_memory().unwrap();
 
-        let file1 = InsertFile::new(
+        let file1 = File::new(
             "foobar".to_string(),
             PathBuf::from("/path/to/foo7bar"),
             "asdas".to_string(),
@@ -434,7 +339,7 @@ mod tests {
         assert!(file1.insert(&database).is_ok());
         assert_eq!(File::count(&database).unwrap(), 1);
 
-        let file2 = InsertFile::new(
+        let file2 = File::new(
             "foobar".to_string(),
             PathBuf::from("/path/to/foo7bar"),
             "bfsdfb".to_string(),
@@ -449,7 +354,7 @@ mod tests {
     fn test_insert_and_fetch() {
         let database = create_in_memory().unwrap();
 
-        let insert_file = InsertFile::new(
+        let insert_file = File::new(
             "foobar".to_string(),
             PathBuf::from("/path/to/foo/bar"),
             "sdadfb".to_string(),
@@ -476,16 +381,16 @@ mod tests {
 
         let insert_files = (0..128)
             .map(|i| {
-                InsertFile::new(
+                File::new(
                     format!("foobar_{}", i),
                     PathBuf::from(format!("/path/to/foo/bar/{}", i)),
                     format!("test_hash_placeholder_{}", i),
                     0,
                 )
             })
-            .collect::<Vec<InsertFile>>();
+            .collect::<Vec<File>>();
 
-        InsertFile::insert_many(&mut database, &insert_files).unwrap();
+        File::insert_many(&mut database, insert_files).unwrap();
         let files = File::fetch_all(&database).unwrap();
 
         assert_eq!(files.len(), 128);
@@ -495,7 +400,7 @@ mod tests {
     fn test_archive_size_and_count() {
         let database = create_in_memory().unwrap();
 
-        let file = InsertFile::new(
+        let file = File::new(
             format!("foobar"),
             PathBuf::from("/path/to/foo/bar"),
             "test_hash_placeholder".to_string(),
@@ -514,16 +419,16 @@ mod tests {
 
         let insert_files = (0..128)
             .map(|i| {
-                InsertFile::new(
+                File::new(
                     format!("foobar_{}", i),
                     PathBuf::from(format!("/path/to/foo/bar/{}", i)),
                     format!("test_hash_placeholder_{}", i),
                     1_u64.pow(10), // 10 GB
                 )
             })
-            .collect::<Vec<InsertFile>>();
+            .collect::<Vec<File>>();
 
-        InsertFile::insert_many(&mut database, &insert_files).unwrap();
+        File::insert_many(&mut database, insert_files).unwrap();
         let archive_size = File::archive_size(&database);
         let archive_size = archive_size.unwrap();
 
@@ -539,16 +444,16 @@ mod tests {
 
         let insert_files = (0..8192)
             .map(|i| {
-                InsertFile::new(
+                File::new(
                     format!("foobar_{}", i),
                     PathBuf::from(format!("/path/to/foo/bar/{}", i)),
                     format!("test_hash_placeholder_{}", i),
                     0,
                 )
             })
-            .collect::<Vec<InsertFile>>();
+            .collect::<Vec<File>>();
 
-        InsertFile::insert_many(&mut database, &insert_files).unwrap();
+        File::insert_many(&mut database, insert_files).unwrap();
 
         let archive_count = File::count(&database).unwrap();
         assert_eq!(archive_count, 8192);
