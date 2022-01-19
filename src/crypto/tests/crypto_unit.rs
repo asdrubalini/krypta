@@ -16,7 +16,7 @@ use file_diff::diff;
 use rand::{prelude::SmallRng, SeedableRng};
 use tmp::Tmp;
 
-use crate::common::{generate_random_plaintext_file_with_rng, generate_seeded_key};
+use common::{generate_random_plaintext_file_with_rng, generate_seeded_key};
 
 mod common;
 
@@ -63,7 +63,7 @@ fn small_file_seeded_key() {
     let mut rng = SmallRng::seed_from_u64(0);
 
     let tests_file_size = [
-        1, 2, 3, 8, 9, 200, 256, 512, 893, 1024, 8192, 100_000, 250_000, 1_000_000,
+        0, 1, 2, 3, 8, 9, 200, 256, 512, 893, 1024, 8192, 100_000, 250_000, 1_000_000,
     ];
 
     for length in tests_file_size {
