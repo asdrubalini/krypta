@@ -2,7 +2,7 @@ use std::fs::Metadata;
 use std::path::Path;
 use std::time::UNIX_EPOCH;
 
-use rusqlite::{params, Row};
+use rusqlite::{named_params, Row};
 
 use crate::errors::DatabaseResult;
 use crate::{models, Database};
@@ -74,7 +74,7 @@ impl FileDevice {
             let path = path.as_ref().to_string_lossy();
             let device = tx.query_row(
                 include_str!("sql/file_device/find_by_path.sql"),
-                params![path],
+                named_params! { ":path": path },
                 |row| FileDevice::try_from(row),
             )?;
             items.push(device);
@@ -91,7 +91,7 @@ impl FileDevice {
         for file in files {
             let device = tx.query_row(
                 include_str!("sql/file_device/find_by_file.sql"),
-                params![file.id],
+                named_params! { ":file_id": file.id },
                 |row| FileDevice::try_from(row),
             )?;
             items.push(device);
@@ -106,13 +106,13 @@ impl Insert for FileDevice {
     fn insert(&self, db: &Database) -> DatabaseResult<FileDevice> {
         let device = db.query_row(
             include_str!("sql/file_device/insert.sql"),
-            params![
-                self.file_id,
-                self.device_id,
-                self.is_unlocked,
-                self.is_encrypted,
-                self.last_modified
-            ],
+            named_params! {
+                ":file_id": self.file_id,
+                ":device_id": self.device_id,
+                ":is_unlocked": self.is_unlocked,
+                ":is_encrypted": self.is_encrypted,
+                ":last_modified": self.last_modified
+            },
             |row| FileDevice::try_from(row),
         )?;
 
@@ -126,13 +126,13 @@ impl Update for FileDevice {
     fn update(self, db: &Database) -> DatabaseResult<FileDevice> {
         let file_device = db.query_row(
             include_str!("sql/file_device/update.sql"),
-            params![
-                self.is_unlocked,
-                self.is_encrypted,
-                self.last_modified,
-                self.file_id,
-                self.device_id
-            ],
+            named_params! {
+                ":is_unlocked": self.is_unlocked,
+                ":is_encrypted": self.is_encrypted,
+                ":last_modified": self.last_modified,
+                ":file_id": self.file_id,
+                ":device_id": self.device_id
+            },
             |row| FileDevice::try_from(row),
         )?;
 
