@@ -4,7 +4,7 @@ use rusqlite::{params, OptionalExtension, Row};
 
 use crate::{
     errors::DatabaseResult,
-    traits::{Count, Update},
+    traits::{Count, TableName, Update},
     Database,
 };
 
@@ -41,6 +41,14 @@ pub struct UpdateDeviceConfig {
     pub unlocked_path: Option<PathBuf>,
 }
 
+impl TableName for DeviceConfig {
+    fn table_name() -> &'static str {
+        "device_config"
+    }
+}
+
+impl Count for DeviceConfig {}
+
 impl From<DeviceConfig> for UpdateDeviceConfig {
     fn from(device_config: DeviceConfig) -> Self {
         UpdateDeviceConfig {
@@ -70,15 +78,6 @@ impl Update<DeviceConfig> for UpdateDeviceConfig {
         )?;
 
         Ok(device_config)
-    }
-}
-
-impl Count for DeviceConfig {
-    fn count(db: &Database) -> DatabaseResult<i64> {
-        let count = db.query_row(include_str!("sql/device_config/count.sql"), [], |row| {
-            row.get(0)
-        })?;
-        Ok(count)
     }
 }
 

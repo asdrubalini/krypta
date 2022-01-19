@@ -14,7 +14,9 @@ use rusqlite::{params, Row};
 
 use crate::{errors::DatabaseResult, Database};
 
-use crate::traits::{Count, Fetch, Insert, InsertMany, Search, Update, UpdateMany};
+use crate::traits::{
+    Count, FetchAll, Insert, InsertMany, Search, TableName, TryFromRow, Update, UpdateMany,
+};
 
 use super::Device;
 
@@ -32,10 +34,18 @@ pub struct File {
     pub nonce: Vec<u8>,
 }
 
-impl TryFrom<&Row<'_>> for File {
-    type Error = rusqlite::Error;
+impl TableName for File {
+    fn table_name() -> &'static str {
+        "file"
+    }
+}
 
-    fn try_from(row: &Row<'_>) -> Result<Self, Self::Error> {
+impl Count for File {}
+
+impl FetchAll for File {}
+
+impl TryFromRow for File {
+    fn try_from_row(row: &Row<'_>) -> Result<Self, rusqlite::Error> {
         Ok(File {
             id: row.get(0)?,
             title: row.get(1)?,
@@ -89,21 +99,6 @@ impl InsertFile {
     }
 }
 
-impl Fetch for File {
-    /// Fetch all records from database
-    fn fetch_all(db: &Database) -> DatabaseResult<Vec<Self>> {
-        let mut stmt = db.prepare(include_str!("sql/file/fetch_all.sql"))?;
-        let mut rows = stmt.query([])?;
-
-        let mut files = vec![];
-        while let Some(row) = rows.next()? {
-            files.push(File::try_from(row)?);
-        }
-
-        Ok(files)
-    }
-}
-
 impl Search for File {
     /// Search files stored in database
     fn search(db: &Database, query: impl AsRef<str>) -> DatabaseResult<Vec<Self>> {
@@ -112,7 +107,7 @@ impl Search for File {
 
         let mut files = vec![];
         while let Some(row) = rows.next()? {
-            files.push(File::try_from(row)?);
+            files.push(File::try_from_row(row)?);
         }
 
         Ok(files)
@@ -135,7 +130,7 @@ impl Insert<File> for InsertFile {
                 self.key,
                 self.nonce
             ],
-            |row| File::try_from(row),
+            |row| File::try_from_row(row),
         )?;
 
         Ok(file)
@@ -169,13 +164,6 @@ impl InsertMany<File> for InsertFile {
         );
 
         Ok(files)
-    }
-}
-
-impl Count for File {
-    fn count(db: &Database) -> DatabaseResult<i64> {
-        let count = db.query_row(include_str!("sql/file/count.sql"), [], |row| row.get(0))?;
-        Ok(count)
     }
 }
 
@@ -234,7 +222,7 @@ impl Update<File> for UpdateFile {
                 self.nonce,
                 self.id
             ],
-            |row| File::try_from(row),
+            |row| File::try_from_row(row),
         )?;
 
         Ok(file)
@@ -309,7 +297,7 @@ impl File {
         let file = db.query_row(
             include_str!("sql/file/find_file_from_path.sql"),
             params![path.to_string_lossy()],
-            |row| File::try_from(row),
+            |row| File::try_from_row(row),
         )?;
 
         Ok(file)
@@ -359,7 +347,7 @@ impl File {
 
         let mut files = vec![];
         while let Some(row) = rows.next()? {
-            files.push(File::try_from(row)?);
+            files.push(File::try_from_row(row)?);
         }
 
         Ok(files)
@@ -412,7 +400,7 @@ impl MetadataFile {
 mod tests {
     use std::path::PathBuf;
 
-    use crate::traits::{Count, Fetch, Insert, InsertMany};
+    use crate::traits::{Count, FetchAll, Insert, InsertMany};
     use crate::{create_in_memory, models::file::InsertFile};
 
     use super::File;
