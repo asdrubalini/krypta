@@ -15,7 +15,7 @@ async fn start() {
     dotenv().ok();
     pretty_env_logger::init();
 
-    // Initialize database pool
+    // Initialize database
     let mut database = database::connect_or_create().expect("Cannot open database");
 
     // Parse cli arguments and execute requested operation
