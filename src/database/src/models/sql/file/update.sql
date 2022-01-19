@@ -1,13 +1,13 @@
 UPDATE `file`
-SET `title` = ?,
-    `path` = ?,
-    `random_hash` = ?,
-    `contents_hash` = ?,
-    `size` = ?,
-    `created_at` = ?,
-    `updated_at` = ?,
-    `key` = ?,
-    `nonce` = ?
+SET `title` = :title,
+    `path` = :path,
+    `random_hash` = :random_hash,
+    `contents_hash` = :contents_hash,
+    `size` = :size,
+    `created_at` = :created_at,
+    `updated_at` = :updated_at,
+    `key` = :key,
+    `nonce` = :nonce
 WHERE 
-    `id` = ?
+    `id` = :id
 RETURNING *;

@@ -1,2 +1,2 @@
 select *
-from file
+from `file`

@@ -10,7 +10,7 @@ use crypto::crypt::{
 };
 use crypto::errors::CryptoError;
 use rand::Rng;
-use rusqlite::{params, Row};
+use rusqlite::{named_params, Row};
 
 use crate::{errors::DatabaseResult, Database};
 
@@ -108,7 +108,9 @@ impl Search for File {
     /// Search files stored in database
     fn search(db: &Database, query: impl AsRef<str>) -> DatabaseResult<Vec<Self>> {
         let mut stmt = db.prepare(include_str!("sql/file/search.sql"))?;
-        let mut rows = stmt.query([format!("%{}%", query.as_ref())])?;
+        let mut rows = stmt.query(named_params! {
+            ":query": format!("%{}%",query.as_ref())
+        })?;
 
         let mut files = vec![];
         while let Some(row) = rows.next()? {
@@ -124,17 +126,17 @@ impl Insert<File> for InsertFile {
     fn insert(&self, db: &Database) -> DatabaseResult<File> {
         let file = db.query_row(
             include_str!("sql/file/insert.sql"),
-            params![
-                self.title,
-                self.path,
-                self.random_hash,
-                self.contents_hash,
-                self.size,
-                self.created_at,
-                self.updated_at,
-                self.key,
-                self.nonce
-            ],
+            named_params! {
+                ":title": self.title,
+                ":path": self.path,
+                ":random_hash": self.random_hash,
+                ":contents_hash": self.contents_hash,
+                ":size": self.size,
+                ":created_at": self.created_at,
+                ":updated_at": self.updated_at,
+                ":key": self.key,
+                ":nonce": self.nonce
+            },
             |row| File::try_from(row),
         )?;
 
@@ -222,18 +224,18 @@ impl Update<File> for UpdateFile {
     fn update(&self, db: &Database) -> DatabaseResult<File> {
         let file = db.query_row(
             include_str!("sql/file/update.sql"),
-            params![
-                self.title,
-                self.path,
-                self.random_hash,
-                self.contents_hash,
-                self.size,
-                self.created_at,
-                self.updated_at,
-                self.key,
-                self.nonce,
-                self.id
-            ],
+            named_params! {
+                ":title": self.title,
+                ":path": self.path,
+                ":random_hash": self.random_hash,
+                ":contents_hash": self.contents_hash,
+                ":size": self.size,
+                ":created_at": self.created_at,
+                ":updated_at": self.updated_at,
+                ":key": self.key,
+                ":nonce": self.nonce,
+                ":id": self.id
+            },
             |row| File::try_from(row),
         )?;
 
@@ -292,7 +294,9 @@ impl File {
         let mut stmt = db.prepare(include_str!(
             "sql/file/find_known_paths_with_last_modified.sql"
         ))?;
-        let mut rows = stmt.query([device.to_owned().platform_id])?;
+        let mut rows = stmt.query(named_params! {
+            ":platform_id": device.to_owned().platform_id
+        })?;
 
         let mut items = HashMap::new();
         while let Some(row) = rows.next()? {
@@ -308,7 +312,7 @@ impl File {
     fn find_file_from_path(db: &Database, path: &Path) -> DatabaseResult<File> {
         let file = db.query_row(
             include_str!("sql/file/find_file_from_path.sql"),
-            params![path.to_string_lossy()],
+            named_params! { ":path":path.to_string_lossy() },
             |row| File::try_from(row),
         )?;
 
@@ -355,7 +359,7 @@ impl File {
     /// Find files that need to be encrypted for the specified device
     pub fn find_need_encryption(db: &Database, device: &Device) -> DatabaseResult<Vec<File>> {
         let mut stmt = db.prepare(include_str!("sql/file/need_encryption.sql"))?;
-        let mut rows = stmt.query([&device.platform_id])?;
+        let mut rows = stmt.query(named_params! { ":platform_id": &device.platform_id })?;
 
         let mut files = vec![];
         while let Some(row) = rows.next()? {
