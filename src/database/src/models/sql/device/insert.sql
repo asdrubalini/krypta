@@ -1,5 +1,2 @@
-INSERT INTO device (platform_id, name)
-VALUES (?, ?)
-RETURNING id,
-    platform_id,
-    name
+INSERT INTO `device` (`platform_id`, `name`)
+VALUES (:platform_id, :name) RETURNING *;
