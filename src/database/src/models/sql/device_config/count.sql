@@ -1,1 +1,2 @@
-SELECT COUNT(*) FROM `device_config`;
+SELECT count(*)
+FROM `device_config`;

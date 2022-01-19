@@ -8,6 +8,4 @@ SET `title` = :title,
     `updated_at` = :updated_at,
     `key` = :key,
     `nonce` = :nonce
-WHERE 
-    `id` = :id
-RETURNING *;
+WHERE `id` = :id RETURNING *;

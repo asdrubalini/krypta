@@ -1,2 +1,2 @@
 SELECT count(*)
-FROM file
+FROM FILE
