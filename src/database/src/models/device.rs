@@ -5,7 +5,7 @@ use rusqlite::{named_params, Row};
 
 use crate::{
     errors::DatabaseResult,
-    traits::{Insert, Search},
+    traits::{Insert, Search, TryFromRow},
     Database,
 };
 
@@ -19,10 +19,8 @@ pub struct Device {
     pub name: String,
 }
 
-impl TryFrom<&Row<'_>> for Device {
-    type Error = rusqlite::Error;
-
-    fn try_from(row: &Row<'_>) -> Result<Self, Self::Error> {
+impl TryFromRow for Device {
+    fn try_from_row(row: &Row) -> Result<Self, rusqlite::Error> {
         Ok(Device {
             id: row.get(0)?,
             platform_id: row.get(1)?,
@@ -90,7 +88,7 @@ impl Search for Device {
 
         let mut devices = vec![];
         while let Some(row) = rows.next()? {
-            devices.push(Device::try_from(row)?);
+            devices.push(Device::try_from_row(row)?);
         }
 
         Ok(devices)
@@ -102,7 +100,7 @@ impl Insert for Device {
         let device = db.query_row(
             include_str!("sql/device/insert.sql"),
             named_params! { ":platform_id": self.platform_id, ":name": self.name },
-            |row| Device::try_from(row),
+            |row| Device::try_from_row(row),
         )?;
 
         Ok(device)

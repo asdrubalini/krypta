@@ -7,7 +7,7 @@ use rusqlite::{named_params, Row};
 use crate::errors::DatabaseResult;
 use crate::{models, Database};
 
-use crate::traits::{Insert, InsertMany, Update, UpdateMany};
+use crate::traits::{Insert, InsertMany, TryFromRow, Update, UpdateMany};
 
 use super::File;
 
@@ -31,10 +31,8 @@ pub struct FileDevice {
     pub last_modified: f64,
 }
 
-impl TryFrom<&Row<'_>> for FileDevice {
-    type Error = rusqlite::Error;
-
-    fn try_from(row: &Row<'_>) -> Result<Self, Self::Error> {
+impl TryFromRow for FileDevice {
+    fn try_from_row(row: &Row) -> Result<Self, rusqlite::Error> {
         Ok(FileDevice {
             file_id: row.get(0)?,
             device_id: row.get(1)?,
@@ -75,7 +73,7 @@ impl FileDevice {
             let device = tx.query_row(
                 include_str!("sql/file_device/find_by_path.sql"),
                 named_params! { ":path": path },
-                |row| FileDevice::try_from(row),
+                |row| FileDevice::try_from_row(row),
             )?;
             items.push(device);
         }
@@ -92,7 +90,7 @@ impl FileDevice {
             let device = tx.query_row(
                 include_str!("sql/file_device/find_by_file.sql"),
                 named_params! { ":file_id": file.id },
-                |row| FileDevice::try_from(row),
+                |row| FileDevice::try_from_row(row),
             )?;
             items.push(device);
         }
@@ -113,7 +111,7 @@ impl Insert for FileDevice {
                 ":is_encrypted": self.is_encrypted,
                 ":last_modified": self.last_modified
             },
-            |row| FileDevice::try_from(row),
+            |row| FileDevice::try_from_row(row),
         )?;
 
         Ok(device)
@@ -133,7 +131,7 @@ impl Update for FileDevice {
                 ":file_id": self.file_id,
                 ":device_id": self.device_id
             },
-            |row| FileDevice::try_from(row),
+            |row| FileDevice::try_from_row(row),
         )?;
 
         Ok(file_device)
