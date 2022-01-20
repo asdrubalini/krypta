@@ -2,7 +2,8 @@ use std::fs::Metadata;
 use std::path::Path;
 use std::time::UNIX_EPOCH;
 
-use rusqlite::{named_params, Row};
+use database_macros::TryFromRow;
+use rusqlite::named_params;
 
 use crate::errors::DatabaseResult;
 use crate::{models, Database};
@@ -22,25 +23,13 @@ pub fn metadata_to_last_modified(metadata: &Metadata) -> f64 {
         .as_secs_f64()
 }
 
-#[derive(Clone, Debug)]
+#[derive(TryFromRow, Clone, Debug)]
 pub struct FileDevice {
     file_id: i64,
     device_id: i64,
     pub is_unlocked: bool,
     pub is_encrypted: bool,
     pub last_modified: f64,
-}
-
-impl TryFromRow for FileDevice {
-    fn try_from_row(row: &Row) -> Result<Self, rusqlite::Error> {
-        Ok(FileDevice {
-            file_id: row.get(0)?,
-            device_id: row.get(1)?,
-            is_unlocked: row.get(2)?,
-            is_encrypted: row.get(3)?,
-            last_modified: row.get(4)?,
-        })
-    }
 }
 
 impl FileDevice {

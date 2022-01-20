@@ -1,57 +1,34 @@
 use std::path::{Path, PathBuf};
 
-use database_macros::TableName;
-use rusqlite::{named_params, OptionalExtension, Row};
+use database_macros::{TableName, TryFromRow};
+use rusqlite::{named_params, OptionalExtension};
 
 use crate::{
     errors::DatabaseResult,
-    traits::{Count, TableName, TryFromRow, Update},
+    traits::{Count, TryFromRow, Update},
     Database,
 };
 
 use super::Device;
 
-#[derive(TableName, Debug, Clone)]
+#[derive(TableName, TryFromRow, Debug, Clone)]
 pub struct DeviceConfig {
     pub id: i64,
     pub device_id: i64,
-    pub locked_path: Option<PathBuf>,
-    pub unlocked_path: Option<PathBuf>,
+    pub locked_path: Option<String>,
+    pub unlocked_path: Option<String>,
 }
 
 impl Count for DeviceConfig {}
 
-impl TryFromRow for DeviceConfig {
-    fn try_from_row(row: &Row) -> Result<Self, rusqlite::Error> {
-        let locked_path = row.get::<_, Option<String>>(2)?.map(PathBuf::from);
-        let unlocked_path = row.get::<_, Option<String>>(3)?.map(PathBuf::from);
-
-        Ok(DeviceConfig {
-            id: row.get(0)?,
-            device_id: row.get(1)?,
-            locked_path,
-            unlocked_path,
-        })
-    }
-}
-
 impl Update for DeviceConfig {
     fn update(self, db: &Database) -> DatabaseResult<DeviceConfig> {
-        let locked_path = self
-            .locked_path
-            .to_owned()
-            .map(|p| p.to_string_lossy().to_string());
-        let unlocked_path = self
-            .unlocked_path
-            .to_owned()
-            .map(|p| p.to_string_lossy().to_string());
-
         let device_config = db.query_row(
             include_str!("sql/device_config/update.sql"),
             named_params! {
                 ":device_id": self.device_id,
-                ":locked_path": locked_path,
-                ":unlocked_path": unlocked_path,
+                ":locked_path": self.locked_path,
+                ":unlocked_path": self.unlocked_path,
                 ":id": self.id
             },
             |row| DeviceConfig::try_from_row(row),
@@ -91,13 +68,17 @@ impl DeviceConfig {
 
     /// Get the `locked_path` for the current device from database
     pub fn get_locked_path(db: &Database, device: &Device) -> DatabaseResult<Option<PathBuf>> {
-        let locked_path = Self::find_or_create_current(db, device)?.locked_path;
+        let locked_path = Self::find_or_create_current(db, device)?
+            .locked_path
+            .map(PathBuf::from);
         Ok(locked_path)
     }
 
     /// Get the `unlocked_path` for the current device from database
     pub fn get_unlocked_path(db: &Database, device: &Device) -> DatabaseResult<Option<PathBuf>> {
-        let unlocked_path = Self::find_or_create_current(db, device)?.unlocked_path;
+        let unlocked_path = Self::find_or_create_current(db, device)?
+            .unlocked_path
+            .map(PathBuf::from);
         Ok(unlocked_path)
     }
 
@@ -108,7 +89,7 @@ impl DeviceConfig {
         device: &Device,
     ) -> DatabaseResult<()> {
         let mut config: DeviceConfig = Self::find_or_create_current(db, device)?;
-        config.locked_path = Some(locked_path.as_ref().to_path_buf());
+        config.locked_path = Some(locked_path.as_ref().to_string_lossy().to_string());
         config.update(db)?;
         Ok(())
     }
@@ -120,7 +101,7 @@ impl DeviceConfig {
         device: &Device,
     ) -> DatabaseResult<()> {
         let mut config: DeviceConfig = Self::find_or_create_current(db, device)?;
-        config.unlocked_path = Some(unlocked_path.as_ref().to_path_buf());
+        config.unlocked_path = Some(unlocked_path.as_ref().to_string_lossy().to_string());
         config.update(db)?;
         Ok(())
     }

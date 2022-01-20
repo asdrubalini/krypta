@@ -1,7 +1,8 @@
 use std::fs::File;
 use std::io::Read;
 
-use rusqlite::{named_params, Row};
+use database_macros::TryFromRow;
+use rusqlite::named_params;
 
 use crate::{
     errors::DatabaseResult,
@@ -9,7 +10,7 @@ use crate::{
     Database,
 };
 
-#[derive(Debug, Clone)]
+#[derive(TryFromRow, Debug, Clone)]
 pub struct Device {
     /// Database internal id
     pub id: Option<i64>,
@@ -17,16 +18,6 @@ pub struct Device {
     pub platform_id: String,
     /// Friendly name
     pub name: String,
-}
-
-impl TryFromRow for Device {
-    fn try_from_row(row: &Row) -> Result<Self, rusqlite::Error> {
-        Ok(Device {
-            id: row.get(0)?,
-            platform_id: row.get(1)?,
-            name: row.get(2)?,
-        })
-    }
 }
 
 #[cfg(target_os = "linux")]
