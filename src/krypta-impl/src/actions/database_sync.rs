@@ -82,6 +82,7 @@ pub async fn sync_database_from_unlocked_path(
     let mut updated_files = models::File::update_many(db, files_to_update)?;
 
     let file_devices_to_update = models::FileDevice::find_by_files(db, &updated_files)?
+        .clone()
         .into_iter()
         .zip(updated_files.iter())
         .map(|(mut file_device, file)| {
