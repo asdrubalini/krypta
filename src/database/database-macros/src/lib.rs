@@ -20,14 +20,35 @@ pub fn derive_table_name(input: TokenStream) -> TokenStream {
     output.into()
 }
 
-#[proc_macro_derive(FromRow)]
+#[proc_macro_derive(TryFromRow)]
 pub fn derive_from_row(input: TokenStream) -> TokenStream {
-    let DeriveInput { ident, .. } = parse_macro_input!(input);
+    let DeriveInput { ident, data, .. } = parse_macro_input!(input);
+
+    let fields = match data {
+        syn::Data::Struct(fields) => fields.fields,
+        syn::Data::Enum(_) => panic!("expecting struct, found enum"),
+        syn::Data::Union(_) => panic!("expecting struct, found union"),
+    };
+
+    let mut fields_tokens = quote!();
+
+    match fields {
+        syn::Fields::Named(named) => {
+            for (field_idx, field) in named.named.into_iter().enumerate() {
+                let field_name = field.ident.unwrap();
+
+                fields_tokens.extend(quote! {
+                    #field_name: row.get(#field_idx)?,
+                });
+            }
+        }
+        _ => panic!("expecting field of type named"),
+    };
 
     let output = quote! {
-        impl crate::traits::FromRow for #ident {
-            fn from_row(row: &rusqlite::Row) -> Result<Self, rusqlite::Error> {
-                todo!()
+        impl crate::traits::TryFromRow for #ident {
+            fn try_from_row(row: &rusqlite::Row) -> Result<Self, rusqlite::Error> {
+                Ok(Self { #fields_tokens })
             }
         }
     };

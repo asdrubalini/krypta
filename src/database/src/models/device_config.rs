@@ -5,7 +5,7 @@ use rusqlite::{named_params, OptionalExtension, Row};
 
 use crate::{
     errors::DatabaseResult,
-    traits::{Count, FromRow, Update},
+    traits::{Count, TryFromRow, Update},
     Database,
 };
 
@@ -21,8 +21,8 @@ pub struct DeviceConfig {
 
 impl Count for DeviceConfig {}
 
-impl FromRow for DeviceConfig {
-    fn from_row(row: &Row) -> Result<Self, rusqlite::Error> {
+impl TryFromRow for DeviceConfig {
+    fn try_from_row(row: &Row) -> Result<Self, rusqlite::Error> {
         let locked_path = row.get::<_, Option<String>>(2)?.map(PathBuf::from);
         let unlocked_path = row.get::<_, Option<String>>(3)?.map(PathBuf::from);
 
@@ -54,7 +54,7 @@ impl Update for DeviceConfig {
                 ":unlocked_path": unlocked_path,
                 ":id": self.id
             },
-            |row| DeviceConfig::from_row(row),
+            |row| DeviceConfig::try_from_row(row),
         )?;
 
         Ok(device_config)
@@ -70,7 +70,7 @@ impl DeviceConfig {
             None => db.query_row(
                 include_str!("sql/device_config/create_empty.sql"),
                 named_params! {":device_id": device.id },
-                |row| DeviceConfig::from_row(row),
+                |row| DeviceConfig::try_from_row(row),
             )?,
         };
 
@@ -82,7 +82,7 @@ impl DeviceConfig {
             .query_row(
                 include_str!("sql/device_config/find_by_device.sql"),
                 named_params! {":device_id": device.id },
-                |row| DeviceConfig::from_row(row),
+                |row| DeviceConfig::try_from_row(row),
             )
             .optional()?;
 

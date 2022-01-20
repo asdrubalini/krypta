@@ -9,21 +9,21 @@ use crypto::crypt::{
     generate_random_secure_key_nonce_pair, FileEncryptUnit, AEAD_KEY_SIZE, AEAD_NONCE_SIZE,
 };
 use crypto::errors::CryptoError;
-use database_macros::TableName;
+use database_macros::{TableName, TryFromRow};
 use rand::Rng;
-use rusqlite::{named_params, Row};
+use rusqlite::named_params;
 
 use crate::{errors::DatabaseResult, Database};
 
-use crate::traits::{Count, FetchAll, FromRow, Insert, InsertMany, Search, Update, UpdateMany};
+use crate::traits::{Count, FetchAll, Insert, InsertMany, Search, TryFromRow, Update, UpdateMany};
 
 use super::Device;
 
-#[derive(TableName, Debug, Clone, PartialEq, Eq)]
+#[derive(TableName, TryFromRow, Debug, Clone, PartialEq, Eq)]
 pub struct File {
     pub id: Option<i64>,
     pub title: String,
-    pub path: PathBuf,
+    pub path: String,
     pub random_hash: String,
     pub contents_hash: String,
     pub size: u64,
@@ -37,23 +37,6 @@ impl Count for File {}
 
 impl FetchAll for File {}
 
-impl FromRow for File {
-    fn from_row(row: &Row<'_>) -> Result<Self, rusqlite::Error> {
-        Ok(File {
-            id: row.get(0)?,
-            title: row.get(1)?,
-            path: PathBuf::from(row.get::<_, String>(2)?),
-            random_hash: row.get(3)?,
-            contents_hash: row.get(4)?,
-            size: row.get(5)?,
-            created_at: row.get(6)?,
-            updated_at: row.get(7)?,
-            key: row.get(8)?,
-            nonce: row.get(9)?,
-        })
-    }
-}
-
 impl Search for File {
     /// Search files stored in database
     fn search(db: &Database, query: impl AsRef<str>) -> DatabaseResult<Vec<Self>> {
@@ -64,7 +47,7 @@ impl Search for File {
 
         let mut files = vec![];
         while let Some(row) = rows.next()? {
-            files.push(File::from_row(row)?);
+            files.push(File::try_from_row(row)?);
         }
 
         Ok(files)
@@ -78,7 +61,7 @@ impl Insert for File {
             include_str!("sql/file/insert.sql"),
             named_params! {
                 ":title": self.title,
-                ":path": self.path.to_string_lossy().to_string(),
+                ":path": self.path,
                 ":random_hash": self.random_hash,
                 ":contents_hash": self.contents_hash,
                 ":size": self.size,
@@ -87,7 +70,7 @@ impl Insert for File {
                 ":key": self.key,
                 ":nonce": self.nonce
             },
-            |row| File::from_row(row),
+            |row| File::try_from_row(row),
         )?;
 
         Ok(file)
@@ -104,7 +87,7 @@ impl Update for File {
             include_str!("sql/file/update.sql"),
             named_params! {
                 ":title": self.title,
-                ":path": self.path.to_string_lossy().to_string(),
+                ":path": self.path,
                 ":random_hash": self.random_hash,
                 ":contents_hash": self.contents_hash,
                 ":size": self.size,
@@ -114,7 +97,7 @@ impl Update for File {
                 ":nonce": self.nonce,
                 ":id": self.id
             },
-            |row| File::from_row(row),
+            |row| File::try_from_row(row),
         )?;
 
         Ok(file)
@@ -137,7 +120,7 @@ impl File {
         File {
             id: None,
             title,
-            path,
+            path: path.to_string_lossy().to_string(),
             random_hash,
             contents_hash,
             size,
@@ -163,6 +146,11 @@ impl File {
 
     fn update_updated_at(&mut self) {
         self.updated_at = Utc::now();
+    }
+
+    /// Get file as PathBuf
+    pub fn as_path_buf(&self) -> PathBuf {
+        PathBuf::from(&self.path)
     }
 
     pub fn find_known_paths_with_last_modified(
@@ -191,7 +179,7 @@ impl File {
         let file = db.query_row(
             include_str!("sql/file/find_file_from_path.sql"),
             named_params! { ":path":path.to_string_lossy() },
-            |row| File::from_row(row),
+            |row| File::try_from_row(row),
         )?;
 
         Ok(file)
@@ -241,7 +229,7 @@ impl File {
 
         let mut files = vec![];
         while let Some(row) = rows.next()? {
-            files.push(File::from_row(row)?);
+            files.push(File::try_from_row(row)?);
         }
 
         Ok(files)

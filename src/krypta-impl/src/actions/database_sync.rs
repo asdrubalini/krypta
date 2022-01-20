@@ -49,7 +49,7 @@ pub async fn sync_database_from_unlocked_path(
         .iter()
         .map(|file| {
             // Should never fail
-            let metadata = paths_requiring_insertion.get(&file.path).unwrap();
+            let metadata = paths_requiring_insertion.get(&file.as_path_buf()).unwrap();
             models::FileDevice::new(
                 file,
                 device,
@@ -73,7 +73,7 @@ pub async fn sync_database_from_unlocked_path(
         .into_iter()
         .map(|mut file| {
             // Should never fail
-            let hash = hashes.get(&file.path).unwrap();
+            let hash = hashes.get(&file.as_path_buf()).unwrap();
             file.contents_hash = hash.to_owned();
             file
         })
@@ -86,7 +86,7 @@ pub async fn sync_database_from_unlocked_path(
         .zip(updated_files.iter())
         .map(|(mut file_device, file)| {
             // Should never fail
-            let metadata = paths_requiring_update.get(&file.path).unwrap();
+            let metadata = paths_requiring_update.get(&file.as_path_buf()).unwrap();
 
             // Convert into UpdateFileDevice and mutate last_modified
             file_device.last_modified = metadata_to_last_modified(metadata);
@@ -214,7 +214,7 @@ mod tests {
 
         let database_paths = database_files
             .into_iter()
-            .map(|file| file.path)
+            .map(|file| file.as_path_buf())
             .collect::<HashSet<_>>(); // HashSet for faster lookups
 
         // Make sure that each created file exists in the database
@@ -241,7 +241,10 @@ mod tests {
                 .unwrap();
 
         assert_eq!(processed_files.len(), 1);
-        assert_eq!(processed_files.first().unwrap().path, new_file_relative);
+        assert_eq!(
+            processed_files.first().unwrap().as_path_buf(),
+            new_file_relative
+        );
 
         // Mutate random file and make sure that it gets detected
         let rand_file = created_files.get(1337).unwrap().to_owned();
@@ -259,6 +262,9 @@ mod tests {
                 .unwrap();
 
         assert_eq!(processed_files.len(), 1);
-        assert_eq!(processed_files.first().unwrap().path, rand_file_relative);
+        assert_eq!(
+            processed_files.first().unwrap().as_path_buf(),
+            rand_file_relative
+        );
     }
 }
