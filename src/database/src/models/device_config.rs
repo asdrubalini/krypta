@@ -107,7 +107,7 @@ impl DeviceConfig {
         locked_path: impl AsRef<Path>,
         device: &Device,
     ) -> DatabaseResult<()> {
-        let mut config: DeviceConfig = Self::find_or_create_current(db, device)?.into();
+        let mut config: DeviceConfig = Self::find_or_create_current(db, device)?;
         config.locked_path = Some(locked_path.as_ref().to_path_buf());
         config.update(db)?;
         Ok(())
@@ -119,7 +119,7 @@ impl DeviceConfig {
         unlocked_path: impl AsRef<Path>,
         device: &Device,
     ) -> DatabaseResult<()> {
-        let mut config: DeviceConfig = Self::find_or_create_current(db, device)?.into();
+        let mut config: DeviceConfig = Self::find_or_create_current(db, device)?;
         config.unlocked_path = Some(unlocked_path.as_ref().to_path_buf());
         config.update(db)?;
         Ok(())

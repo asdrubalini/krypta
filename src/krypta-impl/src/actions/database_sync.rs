@@ -51,7 +51,7 @@ pub async fn sync_database_from_unlocked_path(
             // Should never fail
             let metadata = paths_requiring_insertion.get(&file.path).unwrap();
             models::FileDevice::new(
-                &file,
+                file,
                 device,
                 true,
                 false,
@@ -82,7 +82,6 @@ pub async fn sync_database_from_unlocked_path(
     let mut updated_files = models::File::update_many(db, files_to_update)?;
 
     let file_devices_to_update = models::FileDevice::find_by_files(db, &updated_files)?
-        .clone()
         .into_iter()
         .zip(updated_files.iter())
         .map(|(mut file_device, file)| {
@@ -174,7 +173,7 @@ fn find_hashes_for_local_paths(
         .map(|(absolute_path, hash)| {
             // Skip hosts bits
             let relative_path: PathBuf =
-                absolute_path.into_iter().skip(unlocked_path_len).collect();
+                absolute_path.iter().skip(unlocked_path_len).collect();
 
             (relative_path, hash.to_string())
         })

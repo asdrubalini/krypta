@@ -60,7 +60,7 @@ impl Tmp {
     pub fn to_relative(&self, absolute_path: impl AsRef<Path>) -> PathBuf {
         let absolute_path = absolute_path.as_ref().to_owned();
         absolute_path
-            .into_iter()
+            .iter()
             .skip(self.path().iter().count())
             .collect()
     }

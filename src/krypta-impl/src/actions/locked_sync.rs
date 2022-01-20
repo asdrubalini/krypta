@@ -28,7 +28,7 @@ pub async fn sync_locked_path_from_database(
     // Error check
     let errors_count = encryption_status
         .iter()
-        .filter(|(_, status)| **status == false)
+        .filter(|(_, status)| !(**status))
         .count();
     log::info!(
         "Encrypted {} files, with {} errors",
@@ -72,16 +72,14 @@ fn encryption_status_into_file_device(
     unlocked_path: &Path,
 ) -> anyhow::Result<Vec<models::FileDevice>> {
     // Filter out only file paths that were encrypted successfully
-    let successfully_encrypted_paths: Vec<PathBuf> = encryption_status
+    let successfully_encrypted_paths = encryption_status
         .into_iter()
-        .filter_map(|(path, is_ok)| if is_ok { Some(path) } else { None })
-        .collect();
+        .filter_map(|(path, is_ok)| if is_ok { Some(path) } else { None });
 
     // Turn paths into relative
     let unlocked_path_len = unlocked_path.iter().count();
     let successfully_encrypted_paths_relative: Vec<PathBuf> = successfully_encrypted_paths
-        .into_iter()
-        .map(|path| path.into_iter().skip(unlocked_path_len).collect())
+        .map(|path| path.iter().skip(unlocked_path_len).collect())
         .collect();
 
     Ok(models::FileDevice::find_by_paths(

@@ -39,7 +39,7 @@ pub fn get_current_platform_id() -> Result<String, std::io::Error> {
     f.read_to_string(&mut machine_id)?;
 
     // Trim newline at the end
-    machine_id = machine_id.replace("\n", "");
+    machine_id = machine_id.replace('\n', "");
 
     Ok(machine_id)
 }
