@@ -41,7 +41,7 @@ pub async fn sync_locked_path_from_database(
     let file_devices: Vec<models::FileDevice> = file_devices
         .into_iter()
         .map(|mut file_device| {
-            file_device.is_encrypted = true;
+            file_device.is_locked = true;
             file_device
         })
         .collect();

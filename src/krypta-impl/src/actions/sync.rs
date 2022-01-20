@@ -151,7 +151,7 @@ pub async fn sync_locked_path_from_database(
     let file_device_need_update = models::FileDevice::find_by_path(db, &paths_need_update)?
         .into_iter()
         .map(|mut file_device| {
-            file_device.is_encrypted = true;
+            file_device.is_locked = true;
             file_device
         })
         .collect::<Vec<FileDevice>>();

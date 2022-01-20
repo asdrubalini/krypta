@@ -222,6 +222,32 @@ impl File {
         Ok(size)
     }
 
+    /// Count how many unlocked files are there on disk (according to database)
+    pub fn count_unlocked(db: &Database, device: &Device) -> DatabaseResult<u64> {
+        let count = db.query_row(
+            include_str!("sql/file/count_locked.sql"),
+            named_params! {
+                ":platform_id": device.platform_id
+            },
+            |row| row.get(0),
+        )?;
+
+        Ok(count)
+    }
+
+    /// Count how many locked files are there on disk (according to database)
+    pub fn count_locked(db: &Database, device: &Device) -> DatabaseResult<u64> {
+        let count = db.query_row(
+            include_str!("sql/file/count_unlocked.sql"),
+            named_params! {
+                ":platform_id": device.platform_id
+            },
+            |row| row.get(0),
+        )?;
+
+        Ok(count)
+    }
+
     /// Find files that need to be encrypted for the specified device
     pub fn find_need_encryption(db: &Database, device: &Device) -> DatabaseResult<Vec<File>> {
         let mut stmt = db.prepare(include_str!("sql/file/need_encryption.sql"))?;

@@ -1,18 +1,21 @@
 use byte_unit::Byte;
 use database::{models, traits::Count, Database};
 
-pub async fn execute(database: &Database) -> anyhow::Result<()> {
-    let archive_size_bytes = models::File::archive_size(database)?;
+pub async fn execute(db: &Database) -> anyhow::Result<()> {
+    let device = models::Device::find_or_create_current(db)?;
+
+    let archive_size_bytes = models::File::archive_size(db)?;
     let archive_size = Byte::from_bytes(archive_size_bytes.into());
 
-    let archive_count = models::File::count(database)?;
+    let archive_count = models::File::count(db)?;
+    let locked_count = models::File::count_locked(db, &device)?;
+    let unlocked_count = models::File::count_unlocked(db, &device)?;
 
-    log::info!(
-        "The total size of the archive is {}",
-        archive_size.get_appropriate_unit(false)
-    );
+    println!("Files stored in database: {archive_count}");
+    println!("Archive size: {}", archive_size.get_appropriate_unit(false));
 
-    log::info!("The archive has {} files", archive_count);
+    println!("Locked files on disk: {locked_count}");
+    println!("Unlocked files on disk: {unlocked_count}");
 
     Ok(())
 }

@@ -58,21 +58,4 @@ impl PathFinder {
 
         Ok(Self { metadatas })
     }
-
-    /// Filter out paths based on `relative_paths_to_filter`, mutating the struct
-    #[deprecated]
-    pub fn filter_out_paths(&mut self, relative_paths_to_filter: &[PathBuf]) {
-        for path in relative_paths_to_filter {
-            self.metadatas.remove(path);
-        }
-    }
-
-    /// Get all relative paths
-    #[deprecated]
-    pub fn relative_paths(&self) -> Vec<PathBuf> {
-        self.metadatas
-            .iter()
-            .map(|(path, _metadata)| path.to_owned())
-            .collect()
-    }
 }
