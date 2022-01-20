@@ -378,7 +378,7 @@ mod tests {
         let database = create_in_memory().unwrap();
 
         let file = File::new(
-            format!("foobar"),
+            "foobar".to_string(),
             PathBuf::from("/path/to/foo/bar"),
             "test_hash_placeholder".to_string(),
             64,

@@ -209,7 +209,7 @@ mod tests {
 
         assert_eq!(processed_files.len(), FILES_COUNT);
 
-        let database_files = models::File::fetch_all(&mut database).unwrap();
+        let database_files = models::File::fetch_all(&database).unwrap();
         assert_eq!(database_files.len(), FILES_COUNT);
 
         let database_paths = database_files
@@ -219,7 +219,7 @@ mod tests {
 
         // Make sure that each created file exists in the database
         for file in created_files.iter() {
-            let created_file = file.into_iter().skip(3).collect::<PathBuf>();
+            let created_file = file.iter().skip(3).collect::<PathBuf>();
             assert!(database_paths.contains(&created_file));
         }
 
