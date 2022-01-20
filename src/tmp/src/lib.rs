@@ -127,7 +127,7 @@ mod tests {
     fn test_generate_random_tmp_path_length() {
         for length in 1..32 {
             let path = Tmp::generate_random_tmp(length);
-            let generated_folder = path.into_iter().last().unwrap();
+            let generated_folder = path.iter().last().unwrap();
 
             assert_eq!(generated_folder.len() - "krypta_".len(), length);
         }
@@ -145,7 +145,7 @@ mod tests {
             };
 
             // Make sure that path gets destroyed
-            assert_eq!(path.exists(), false);
+            assert!(!path.exists());
         }
     }
 }

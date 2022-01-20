@@ -37,7 +37,7 @@ fn encrypt_decrypt_with_key(
     let mut locked_path = file_path.clone();
     locked_path.push(ENCRYPTED_FILE);
 
-    let mut recovered_path = file_path.clone();
+    let mut recovered_path = file_path;
     recovered_path.push(RECOVERED_FILE);
 
     let encryptor = FileEncryptUnit::try_new(&unlocked_path, &locked_path, key, nonce).unwrap();
