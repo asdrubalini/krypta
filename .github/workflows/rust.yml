@@ -18,9 +18,9 @@ jobs:
 
       - uses: actions-rs/toolchain@v1
         with:
-          profile: minimal
           override: true
-          toolchain: nightly, clippy
+          toolchain: nightly
+          components: clippy
 
       - uses: Swatinem/rust-cache@v1
 
