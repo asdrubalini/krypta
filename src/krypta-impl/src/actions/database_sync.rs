@@ -172,8 +172,7 @@ fn find_hashes_for_local_paths(
         .into_iter()
         .map(|(absolute_path, hash)| {
             // Skip hosts bits
-            let relative_path: PathBuf =
-                absolute_path.iter().skip(unlocked_path_len).collect();
+            let relative_path: PathBuf = absolute_path.iter().skip(unlocked_path_len).collect();
 
             (relative_path, hash.to_string())
         })

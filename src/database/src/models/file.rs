@@ -15,9 +15,7 @@ use rusqlite::{named_params, Row};
 
 use crate::{errors::DatabaseResult, Database};
 
-use crate::traits::{
-    Count, FetchAll, Insert, InsertMany, Search, TableName, TryFromRow, Update, UpdateMany,
-};
+use crate::traits::{Count, FetchAll, FromRow, Insert, InsertMany, Search, Update, UpdateMany};
 
 use super::Device;
 
@@ -39,8 +37,8 @@ impl Count for File {}
 
 impl FetchAll for File {}
 
-impl TryFromRow for File {
-    fn try_from_row(row: &Row<'_>) -> Result<Self, rusqlite::Error> {
+impl FromRow for File {
+    fn from_row(row: &Row<'_>) -> Result<Self, rusqlite::Error> {
         Ok(File {
             id: row.get(0)?,
             title: row.get(1)?,
@@ -66,7 +64,7 @@ impl Search for File {
 
         let mut files = vec![];
         while let Some(row) = rows.next()? {
-            files.push(File::try_from_row(row)?);
+            files.push(File::from_row(row)?);
         }
 
         Ok(files)
@@ -89,7 +87,7 @@ impl Insert for File {
                 ":key": self.key,
                 ":nonce": self.nonce
             },
-            |row| File::try_from_row(row),
+            |row| File::from_row(row),
         )?;
 
         Ok(file)
@@ -116,7 +114,7 @@ impl Update for File {
                 ":nonce": self.nonce,
                 ":id": self.id
             },
-            |row| File::try_from_row(row),
+            |row| File::from_row(row),
         )?;
 
         Ok(file)
@@ -193,7 +191,7 @@ impl File {
         let file = db.query_row(
             include_str!("sql/file/find_file_from_path.sql"),
             named_params! { ":path":path.to_string_lossy() },
-            |row| File::try_from_row(row),
+            |row| File::from_row(row),
         )?;
 
         Ok(file)
@@ -243,7 +241,7 @@ impl File {
 
         let mut files = vec![];
         while let Some(row) = rows.next()? {
-            files.push(File::try_from_row(row)?);
+            files.push(File::from_row(row)?);
         }
 
         Ok(files)

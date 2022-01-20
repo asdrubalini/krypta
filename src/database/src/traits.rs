@@ -9,8 +9,8 @@ pub trait TableName {
 }
 
 /// Convert Row into Self
-pub trait TryFromRow: Sized {
-    fn try_from_row(row: &Row) -> Result<Self, rusqlite::Error>;
+pub trait FromRow: Sized {
+    fn from_row(row: &Row) -> Result<Self, rusqlite::Error>;
 }
 
 /// A model that can be full-text searched
@@ -55,7 +55,7 @@ pub trait InsertMany: Sized + Insert {
 }
 
 /// A model that can be fetched
-pub trait FetchAll: Sized + TryFromRow + TableName {
+pub trait FetchAll: Sized + FromRow + TableName {
     fn fetch_all(db: &Database) -> DatabaseResult<Vec<Self>> {
         let table = Self::table_name();
 
@@ -64,7 +64,7 @@ pub trait FetchAll: Sized + TryFromRow + TableName {
 
         let mut files = vec![];
         while let Some(row) = rows.next()? {
-            files.push(Self::try_from_row(row)?);
+            files.push(Self::from_row(row)?);
         }
 
         Ok(files)
