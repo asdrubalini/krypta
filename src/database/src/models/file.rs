@@ -9,6 +9,7 @@ use crypto::crypt::{
     generate_random_secure_key_nonce_pair, FileEncryptUnit, AEAD_KEY_SIZE, AEAD_NONCE_SIZE,
 };
 use crypto::errors::CryptoError;
+use database_macros::TableName;
 use rand::Rng;
 use rusqlite::{named_params, Row};
 
@@ -20,7 +21,7 @@ use crate::traits::{
 
 use super::Device;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(TableName, Debug, Clone, PartialEq, Eq)]
 pub struct File {
     pub id: Option<i64>,
     pub title: String,
@@ -32,12 +33,6 @@ pub struct File {
     pub updated_at: DateTime<Utc>,
     pub key: Vec<u8>,
     pub nonce: Vec<u8>,
-}
-
-impl TableName for File {
-    fn table_name() -> &'static str {
-        "file"
-    }
 }
 
 impl Count for File {}

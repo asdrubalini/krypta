@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+use database_macros::TableName;
 use rusqlite::{named_params, OptionalExtension, Row};
 
 use crate::{
@@ -10,18 +11,12 @@ use crate::{
 
 use super::Device;
 
-#[derive(Debug, Clone)]
+#[derive(TableName, Debug, Clone)]
 pub struct DeviceConfig {
     pub id: i64,
     pub device_id: i64,
     pub locked_path: Option<PathBuf>,
     pub unlocked_path: Option<PathBuf>,
-}
-
-impl TableName for DeviceConfig {
-    fn table_name() -> &'static str {
-        "device_config"
-    }
 }
 
 impl Count for DeviceConfig {}

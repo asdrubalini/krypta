@@ -10,6 +10,7 @@ chrono = "0.4"
 log = "0.4"
 rand = "0.8"
 thiserror = "1.0"
+database-macros = { path = "database-macros" }
 
 [dev-dependencies]
 tmp = { version = "0.0.0", path = "../tmp" }
