@@ -1,9 +1,9 @@
 use std::fs::Metadata;
 use std::path::Path;
-use std::time::UNIX_EPOCH;
 
 use database_macros::TryFromRow;
 use rusqlite::named_params;
+use std::time::UNIX_EPOCH;
 
 use crate::errors::DatabaseResult;
 use crate::{models, Database};
@@ -14,13 +14,13 @@ use super::File;
 
 /// Convert a std::fs::Metadata into a UNIX epoch u64
 #[cfg(target_os = "linux")]
-pub fn metadata_to_last_modified(metadata: &Metadata) -> f64 {
+pub fn metadata_to_last_modified(metadata: &Metadata) -> u64 {
     metadata
         .modified()
         .unwrap()
         .duration_since(UNIX_EPOCH)
         .unwrap()
-        .as_secs_f64()
+        .as_secs()
 }
 
 #[derive(TryFromRow, Clone, Debug)]
@@ -29,7 +29,7 @@ pub struct FileDevice {
     device_id: i64,
     pub is_unlocked: bool,
     pub is_encrypted: bool,
-    pub last_modified: f64,
+    pub last_modified: u64,
 }
 
 impl FileDevice {
@@ -39,7 +39,7 @@ impl FileDevice {
         device: &models::Device,
         is_unlocked: bool,
         is_encrypted: bool,
-        last_modified: f64,
+        last_modified: u64,
     ) -> Self {
         FileDevice {
             file_id: file.id.expect("missing file_id"),
@@ -153,7 +153,7 @@ mod tests {
         // Prepare device
         let device = Device::find_or_create_current(&database).unwrap();
 
-        let to_insert = FileDevice::new(&file, &device, false, false, 0.0);
+        let to_insert = FileDevice::new(&file, &device, false, false, 0);
         to_insert.insert(&database).unwrap();
     }
 }

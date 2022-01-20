@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS `file_device` (
 	`device_id` INTEGER NOT NULL,
 	`is_unlocked` INTEGER NOT NULL,
 	`is_encrypted` INTEGER NOT NULL,
-	`last_modified` REAL NOT NULL,
+	`last_modified` INTEGER NOT NULL,
 	PRIMARY KEY(`file_id`, `device_id`)
 );
 
