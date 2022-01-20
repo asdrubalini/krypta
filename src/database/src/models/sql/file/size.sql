@@ -1,2 +1,2 @@
-SELECT sum(file.size)
-FROM FILE
+SELECT sum(`file`.`size`)
+FROM `file`
