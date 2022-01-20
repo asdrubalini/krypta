@@ -3,6 +3,8 @@ use proc_macro::{self, TokenStream};
 use quote::quote;
 use syn::{parse_macro_input, DeriveInput};
 
+/// Derive TableName trait for model struct. Table name is based on the struct
+/// name converted to snake_case
 #[proc_macro_derive(TableName)]
 pub fn derive_table_name(input: TokenStream) -> TokenStream {
     let DeriveInput { ident, .. } = parse_macro_input!(input);
@@ -20,6 +22,8 @@ pub fn derive_table_name(input: TokenStream) -> TokenStream {
     output.into()
 }
 
+/// Derive TryFromRow trait for model struct. try_from_row method builds Self struct
+/// based on rusqlite::Row::get(&str: field_name)
 #[proc_macro_derive(TryFromRow)]
 pub fn derive_from_row(input: TokenStream) -> TokenStream {
     let DeriveInput { ident, data, .. } = parse_macro_input!(input);
@@ -34,11 +38,11 @@ pub fn derive_from_row(input: TokenStream) -> TokenStream {
 
     match fields {
         syn::Fields::Named(named) => {
-            for (field_idx, field) in named.named.into_iter().enumerate() {
+            for field in named.named.into_iter() {
                 let field_name = field.ident.unwrap();
 
                 fields_tokens.extend(quote! {
-                    #field_name: row.get(#field_idx)?,
+                    #field_name: row.get(stringify!(#field_name))?,
                 });
             }
         }
