@@ -28,7 +28,7 @@ pub struct FileDevice {
     file_id: i64,
     device_id: i64,
     pub is_unlocked: bool,
-    pub is_encrypted: bool,
+    pub is_locked: bool,
     pub last_modified: f64,
 }
 
@@ -38,14 +38,14 @@ impl FileDevice {
         file: &models::File,
         device: &models::Device,
         is_unlocked: bool,
-        is_encrypted: bool,
+        is_locked: bool,
         last_modified: f64,
     ) -> Self {
         FileDevice {
             file_id: file.id.expect("missing file_id"),
             device_id: device.id.expect("missing device_id"),
             is_unlocked,
-            is_encrypted,
+            is_locked,
             last_modified,
         }
     }
@@ -97,7 +97,7 @@ impl Insert for FileDevice {
                 ":file_id": self.file_id,
                 ":device_id": self.device_id,
                 ":is_unlocked": self.is_unlocked,
-                ":is_encrypted": self.is_encrypted,
+                ":is_locked": self.is_locked,
                 ":last_modified": self.last_modified
             },
             |row| FileDevice::try_from_row(row),
@@ -115,7 +115,7 @@ impl Update for FileDevice {
             include_str!("sql/file_device/update.sql"),
             named_params! {
                 ":is_unlocked": self.is_unlocked,
-                ":is_encrypted": self.is_encrypted,
+                ":is_locked": self.is_locked,
                 ":last_modified": self.last_modified,
                 ":file_id": self.file_id,
                 ":device_id": self.device_id
