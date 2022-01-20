@@ -196,7 +196,7 @@ mod tests {
 
         // Prepare
         let tmp = Tmp::new();
-        let created_files = tmp.random_fill(FILES_COUNT, 16);
+        let created_files = tmp.random_fill(FILES_COUNT, || 16);
 
         let mut database = database::create_in_memory().unwrap();
         let current_device = models::Device::find_or_create_current(&database).unwrap();
@@ -232,7 +232,7 @@ mod tests {
         assert_eq!(processed_files.len(), 0);
 
         // Create a new file and make sure that it gets detected
-        let new_file = tmp.random_fill(1, 128).first().unwrap().to_owned();
+        let new_file = tmp.random_fill(1, || 128).first().unwrap().to_owned();
         let new_file_relative = tmp.to_relative(&new_file);
 
         let processed_files =

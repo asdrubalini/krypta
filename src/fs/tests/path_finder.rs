@@ -8,7 +8,7 @@ fn test_path_finder() {
             println!("files_count: {} files_len: {}", files_count, files_len);
 
             let tmp = Tmp::new();
-            tmp.random_fill(files_count, files_len);
+            tmp.random_fill(files_count, || files_len);
 
             let path_finder = PathFinder::from_source_path(tmp.path()).unwrap();
 

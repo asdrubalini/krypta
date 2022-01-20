@@ -1,4 +1,7 @@
-use std::{env, fs::remove_file, process::Command};
+use std::{env, fs::remove_file, mem::forget, process::Command};
+
+use rand::{thread_rng, Rng};
+use tmp::{RandomFill, Tmp};
 
 fn main() {
     let mut args = env::args();
@@ -6,6 +9,7 @@ fn main() {
 
     match args.next().unwrap().as_str() {
         "test-full" => test_full(),
+        "populate-unlocked" => populate_unlocked(),
         _ => panic!("xtask: invalid argument"),
     };
 }
@@ -42,4 +46,18 @@ fn test_full() {
     .into_iter()
     .map(exec)
     .count();
+}
+
+fn populate_unlocked() {
+    let tmp = Tmp::with_path("/krypta/unlocked/");
+
+    tmp.random_fill(50_000, || {
+        if thread_rng().gen_bool(0.6) {
+            thread_rng().gen_range(10..8192)
+        } else {
+            thread_rng().gen_range(50_000..100_000)
+        }
+    });
+
+    forget(tmp);
 }

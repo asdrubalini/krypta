@@ -53,8 +53,24 @@ impl Tmp {
         Self { path: random_tmp }
     }
 
+    pub fn with_path(path: impl AsRef<Path>) -> Self {
+        let path = path.as_ref().to_path_buf();
+
+        if PathBuf::from(&path).exists() {
+            panic!("Random tmp path already exists: {:?}", path);
+        }
+
+        create_dir(&path).unwrap();
+
+        Self { path }
+    }
+
     pub fn path(&self) -> PathBuf {
         self.path.clone()
+    }
+
+    pub fn create_path(&self) {
+        todo!()
     }
 
     pub fn to_relative(&self, absolute_path: impl AsRef<Path>) -> PathBuf {
@@ -81,11 +97,11 @@ impl Drop for Tmp {
 
 pub trait RandomFill {
     /// Random fill with files
-    fn random_fill(&self, count: usize, fill_length: usize) -> Vec<PathBuf>;
+    fn random_fill(&self, count: usize, fill_length: impl Fn() -> usize) -> Vec<PathBuf>;
 }
 
 impl RandomFill for Tmp {
-    fn random_fill(&self, count: usize, fill_length: usize) -> Vec<PathBuf> {
+    fn random_fill(&self, count: usize, fill_length: impl Fn() -> usize) -> Vec<PathBuf> {
         let mut current_base = self.path();
         let mut paths = vec![];
         let mut rng = rand::thread_rng();
@@ -96,7 +112,7 @@ impl RandomFill for Tmp {
 
             let mut file =
                 File::create(&path).unwrap_or_else(|_| panic!("Cannot create {:?}", path));
-            let random_bytes: Vec<u8> = (0..fill_length).map(|_| rand::random::<u8>()).collect();
+            let random_bytes: Vec<u8> = (0..fill_length()).map(|_| rand::random::<u8>()).collect();
 
             file.write_all(&random_bytes).unwrap();
             file.flush().unwrap();
