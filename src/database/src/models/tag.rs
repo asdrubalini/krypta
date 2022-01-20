@@ -1,8 +1,7 @@
-use database_macros::TableName;
+use database_macros::{TableName, TryFromRow};
 
-use crate::traits::TableName;
-
-#[derive(TableName, Debug)]
+#[derive(TableName, TryFromRow)]
 pub struct Tag {
+    pub id: i32,
     pub name: String,
 }

@@ -72,9 +72,10 @@ fn encryption_status_into_file_device(
     unlocked_path: &Path,
 ) -> anyhow::Result<Vec<models::FileDevice>> {
     // Filter out only file paths that were encrypted successfully
-    let successfully_encrypted_paths = encryption_status
-        .into_iter()
-        .filter_map(|(path, is_ok)| if is_ok { Some(path) } else { None });
+    let successfully_encrypted_paths =
+        encryption_status
+            .into_iter()
+            .filter_map(|(path, is_ok)| if is_ok { Some(path) } else { None });
 
     // Turn paths into relative
     let unlocked_path_len = unlocked_path.iter().count();
