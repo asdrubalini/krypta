@@ -50,7 +50,15 @@ pub trait InsertMany: Sized + Insert {
             inserted_items.len()
         );
 
-        Ok(inserted_items)
+        let callback_result = InsertMany::insert_many_hook(db, inserted_items)?;
+        Ok(callback_result)
+    }
+
+    /// Custom hook for doing something else after inserting
+    #[inline]
+    fn insert_many_hook(_db: &mut Database, insertables: Vec<Self>) -> DatabaseResult<Vec<Self>> {
+        // Do nothing by default
+        Ok(insertables)
     }
 }
 
@@ -103,7 +111,15 @@ pub trait UpdateMany: Sized + Update {
             updated_items.len()
         );
 
-        Ok(updated_items)
+        let callback_result = UpdateMany::update_many_hook(db, updated_items)?;
+        Ok(callback_result)
+    }
+
+    /// Custom hook for doing something else after updating
+    #[inline]
+    fn update_many_hook(_db: &mut Database, updatables: Vec<Self>) -> DatabaseResult<Vec<Self>> {
+        // Do nothing by default
+        Ok(updatables)
     }
 }
 

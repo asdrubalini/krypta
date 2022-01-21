@@ -17,7 +17,7 @@ use crate::{errors::DatabaseResult, Database};
 
 use crate::traits::{Count, FetchAll, Insert, InsertMany, Search, TryFromRow, Update, UpdateMany};
 
-use super::Device;
+use super::{Device, FileSearch};
 
 #[derive(TableName, TryFromRow, Debug, Clone, PartialEq, Eq)]
 pub struct File {
