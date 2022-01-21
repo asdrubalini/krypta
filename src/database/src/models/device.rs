@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::Read;
 
-use database_macros::TryFromRow;
+use database_macros::{Insert, TableName, TryFromRow};
 use rusqlite::named_params;
 
 use crate::{
@@ -10,7 +10,7 @@ use crate::{
     Database,
 };
 
-#[derive(TryFromRow, Debug, Clone)]
+#[derive(TableName, TryFromRow, Insert, Debug, Clone)]
 pub struct Device {
     /// Database internal id
     pub id: Option<i64>,
@@ -83,18 +83,6 @@ impl Search for Device {
         }
 
         Ok(devices)
-    }
-}
-
-impl Insert for Device {
-    fn insert(self, db: &Database) -> DatabaseResult<Device> {
-        let device = db.query_row(
-            include_str!("sql/device/insert.sql"),
-            named_params! { ":platform_id": self.platform_id, ":name": self.name },
-            |row| Device::try_from_row(row),
-        )?;
-
-        Ok(device)
     }
 }
 

@@ -9,17 +9,17 @@ use crypto::crypt::{
     generate_random_secure_key_nonce_pair, FileEncryptUnit, AEAD_KEY_SIZE, AEAD_NONCE_SIZE,
 };
 use crypto::errors::CryptoError;
-use database_macros::{TableName, TryFromRow};
+use database_macros::{Insert, TableName, TryFromRow};
 use rand::Rng;
 use rusqlite::named_params;
 
 use crate::{errors::DatabaseResult, Database};
 
-use crate::traits::{Count, FetchAll, Insert, InsertMany, Search, TryFromRow, Update, UpdateMany};
+use crate::traits::{Count, FetchAll, InsertMany, Search, TryFromRow, Update, UpdateMany};
 
 use super::Device;
 
-#[derive(TableName, TryFromRow, Debug, Clone, PartialEq, Eq)]
+#[derive(TableName, TryFromRow, Insert, Debug, Clone, PartialEq, Eq)]
 pub struct File {
     pub id: Option<i64>,
     pub title: String,
@@ -51,29 +51,6 @@ impl Search for File {
         }
 
         Ok(files)
-    }
-}
-
-impl Insert for File {
-    /// Insert a new file into the database
-    fn insert(self, db: &Database) -> DatabaseResult<Self> {
-        let file = db.query_row(
-            include_str!("sql/file/insert.sql"),
-            named_params! {
-                ":title": self.title,
-                ":path": self.path,
-                ":random_hash": self.random_hash,
-                ":contents_hash": self.contents_hash,
-                ":size": self.size,
-                ":created_at": self.created_at,
-                ":updated_at": self.updated_at,
-                ":key": self.key,
-                ":nonce": self.nonce
-            },
-            |row| File::try_from_row(row),
-        )?;
-
-        Ok(file)
     }
 }
 

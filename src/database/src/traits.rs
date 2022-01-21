@@ -19,7 +19,7 @@ pub trait Search: Sized {
 }
 
 /// A model that can be inserted
-pub trait Insert: Sized {
+pub trait Insert: Sized + TableName + TryFromRow {
     fn insert(self, db: &Database) -> DatabaseResult<Self>;
 }
 

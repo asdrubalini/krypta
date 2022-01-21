@@ -2,13 +2,13 @@ use std::fs::Metadata;
 use std::path::Path;
 use std::time::UNIX_EPOCH;
 
-use database_macros::TryFromRow;
+use database_macros::{Insert, TableName, TryFromRow};
 use rusqlite::named_params;
 
 use crate::errors::DatabaseResult;
 use crate::{models, Database};
 
-use crate::traits::{Insert, InsertMany, TryFromRow, Update, UpdateMany};
+use crate::traits::{InsertMany, TryFromRow, Update, UpdateMany};
 
 use super::File;
 
@@ -23,7 +23,7 @@ pub fn metadata_to_last_modified(metadata: &Metadata) -> f64 {
         .as_secs_f64()
 }
 
-#[derive(TryFromRow, Clone, Debug)]
+#[derive(TableName, TryFromRow, Insert, Clone, Debug)]
 pub struct FileDevice {
     file_id: i64,
     device_id: i64,
@@ -86,24 +86,6 @@ impl FileDevice {
 
         tx.commit()?;
         Ok(items)
-    }
-}
-
-impl Insert for FileDevice {
-    fn insert(self, db: &Database) -> DatabaseResult<FileDevice> {
-        let device = db.query_row(
-            include_str!("sql/file_device/insert.sql"),
-            named_params! {
-                ":file_id": self.file_id,
-                ":device_id": self.device_id,
-                ":is_unlocked": self.is_unlocked,
-                ":is_locked": self.is_locked,
-                ":last_modified": self.last_modified
-            },
-            |row| FileDevice::try_from_row(row),
-        )?;
-
-        Ok(device)
     }
 }
 
