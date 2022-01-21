@@ -96,8 +96,8 @@ pub fn derive_insert(input: TokenStream) -> TokenStream {
     };
 
     // Remove trailing comma
-    query_args.pop();
-    query_values.pop();
+    assert_eq!(query_args.pop().unwrap(), ',');
+    assert_eq!(query_values.pop().unwrap(), ',');
 
     let output = quote! {
         impl crate::traits::Insert for #ident {
