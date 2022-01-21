@@ -5,8 +5,6 @@ use tmp::{RandomFill, Tmp};
 fn test_path_finder() {
     for files_count in 100..150 {
         for files_len in 10..15 {
-            println!("files_count: {} files_len: {}", files_count, files_len);
-
             let tmp = Tmp::new();
             tmp.random_fill(files_count, || files_len);
 
