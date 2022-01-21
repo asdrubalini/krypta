@@ -25,7 +25,11 @@ pub trait Insert: Sized {
 
 /// A model that can be mass-inserted
 pub trait InsertMany: Sized + Insert {
-    fn insert_many(db: &mut Database, insertables: Vec<Self>) -> DatabaseResult<Vec<Self>> {
+    fn insert_many(
+        db: &mut Database,
+        insertables: impl IntoIterator<Item = Self>,
+    ) -> DatabaseResult<Vec<Self>> {
+        let insertables: Vec<Self> = insertables.into_iter().collect();
         let tx = db.transaction()?;
         let mut inserted_items = vec![];
 
@@ -56,9 +60,12 @@ pub trait InsertMany: Sized + Insert {
 
     /// Custom hook for doing something else after inserting
     #[inline]
-    fn insert_many_hook(_db: &mut Database, insertables: Vec<Self>) -> DatabaseResult<Vec<Self>> {
+    fn insert_many_hook(
+        _db: &mut Database,
+        insertables: impl IntoIterator<Item = Self>,
+    ) -> DatabaseResult<Vec<Self>> {
         // Do nothing by default
-        Ok(insertables)
+        Ok(insertables.into_iter().collect())
     }
 }
 
@@ -86,7 +93,11 @@ pub trait Update: Sized {
 
 /// A model that can be mass-updated
 pub trait UpdateMany: Sized + Update {
-    fn update_many(db: &mut Database, updatables: Vec<Self>) -> DatabaseResult<Vec<Self>> {
+    fn update_many(
+        db: &mut Database,
+        updatables: impl IntoIterator<Item = Self>,
+    ) -> DatabaseResult<Vec<Self>> {
+        let updatables: Vec<Self> = updatables.into_iter().collect();
         let tx = db.transaction()?;
         let mut updated_items = vec![];
 
@@ -117,9 +128,12 @@ pub trait UpdateMany: Sized + Update {
 
     /// Custom hook for doing something else after updating
     #[inline]
-    fn update_many_hook(_db: &mut Database, updatables: Vec<Self>) -> DatabaseResult<Vec<Self>> {
+    fn update_many_hook(
+        _db: &mut Database,
+        updatables: impl IntoIterator<Item = Self>,
+    ) -> DatabaseResult<Vec<Self>> {
         // Do nothing by default
-        Ok(updatables)
+        Ok(updatables.into_iter().collect())
     }
 }
 
