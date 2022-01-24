@@ -30,6 +30,7 @@ impl Default for Tmp {
 
 impl Tmp {
     /// Generate a random path in the form of "/tmp/<random chars>/"
+    #[cfg(target_os = "linux")]
     fn generate_random_tmp(folder_length: usize) -> PathBuf {
         let mut random_name = "krypta_".to_string();
         random_name.push_str(&random_string(folder_length));
