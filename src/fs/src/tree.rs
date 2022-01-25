@@ -1,17 +1,16 @@
-use std::{collections::HashMap, ffi::OsString, path::PathBuf};
+use std::{
+    collections::HashMap,
+    ffi::OsString,
+    path::{Path, PathBuf},
+};
 
-// TODO: consider swithing to OsString
-
+/// Where the actual paths are stored
 #[derive(Debug)]
-pub struct PathTree {
-    paths: PathKind,
-}
+pub struct PathTree(PathKind);
 
 impl Default for PathTree {
     fn default() -> Self {
-        Self {
-            paths: PathKind::root(),
-        }
+        Self(PathKind::root())
     }
 }
 
@@ -20,7 +19,7 @@ impl FromIterator<PathBuf> for PathTree {
         let mut tree = PathTree::default();
 
         for file_path in iter {
-            tree.add_file(file_path);
+            tree.insert_file_path(file_path);
         }
 
         tree
@@ -28,16 +27,16 @@ impl FromIterator<PathBuf> for PathTree {
 }
 
 impl PathTree {
-    pub fn add_file(&mut self, file_path: PathBuf) {
-        let mut current_path = match &mut self.paths {
+    pub fn insert_file_path(&mut self, file_path: impl AsRef<Path>) {
+        let mut current_path = match &mut self.0 {
             PathKind::Directory { contents: content } => content,
             PathKind::File => panic!(
                 "unexpected error: root is of type PathKind::File instead of PathKind::Directory"
             ),
         };
-        let path_len = file_path.iter().count();
+        let path_len = file_path.as_ref().iter().count();
 
-        for (i, piece) in file_path.iter().enumerate() {
+        for (i, piece) in file_path.as_ref().iter().enumerate() {
             let piece = piece.to_owned();
 
             if current_path.get(&piece).is_some() {
@@ -83,6 +82,7 @@ impl Iterator for PathTree {
     }
 }
 
+/// The kind of a path inside the tree
 #[derive(Debug)]
 enum PathKind {
     Directory {
@@ -92,6 +92,7 @@ enum PathKind {
 }
 
 impl PathKind {
+    /// The first `PathKind` which contains the tree and everything
     fn root() -> Self {
         PathKind::Directory {
             contents: HashMap::default(),
