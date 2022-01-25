@@ -195,7 +195,7 @@ impl File {
     }
 
     pub fn archive_size(db: &Database) -> DatabaseResult<u64> {
-        let size = db.query_row(include_str!("sql/file/size.sql"), [], |row| row.get(0))?;
+        let size = db.query_row(include_str!("sql/file/size.sql"), [], |row| row.get("size"))?;
         Ok(size)
     }
 
@@ -206,7 +206,7 @@ impl File {
             named_params! {
                 ":platform_id": device.platform_id
             },
-            |row| row.get(0),
+            |row| row.get("count"),
         )?;
 
         Ok(count)
@@ -219,7 +219,7 @@ impl File {
             named_params! {
                 ":platform_id": device.platform_id
             },
-            |row| row.get(0),
+            |row| row.get("count"),
         )?;
 
         Ok(count)

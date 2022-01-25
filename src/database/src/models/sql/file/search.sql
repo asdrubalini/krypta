@@ -1,3 +1,3 @@
 SELECT *
-FROM `file`
-WHERE `file`.`title` LIKE :query
+FROM file
+WHERE title LIKE :query;
