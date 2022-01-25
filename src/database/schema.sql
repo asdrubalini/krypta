@@ -27,8 +27,6 @@ CREATE TABLE IF NOT EXISTS `file` (
 	PRIMARY KEY(`id` AUTOINCREMENT)
 ) STRICT;
 
--- CREATE VIRTUAL TABLE `file_search` USING fts5(`path`);
-
 CREATE UNIQUE INDEX IF NOT EXISTS `file_title` ON `file` (`title` ASC);
 CREATE UNIQUE INDEX IF NOT EXISTS `file_random_hash` ON `file` (`random_hash`);
 CREATE UNIQUE INDEX IF NOT EXISTS `file_time` ON `file` (`created_at`, `updated_at`);
