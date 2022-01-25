@@ -6,4 +6,7 @@
 mod path_finder;
 pub use path_finder::PathFinder;
 
+mod tree;
+pub use tree::PathTree;
+
 pub mod errors;
