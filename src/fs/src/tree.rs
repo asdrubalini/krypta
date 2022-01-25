@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 
 // TODO: consider swithing to OsString
 
@@ -38,21 +38,19 @@ impl PathTree {
         let path_len = file_path.iter().count();
 
         for (i, piece) in file_path.iter().enumerate() {
-            let piece = piece.to_string_lossy().to_string();
+            let piece = piece.to_owned();
 
             if current_path.get(&piece).is_some() {
                 // path already exists, just traverse
                 current_path = match current_path.get_mut(&piece).unwrap() {
                     PathKind::Directory { contents: content } => content,
                     PathKind::File => panic!(
-                        "unexpected error: {piece} is of type PathKind::File instead of PathKind::Directory"
+                        "unexpected error: {piece:?} is of type PathKind::File instead of PathKind::Directory"
                     ),
                 };
 
                 continue;
             }
-
-            // println!("inserting {piece}");
 
             if i + 1 == path_len {
                 // Current piece is a file
@@ -69,7 +67,7 @@ impl PathTree {
                 current_path = match current_path.get_mut(&piece).unwrap() {
                     PathKind::Directory { contents: content } => content,
                     PathKind::File => panic!(
-                        "unexpected error: {piece} is of type PathKind::File instead of PathKind::Directory"
+                        "unexpected error: {piece:?} is of type PathKind::File instead of PathKind::Directory"
                     ),
                 };
             }
@@ -87,7 +85,9 @@ impl Iterator for PathTree {
 
 #[derive(Debug)]
 enum PathKind {
-    Directory { contents: HashMap<String, PathKind> },
+    Directory {
+        contents: HashMap<OsString, PathKind>,
+    },
     File,
 }
 
