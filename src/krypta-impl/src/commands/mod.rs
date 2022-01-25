@@ -6,5 +6,6 @@ mod encrypt;
 mod force_sync;
 mod status;
 mod sync;
+mod tree;
 
 pub use execute::execute_command;

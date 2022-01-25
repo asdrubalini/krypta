@@ -48,5 +48,8 @@ pub enum CliCommand {
         query: String,
     },
 
+    /// Display files tree
+    Tree,
+
     Debug,
 }
