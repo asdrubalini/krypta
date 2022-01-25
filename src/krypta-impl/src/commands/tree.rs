@@ -4,9 +4,29 @@ use database::{models, traits::FetchAll, Database};
 
 // TODO: consider swithing to OsString
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 struct PathTree {
     paths: PathKind,
+}
+
+impl Default for PathTree {
+    fn default() -> Self {
+        Self {
+            paths: PathKind::root(),
+        }
+    }
+}
+
+impl FromIterator<PathBuf> for PathTree {
+    fn from_iter<T: IntoIterator<Item = PathBuf>>(iter: T) -> Self {
+        let mut tree = PathTree::default();
+
+        for file_path in iter {
+            tree.add_file(file_path);
+        }
+
+        tree
+    }
 }
 
 impl PathTree {
@@ -21,9 +41,16 @@ impl PathTree {
             let piece = piece.to_string_lossy().to_string();
 
             if current_path.get(&piece).is_some() {
-                // Already exists
+                // path already exists, just traverse
+                current_path = match current_path.get_mut(&piece).unwrap() {
+                    PathKind::Directory { contents: content } => content,
+                    PathKind::File => panic!("ciao"),
+                };
+
                 continue;
             }
+
+            // println!("inserting {piece}");
 
             if i + 1 == path_len {
                 // Current piece is a file
@@ -60,8 +87,8 @@ enum PathKind {
     File,
 }
 
-impl Default for PathKind {
-    fn default() -> Self {
+impl PathKind {
+    fn root() -> Self {
         PathKind::Directory {
             contents: HashMap::default(),
         }
@@ -69,15 +96,10 @@ impl Default for PathKind {
 }
 
 pub async fn tree(db: &mut Database) -> anyhow::Result<()> {
-    let files = models::File::fetch_all(db)?
+    let tree: PathTree = models::File::fetch_all(db)?
         .into_iter()
-        .map(|file| file.as_path_buf());
-
-    let mut tree = PathTree::default();
-
-    for file_path in files {
-        tree.add_file(file_path);
-    }
+        .map(|f| f.as_path_buf())
+        .collect();
 
     println!("{tree:#?}");
 
