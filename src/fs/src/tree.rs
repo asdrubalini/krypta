@@ -29,7 +29,7 @@ impl FromIterator<PathBuf> for PathTree {
 impl PathTree {
     pub fn insert_file_path(&mut self, file_path: impl AsRef<Path>) {
         let mut current_path = match &mut self.0 {
-            PathKind::Directory { contents: content } => content,
+            PathKind::Directory(contents) => contents,
             PathKind::File => panic!(
                 "unexpected error: root is of type PathKind::File instead of PathKind::Directory"
             ),
@@ -42,7 +42,7 @@ impl PathTree {
             if current_path.get(&piece).is_some() {
                 // path already exists, just traverse
                 current_path = match current_path.get_mut(&piece).unwrap() {
-                    PathKind::Directory { contents: content } => content,
+                    PathKind::Directory (contents) => contents,
                     PathKind::File => panic!(
                         "unexpected error: {piece:?} is of type PathKind::File instead of PathKind::Directory"
                     ),
@@ -56,15 +56,10 @@ impl PathTree {
                 current_path.insert(piece.to_owned(), PathKind::File);
             } else {
                 // Current piece is a directory
-                current_path.insert(
-                    piece.to_owned(),
-                    PathKind::Directory {
-                        contents: HashMap::default(),
-                    },
-                );
+                current_path.insert(piece.to_owned(), PathKind::Directory(HashMap::default()));
 
                 current_path = match current_path.get_mut(&piece).unwrap() {
-                    PathKind::Directory { contents } => contents,
+                    PathKind::Directory (contents ) => contents,
                     PathKind::File => panic!(
                         "unexpected error: {piece:?} is of type PathKind::File instead of PathKind::Directory"
                     ),
@@ -74,12 +69,12 @@ impl PathTree {
     }
 
     pub fn ordered(self) -> OrderedTree {
-        OrderedTree { tree: self }
+        OrderedTree { _tree: self }
     }
 }
 
 pub struct OrderedTree {
-    tree: PathTree,
+    _tree: PathTree,
 }
 
 impl Iterator for OrderedTree {
@@ -91,19 +86,122 @@ impl Iterator for OrderedTree {
 }
 
 /// The kind of a path inside the tree
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 enum PathKind {
-    Directory {
-        contents: HashMap<OsString, PathKind>,
-    },
+    Directory(HashMap<OsString, PathKind>),
     File,
 }
 
 impl PathKind {
     /// The first `PathKind` which contains the tree and everything
     fn root() -> Self {
-        PathKind::Directory {
-            contents: HashMap::default(),
-        }
+        PathKind::Directory(HashMap::default())
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{collections::HashMap, ffi::OsString, path::PathBuf};
+
+    use crate::{tree::PathKind, PathTree};
+
+    macro_rules! f {
+        ($name:tt) => {
+            (OsString::from($name), PathKind::File)
+        };
+    }
+
+    macro_rules! d {
+        ($name:tt, $inner:tt) => {
+            (OsString::from($name), PathKind::Directory($inner))
+        };
+    }
+
+    macro_rules! hm {
+        ($inner:tt) => {
+            HashMap::from($inner)
+        };
+    }
+
+    #[test]
+    fn test_path_tree_single_in_root() {
+        let files = ["hehe.txt"];
+        let tree: PathTree = files.iter().map(PathBuf::from).collect();
+
+        let expected = PathKind::Directory(HashMap::from([f!("hehe.txt")]));
+
+        assert_eq!(tree.0, expected);
+    }
+
+    #[test]
+    fn test_path_tree_many_in_root() {
+        let files = [
+            "hehe.txt",
+            "ciaociao.txt",
+            "rusty-dick.dat",
+            "no-extension-lol",
+        ];
+        let tree: PathTree = files.iter().map(PathBuf::from).collect();
+
+        let expected =
+            PathKind::Directory(files.iter().map(|path| f!(path)).collect::<HashMap<_, _>>());
+
+        assert_eq!(tree.0, expected);
+    }
+
+    // #[test]
+    // fn test_path_tree_single_nested() {
+    // let files = ["some/path/lol/midget-porn.mp4"];
+    // let tree: PathTree = files.iter().map(PathBuf::from).collect();
+
+    // let expected = dir!(hm!((
+    // path!("some"),
+    // dir!(hm!((
+    // path!("path"),
+    // dir!(hm!((
+    // path!("lol"),
+    // dir!(hm!((path!("midget-porn.mp4"), file!()),)),
+    // )),),
+    // ))),
+    // )));
+
+    // assert_eq!(tree.0, expected);
+    // }
+
+    // #[test]
+    // fn test_path_tree_many_nested() {
+    // let files = ["some/path/lol/midget-porn.mp4", "some/path/lol.dat"];
+    // let tree: PathTree = files.iter().map(PathBuf::from).collect();
+
+    // let expected = dir!(hm!((
+    // path!("some"),
+    // dir!(hm!((
+    // path!("path"),
+    // dir!(hm!(
+    // (path!("lol"), dir!(hm!((path!("midget-porn.mp4"), file!())))),
+    // (path!("lol.dat"), file!())
+    // )),
+    // ))),
+    // )));
+
+    // assert_eq!(tree.0, expected);
+    // }
+    // }
+    // #[test]
+    // fn test_path_tree_many_nested() {
+    // let files = ["some/path/lol/midget-porn.mp4", "some/path/lol.dat"];
+    // let tree: PathTree = files.iter().map(PathBuf::from).collect();
+
+    // let expected = dir!(hm!((
+    // path!("some"),
+    // dir!(hm!((
+    // path!("path"),
+    // dir!(hm!(
+    // (path!("lol"), dir!(hm!((path!("midget-porn.mp4"), file!())))),
+    // (path!("lol.dat"), file!())
+    // )),
+    // ))),
+    // )));
+
+    // assert_eq!(tree.0, expected);
 }
