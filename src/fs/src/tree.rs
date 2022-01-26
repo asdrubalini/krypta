@@ -53,18 +53,18 @@ impl PathTree {
 
             if i + 1 == path_len {
                 // Current piece is a file
-                current_path.insert(piece.clone(), PathKind::File);
+                current_path.insert(piece.to_owned(), PathKind::File);
             } else {
                 // Current piece is a directory
                 current_path.insert(
-                    piece.clone(),
+                    piece.to_owned(),
                     PathKind::Directory {
                         contents: HashMap::default(),
                     },
                 );
 
                 current_path = match current_path.get_mut(&piece).unwrap() {
-                    PathKind::Directory { contents: content } => content,
+                    PathKind::Directory { contents } => contents,
                     PathKind::File => panic!(
                         "unexpected error: {piece:?} is of type PathKind::File instead of PathKind::Directory"
                     ),
@@ -72,9 +72,17 @@ impl PathTree {
             }
         }
     }
+
+    pub fn ordered(self) -> OrderedTree {
+        OrderedTree { tree: self }
+    }
 }
 
-impl Iterator for PathTree {
+pub struct OrderedTree {
+    tree: PathTree,
+}
+
+impl Iterator for OrderedTree {
     type Item = PathBuf;
 
     fn next(&mut self) -> Option<Self::Item> {

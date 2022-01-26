@@ -9,6 +9,6 @@ pub use path_finder::PathFinder;
 /// The `PathTree` module is able to load a series of nested file paths and store them as a tree of
 /// paths
 mod tree;
-pub use tree::PathTree;
+pub use tree::{OrderedTree, PathTree};
 
 pub mod errors;
