@@ -105,21 +105,31 @@ mod tests {
 
     use crate::{tree::PathKind, PathTree};
 
+    /// Create a file with name
     macro_rules! f {
         ($name:tt) => {
             (OsString::from($name), PathKind::File)
         };
     }
 
+    /// Build an hashmap
     macro_rules! hm {
         ($($inner:tt)*) => {
             HashMap::from([$($inner)*])
         };
     }
 
+    /// Create a dir with content
     macro_rules! d {
         ($name:tt, $($inner:tt)*) => {
             (OsString::from($name), PathKind::Directory(hm!($($inner)*)))
+        };
+    }
+
+    /// Create the root structure
+    macro_rules! root {
+        ($($inner:tt)*) => {
+            PathKind::Directory(hm![$($inner)*])
         };
     }
 
@@ -154,10 +164,7 @@ mod tests {
         let files = ["some/path/lol/midget-porn.mp4"];
         let tree: PathTree = files.iter().map(PathBuf::from).collect();
 
-        let expected = PathKind::Directory(hm![d!(
-            "some",
-            d!("path", d!("lol", f!("midget-porn.mp4")))
-        )]);
+        let expected = root!(d!("some", d!("path", d!("lol", f!("midget-porn.mp4")))));
 
         assert_eq!(tree.0, expected);
     }
@@ -167,10 +174,10 @@ mod tests {
         let files = ["some/path/lol/midget-porn.mp4", "some/path/lol.dat"];
         let tree: PathTree = files.iter().map(PathBuf::from).collect();
 
-        let expected = PathKind::Directory(hm!(d!(
+        let expected = root!(d!(
             "some",
             d!("path", d!("lol", f!("midget-porn.mp4")), f!("lol.dat"))
-        )));
+        ));
 
         assert_eq!(tree.0, expected);
     }
