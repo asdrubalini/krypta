@@ -4,6 +4,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use itertools::Itertools;
+
 /// Where the actual paths are stored
 #[derive(Debug)]
 pub struct PathTree(PathKind);
@@ -69,19 +71,39 @@ impl PathTree {
     }
 
     pub fn ordered(self) -> OrderedTree {
-        OrderedTree { _tree: self }
+        let mut paths = vec![];
+        traverse_paths_ordered(&self.0, vec![], &mut paths);
+        OrderedTree { paths }
+    }
+}
+
+/// Fully traverse a PathKind building a Vec<PathBuf>
+fn traverse_paths_ordered(item: &PathKind, current_path: Vec<OsString>, output: &mut Vec<PathBuf>) {
+    match item {
+        PathKind::Directory(items) => {
+            for (name, kind) in items.iter().sorted_by_key(|k| k.0) {
+                let mut current_path = current_path.clone();
+                current_path.push(name.to_owned());
+                traverse_paths_ordered(kind, current_path, output);
+            }
+        }
+
+        PathKind::File => {
+            let full_path: PathBuf = current_path.into_iter().collect();
+            output.push(full_path);
+        }
     }
 }
 
 pub struct OrderedTree {
-    _tree: PathTree,
+    paths: Vec<PathBuf>,
 }
 
 impl Iterator for OrderedTree {
     type Item = PathBuf;
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        self.paths.pop()
     }
 }
 
