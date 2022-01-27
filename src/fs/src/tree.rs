@@ -111,15 +111,15 @@ mod tests {
         };
     }
 
-    macro_rules! d {
-        ($name:tt, $inner:tt) => {
-            (OsString::from($name), PathKind::Directory($inner))
+    macro_rules! hm {
+        ($($inner:tt)*) => {
+            HashMap::from([$($inner)*])
         };
     }
 
-    macro_rules! hm {
-        ($inner:tt) => {
-            HashMap::from($inner)
+    macro_rules! d {
+        ($name:tt, $($inner:tt)*) => {
+            (OsString::from($name), PathKind::Directory(hm!($($inner)*)))
         };
     }
 
@@ -128,7 +128,7 @@ mod tests {
         let files = ["hehe.txt"];
         let tree: PathTree = files.iter().map(PathBuf::from).collect();
 
-        let expected = PathKind::Directory(HashMap::from([f!("hehe.txt")]));
+        let expected = PathKind::Directory(hm![f!("hehe.txt")]);
 
         assert_eq!(tree.0, expected);
     }
@@ -149,59 +149,29 @@ mod tests {
         assert_eq!(tree.0, expected);
     }
 
-    // #[test]
-    // fn test_path_tree_single_nested() {
-    // let files = ["some/path/lol/midget-porn.mp4"];
-    // let tree: PathTree = files.iter().map(PathBuf::from).collect();
+    #[test]
+    fn test_path_tree_single_nested() {
+        let files = ["some/path/lol/midget-porn.mp4"];
+        let tree: PathTree = files.iter().map(PathBuf::from).collect();
 
-    // let expected = dir!(hm!((
-    // path!("some"),
-    // dir!(hm!((
-    // path!("path"),
-    // dir!(hm!((
-    // path!("lol"),
-    // dir!(hm!((path!("midget-porn.mp4"), file!()),)),
-    // )),),
-    // ))),
-    // )));
+        let expected = PathKind::Directory(hm![d!(
+            "some",
+            d!("path", d!("lol", f!("midget-porn.mp4")))
+        )]);
 
-    // assert_eq!(tree.0, expected);
-    // }
+        assert_eq!(tree.0, expected);
+    }
 
-    // #[test]
-    // fn test_path_tree_many_nested() {
-    // let files = ["some/path/lol/midget-porn.mp4", "some/path/lol.dat"];
-    // let tree: PathTree = files.iter().map(PathBuf::from).collect();
+    #[test]
+    fn test_path_tree_many_nested() {
+        let files = ["some/path/lol/midget-porn.mp4", "some/path/lol.dat"];
+        let tree: PathTree = files.iter().map(PathBuf::from).collect();
 
-    // let expected = dir!(hm!((
-    // path!("some"),
-    // dir!(hm!((
-    // path!("path"),
-    // dir!(hm!(
-    // (path!("lol"), dir!(hm!((path!("midget-porn.mp4"), file!())))),
-    // (path!("lol.dat"), file!())
-    // )),
-    // ))),
-    // )));
+        let expected = PathKind::Directory(hm!(d!(
+            "some",
+            d!("path", d!("lol", f!("midget-porn.mp4")), f!("lol.dat"))
+        )));
 
-    // assert_eq!(tree.0, expected);
-    // }
-    // }
-    // #[test]
-    // fn test_path_tree_many_nested() {
-    // let files = ["some/path/lol/midget-porn.mp4", "some/path/lol.dat"];
-    // let tree: PathTree = files.iter().map(PathBuf::from).collect();
-
-    // let expected = dir!(hm!((
-    // path!("some"),
-    // dir!(hm!((
-    // path!("path"),
-    // dir!(hm!(
-    // (path!("lol"), dir!(hm!((path!("midget-porn.mp4"), file!())))),
-    // (path!("lol.dat"), file!())
-    // )),
-    // ))),
-    // )));
-
-    // assert_eq!(tree.0, expected);
+        assert_eq!(tree.0, expected);
+    }
 }
