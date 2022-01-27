@@ -138,7 +138,7 @@ mod tests {
         let files = ["hehe.txt"];
         let tree: PathTree = files.iter().map(PathBuf::from).collect();
 
-        let expected = PathKind::Directory(hm![f!("hehe.txt")]);
+        let expected = root!(f!("hehe.txt"));
 
         assert_eq!(tree.0, expected);
     }
@@ -178,6 +178,40 @@ mod tests {
             "some",
             d!("path", d!("lol", f!("midget-porn.mp4")), f!("lol.dat"))
         ));
+
+        assert_eq!(tree.0, expected);
+    }
+
+    #[test]
+    fn test_path_tree_many_misc() {
+        let files = [
+            "bdsm/hard-sex-orgasm.mp3",
+            "some/path/lol/midget-porn.mp4",
+            "some/path/lol.dat",
+            "some/links.txt",
+            "super/mega/ultra/nested/dir/x.dat",
+            "super/mega/ultra/nested/porn.mp4",
+        ];
+        let tree: PathTree = files.iter().map(PathBuf::from).collect();
+
+        let expected = root!(
+            d!("bdsm", f!("hard-sex-orgasm.mp3")),
+            d!(
+                "some",
+                d!("path", d!("lol", f!("midget-porn.mp4")), f!("lol.dat")),
+                f!("links.txt")
+            ),
+            d!(
+                "super",
+                d!(
+                    "mega",
+                    d!(
+                        "ultra",
+                        d!("nested", d!("dir", f!("x.dat")), f!("porn.mp4"))
+                    )
+                )
+            )
+        );
 
         assert_eq!(tree.0, expected);
     }
