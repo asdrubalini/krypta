@@ -5,7 +5,7 @@ use tmp::{RandomFill, Tmp};
 fn test_path_finder() {
     for files_count in 100..150 {
         for files_len in 10..15 {
-            let tmp = Tmp::new();
+            let tmp = Tmp::empty();
             tmp.random_fill(files_count, || files_len);
 
             let path_finder = PathFinder::from_source_path(tmp.path()).unwrap();

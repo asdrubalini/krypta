@@ -34,3 +34,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features
+
+      - name: Run integration tests
+        run: cargo xtask integration-tests

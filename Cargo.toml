@@ -11,7 +11,7 @@ members = [
     "src/fs",
     "src/tmp",
     "src/cli",
-    "src/database"
+    "src/database",
 ]
 
 [dependencies]

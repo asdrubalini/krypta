@@ -29,7 +29,7 @@ fn generate_file_with_content_and_blake3_hash(
 
 #[test]
 fn test_blake3_small_ascii_file() {
-    let tmp = Tmp::new();
+    let tmp = Tmp::empty();
 
     let mut plaintext_file = tmp.path();
     plaintext_file.push("small_file.txt");
@@ -63,7 +63,7 @@ fn generate_file_with_rng_and_blake3_hash(
 
 #[test]
 fn test_blake3_random_file() {
-    let tmp = Tmp::new();
+    let tmp = Tmp::empty();
 
     let mut generated_random_file = tmp.path();
     generated_random_file.push("big_file.txt");

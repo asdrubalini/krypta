@@ -6,6 +6,7 @@ use std::{
 };
 
 use rand::{distributions::Alphanumeric, Rng};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 const TMP_PATH_LENGTH: usize = 16;
 
@@ -24,7 +25,7 @@ pub struct Tmp {
 
 impl Default for Tmp {
     fn default() -> Self {
-        Self::new()
+        Self::empty()
     }
 }
 
@@ -42,7 +43,7 @@ impl Tmp {
         random_tmp
     }
 
-    pub fn new() -> Self {
+    pub fn empty() -> Self {
         let random_tmp = Self::generate_random_tmp(TMP_PATH_LENGTH);
 
         if PathBuf::from(&random_tmp).exists() {
@@ -68,10 +69,6 @@ impl Tmp {
 
     pub fn path(&self) -> PathBuf {
         self.path.clone()
-    }
-
-    pub fn create_path(&self) {
-        todo!()
     }
 
     pub fn to_relative(&self, absolute_path: impl AsRef<Path>) -> PathBuf {
@@ -104,35 +101,42 @@ pub trait RandomFill {
 impl RandomFill for Tmp {
     fn random_fill(&self, count: usize, fill_length: impl Fn() -> usize) -> Vec<PathBuf> {
         let mut current_base = self.path();
-        let mut paths = vec![];
         let mut rng = rand::thread_rng();
 
-        for _ in 0..count {
-            let mut path = PathBuf::from(&current_base);
-            path.push(random_string(TMP_PATH_LENGTH));
+        let paths: Vec<(PathBuf, usize)> = (0..count)
+            .into_iter()
+            .map(|_| {
+                let mut path = PathBuf::from(&current_base);
+                path.push(random_string(TMP_PATH_LENGTH));
 
-            let mut file =
-                File::create(&path).unwrap_or_else(|_| panic!("Cannot create {:?}", path));
-            let random_bytes: Vec<u8> = (0..fill_length()).map(|_| rand::random::<u8>()).collect();
+                let rand = rng.gen::<f32>();
 
-            file.write_all(&random_bytes).unwrap();
-            file.flush().unwrap();
+                if rand > 0.99 {
+                    current_base = self.path();
+                } else if rand > 0.98 {
+                    let mut base = current_base.clone();
+                    base.push(random_string(TMP_PATH_LENGTH));
+                    create_dir(&base).unwrap();
+                    current_base = base;
+                }
 
-            let rand = rng.gen::<f32>();
-
-            if rand > 0.99 {
-                current_base = self.path();
-            } else if rand > 0.98 {
-                let mut base = current_base.clone();
-                base.push(random_string(TMP_PATH_LENGTH));
-                create_dir(&base).unwrap();
-                current_base = base;
-            }
-
-            paths.push(path);
-        }
+                (path, fill_length())
+            })
+            .collect();
 
         paths
+            .par_iter()
+            .map(|(path, fill_len)| {
+                let mut file =
+                    File::create(path).unwrap_or_else(|_| panic!("Cannot create {:?}", path));
+                let random_bytes: Vec<u8> = (0..*fill_len).map(|_| rand::random::<u8>()).collect();
+
+                file.write_all(&random_bytes).unwrap();
+                file.flush().unwrap();
+            })
+            .count();
+
+        paths.into_iter().map(|f| f.0).collect()
     }
 }
 
@@ -154,7 +158,7 @@ mod tests {
     fn test_temp_path_folder_creation_and_destruction() {
         for _ in 0..256 {
             let path = {
-                let tmp = Tmp::new();
+                let tmp = Tmp::empty();
 
                 // Make sure that path gets created
                 assert!(tmp.path().exists());

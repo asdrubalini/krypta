@@ -11,7 +11,7 @@ mod common;
 
 #[test]
 fn test_blake3_same_file() {
-    let tmp = Tmp::new();
+    let tmp = Tmp::empty();
 
     let mut paths = vec![];
 
@@ -40,7 +40,7 @@ fn test_blake3_same_file() {
 
 #[test]
 fn test_blake3_random_files() {
-    let tmp = Tmp::new();
+    let tmp = Tmp::empty();
 
     let mut rng = SmallRng::seed_from_u64(0);
     let mut generated_paths = vec![];
