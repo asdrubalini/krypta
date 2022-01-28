@@ -59,7 +59,7 @@ fn encrypt_decrypt_with_key(
 
 #[test]
 fn small_file_seeded_key() {
-    let tmp = Tmp::new();
+    let tmp = Tmp::empty();
     let mut rng = SmallRng::seed_from_u64(0);
 
     let tests_file_size = [
@@ -81,7 +81,7 @@ fn small_file_seeded_key() {
 
 #[test]
 fn test_locked_file_is_different_than_unlocked() {
-    let tmp = Tmp::new();
+    let tmp = Tmp::empty();
 
     let mut blank_path = tmp.path();
     blank_path.push("blank.txt");

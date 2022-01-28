@@ -52,7 +52,7 @@ pub mod tests {
 
     #[test]
     fn test_connect_and_create() {
-        let tmp = Tmp::new();
+        let tmp = Tmp::empty();
 
         let mut database_file = tmp.path();
         database_file.push("database.db");

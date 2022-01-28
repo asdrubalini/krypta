@@ -195,7 +195,7 @@ mod tests {
         const FILES_COUNT: usize = 10_000;
 
         // Prepare
-        let tmp = Tmp::new();
+        let tmp = Tmp::empty();
         let created_files = tmp.random_fill(FILES_COUNT, || 16);
 
         let mut database = database::create_in_memory().unwrap();
