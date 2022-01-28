@@ -8,11 +8,11 @@ use itertools::Itertools;
 
 /// Where the actual paths are stored
 #[derive(Debug)]
-pub struct PathTree(PathKind);
+pub struct PathTree(PathType);
 
 impl Default for PathTree {
     fn default() -> Self {
-        Self(PathKind::root())
+        Self(PathType::root())
     }
 }
 
@@ -31,9 +31,9 @@ impl FromIterator<PathBuf> for PathTree {
 impl PathTree {
     pub fn insert_file_path(&mut self, file_path: impl AsRef<Path>) {
         let mut current_path = match &mut self.0 {
-            PathKind::Directory(contents) => contents,
-            PathKind::File => panic!(
-                "unexpected error: root is of type PathKind::File instead of PathKind::Directory"
+            PathType::Directory(contents) => contents,
+            PathType::File => panic!(
+                "unexpected error: root is of type PathType::File instead of PathType::Directory"
             ),
         };
         let path_len = file_path.as_ref().iter().count();
@@ -44,9 +44,9 @@ impl PathTree {
             if current_path.get(&piece).is_some() {
                 // path already exists, just traverse
                 current_path = match current_path.get_mut(&piece).unwrap() {
-                    PathKind::Directory (contents) => contents,
-                    PathKind::File => panic!(
-                        "unexpected error: {piece:?} is of type PathKind::File instead of PathKind::Directory"
+                    PathType::Directory (contents) => contents,
+                    PathType::File => panic!(
+                        "unexpected error: {piece:?} is of type PathType::File instead of PathType::Directory"
                     ),
                 };
 
@@ -55,15 +55,15 @@ impl PathTree {
 
             if i + 1 == path_len {
                 // Current piece is a file
-                current_path.insert(piece.to_owned(), PathKind::File);
+                current_path.insert(piece.to_owned(), PathType::File);
             } else {
                 // Current piece is a directory
-                current_path.insert(piece.to_owned(), PathKind::Directory(HashMap::default()));
+                current_path.insert(piece.to_owned(), PathType::Directory(HashMap::default()));
 
                 current_path = match current_path.get_mut(&piece).unwrap() {
-                    PathKind::Directory (contents ) => contents,
-                    PathKind::File => panic!(
-                        "unexpected error: {piece:?} is of type PathKind::File instead of PathKind::Directory"
+                    PathType::Directory (contents ) => contents,
+                    PathType::File => panic!(
+                        "unexpected error: {piece:?} is of type PathType::File instead of PathType::Directory"
                     ),
                 };
             }
@@ -95,10 +95,10 @@ impl PathTree {
     }
 }
 
-/// Fully traverse a PathKind building a Vec<PathBuf>
-fn traverse_paths_ordered(item: &PathKind, current_path: Vec<OsString>, output: &mut Vec<PathBuf>) {
+/// Fully traverse a PathType building a Vec<PathBuf>
+fn traverse_paths_ordered(item: &PathType, current_path: Vec<OsString>, output: &mut Vec<PathBuf>) {
     match item {
-        PathKind::Directory(items) => {
+        PathType::Directory(items) => {
             for (name, kind) in items.iter().sorted_by_key(|k| k.0) {
                 let mut current_path = current_path.clone();
                 current_path.push(name.to_owned());
@@ -106,36 +106,24 @@ fn traverse_paths_ordered(item: &PathKind, current_path: Vec<OsString>, output: 
             }
         }
 
-        PathKind::File => {
+        PathType::File => {
             let full_path: PathBuf = current_path.into_iter().collect();
             output.push(full_path);
         }
     }
 }
 
-pub struct OrderedTree {
-    paths: Vec<String>,
-}
-
-impl Iterator for OrderedTree {
-    type Item = String;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.paths.pop()
-    }
-}
-
 /// The kind of a path inside the tree
 #[derive(Debug, PartialEq, Eq)]
-enum PathKind {
-    Directory(HashMap<OsString, PathKind>),
+enum PathType {
+    Directory(HashMap<OsString, PathType>),
     File,
 }
 
-impl PathKind {
-    /// The first `PathKind` which contains the tree and everything
+impl PathType {
+    /// The first `PathType` which contains the tree and everything
     fn root() -> Self {
-        PathKind::Directory(HashMap::default())
+        PathType::Directory(HashMap::default())
     }
 }
 
@@ -143,12 +131,12 @@ impl PathKind {
 mod tests {
     use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 
-    use crate::{tree::PathKind, PathTree};
+    use crate::{tree::PathType, PathTree};
 
     /// Create a file with name
     macro_rules! f {
         ($name:tt) => {
-            (OsString::from($name), PathKind::File)
+            (OsString::from($name), PathType::File)
         };
     }
 
@@ -162,14 +150,14 @@ mod tests {
     /// Create a dir with content
     macro_rules! d {
         ($name:tt, $($inner:tt)*) => {
-            (OsString::from($name), PathKind::Directory(hm!($($inner)*)))
+            (OsString::from($name), PathType::Directory(hm!($($inner)*)))
         };
     }
 
     /// Create the root structure
     macro_rules! root {
         ($($inner:tt)*) => {
-            PathKind::Directory(hm![$($inner)*])
+            PathType::Directory(hm![$($inner)*])
         };
     }
 
@@ -194,7 +182,7 @@ mod tests {
         let tree: PathTree = files.iter().map(PathBuf::from).collect();
 
         let expected =
-            PathKind::Directory(files.iter().map(|path| f!(path)).collect::<HashMap<_, _>>());
+            PathType::Directory(files.iter().map(|path| f!(path)).collect::<HashMap<_, _>>());
 
         assert_eq!(tree.0, expected);
     }
