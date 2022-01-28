@@ -1,8 +1,7 @@
-mod execute;
-// mod init;
 mod config;
 mod debug;
 mod encrypt;
+mod execute;
 mod force_sync;
 mod status;
 mod sync;
