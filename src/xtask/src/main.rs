@@ -62,6 +62,14 @@ fn integration_tests() {
     .into_iter()
     .map(exec)
     .count();
+
+    let structure_path = Tmp::empty();
+
+    exec(format!(
+        "./target/release/krypta set-unlocked {}",
+        structure_path.path().to_string_lossy()
+    ));
+    exec("./target/release/krypta unlock-structure");
 }
 
 fn populate_unlocked() -> Tmp {
