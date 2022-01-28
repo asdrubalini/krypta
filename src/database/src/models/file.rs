@@ -83,6 +83,12 @@ impl Update for File {
 
 impl UpdateMany for File {}
 
+impl From<&File> for PathBuf {
+    fn from(file: &File) -> Self {
+        PathBuf::from(&file.path)
+    }
+}
+
 impl File {
     /// Build a new `InsertFile` and generate on the fly some stuff
     pub fn new(title: String, path: PathBuf, contents_hash: String, size: u64) -> Self {
@@ -123,11 +129,6 @@ impl File {
 
     fn update_updated_at(&mut self) {
         self.updated_at = Utc::now();
-    }
-
-    /// Get file as PathBuf
-    pub fn as_path_buf(&self) -> PathBuf {
-        PathBuf::from(&self.path)
     }
 
     pub fn find_known_paths_with_last_modified(

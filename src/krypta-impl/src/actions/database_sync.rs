@@ -49,7 +49,7 @@ pub async fn sync_database_from_unlocked_path(
         .iter()
         .map(|file| {
             // Should never fail
-            let metadata = paths_requiring_insertion.get(&file.as_path_buf()).unwrap();
+            let metadata = paths_requiring_insertion.get(&PathBuf::from(file)).unwrap();
             models::FileDevice::new(
                 file,
                 device,
@@ -73,7 +73,7 @@ pub async fn sync_database_from_unlocked_path(
         .into_iter()
         .map(|mut file| {
             // Should never fail
-            let hash = hashes.get(&file.as_path_buf()).unwrap();
+            let hash = hashes.get(&PathBuf::from(&file)).unwrap();
             file.contents_hash = hash.to_owned();
             file
         })
@@ -86,7 +86,7 @@ pub async fn sync_database_from_unlocked_path(
         .zip(updated_files.iter())
         .map(|(mut file_device, file)| {
             // Should never fail
-            let metadata = paths_requiring_update.get(&file.as_path_buf()).unwrap();
+            let metadata = paths_requiring_update.get(&PathBuf::from(file)).unwrap();
 
             // Convert into UpdateFileDevice and mutate last_modified
             file_device.last_modified = metadata_to_last_modified(metadata);
@@ -214,7 +214,7 @@ mod tests {
 
         let database_paths = database_files
             .into_iter()
-            .map(|file| file.as_path_buf())
+            .map(|file| PathBuf::from(&file))
             .collect::<HashSet<_>>(); // HashSet for faster lookups
 
         // Make sure that each created file exists in the database
@@ -242,7 +242,7 @@ mod tests {
 
         assert_eq!(processed_files.len(), 1);
         assert_eq!(
-            processed_files.first().unwrap().as_path_buf(),
+            PathBuf::from(processed_files.first().unwrap()),
             new_file_relative
         );
 
@@ -263,7 +263,7 @@ mod tests {
 
         assert_eq!(processed_files.len(), 1);
         assert_eq!(
-            processed_files.first().unwrap().as_path_buf(),
+            PathBuf::from(processed_files.first().unwrap()),
             rand_file_relative
         );
     }

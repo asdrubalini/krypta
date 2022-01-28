@@ -1,4 +1,4 @@
-use std::fs::create_dir_all;
+use std::{fs::create_dir_all, path::PathBuf};
 
 use database::{models, traits::FetchAll, Database};
 use fs::PathTree;
@@ -9,8 +9,8 @@ pub async fn unlock_structure(db: &mut Database) -> anyhow::Result<()> {
         .expect("Cannot find `unlocked_path` in config");
 
     let tree: PathTree = models::File::fetch_all(db)?
-        .into_iter()
-        .map(|f| f.as_path_buf())
+        .iter()
+        .map(PathBuf::from)
         .collect();
 
     let directories = tree.directory_structure();
