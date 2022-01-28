@@ -1,7 +1,7 @@
 use byte_unit::Byte;
 use database::{models, traits::Count, Database};
 
-pub async fn execute(db: &Database) -> anyhow::Result<()> {
+pub async fn status(db: &Database) -> anyhow::Result<()> {
     let device = models::Device::find_or_create_current(db)?;
 
     let archive_size_bytes = models::File::archive_size(db)?;
