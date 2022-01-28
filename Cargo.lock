@@ -486,6 +486,7 @@ dependencies = [
  "fs",
  "log",
  "pretty_env_logger",
+ "rand",
  "thiserror",
  "tmp",
  "tokio",

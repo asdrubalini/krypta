@@ -5,14 +5,13 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 const TMP_PATH_LENGTH: usize = 16;
 
-pub fn random_string(length: usize) -> String {
-    rand::thread_rng()
-        .sample_iter(&Alphanumeric)
+pub fn random_string(length: usize, rng: &mut impl Rng) -> String {
+    rng.sample_iter(&Alphanumeric)
         .take(length)
         .map(char::from)
         .collect::<String>()
@@ -32,9 +31,9 @@ impl Default for Tmp {
 impl Tmp {
     /// Generate a random path in the form of "/tmp/<random chars>/"
     #[cfg(target_os = "linux")]
-    fn generate_random_tmp(folder_length: usize) -> PathBuf {
+    fn generate_random_tmp(folder_length: usize, rng: &mut impl Rng) -> PathBuf {
         let mut random_name = "krypta_".to_string();
-        random_name.push_str(&random_string(folder_length));
+        random_name.push_str(&random_string(folder_length, rng));
 
         let mut random_tmp = PathBuf::new();
         random_tmp.push("/tmp/");
@@ -44,7 +43,11 @@ impl Tmp {
     }
 
     pub fn empty() -> Self {
-        let random_tmp = Self::generate_random_tmp(TMP_PATH_LENGTH);
+        Self::empty_with_rng(&mut thread_rng())
+    }
+
+    pub fn empty_with_rng(rng: &mut impl Rng) -> Self {
+        let random_tmp = Self::generate_random_tmp(TMP_PATH_LENGTH, rng);
 
         if PathBuf::from(&random_tmp).exists() {
             panic!("Random tmp path already exists: {:?}", random_tmp);
@@ -95,19 +98,18 @@ impl Drop for Tmp {
 
 pub trait RandomFill {
     /// Random fill with files
-    fn random_fill(&self, count: usize, fill_length: impl Fn() -> usize) -> Vec<PathBuf>;
+    fn random_fill(&self, count: usize, rng: &mut impl Rng) -> Vec<PathBuf>;
 }
 
 impl RandomFill for Tmp {
-    fn random_fill(&self, count: usize, fill_length: impl Fn() -> usize) -> Vec<PathBuf> {
+    fn random_fill(&self, count: usize, rng: &mut impl Rng) -> Vec<PathBuf> {
         let mut current_base = self.path();
-        let mut rng = rand::thread_rng();
 
         let paths: Vec<(PathBuf, usize)> = (0..count)
             .into_iter()
             .map(|_| {
                 let mut path = PathBuf::from(&current_base);
-                path.push(random_string(TMP_PATH_LENGTH));
+                path.push(random_string(TMP_PATH_LENGTH, rng));
 
                 let rand = rng.gen::<f32>();
 
@@ -115,12 +117,18 @@ impl RandomFill for Tmp {
                     current_base = self.path();
                 } else if rand > 0.98 {
                     let mut base = current_base.clone();
-                    base.push(random_string(TMP_PATH_LENGTH));
+                    base.push(random_string(TMP_PATH_LENGTH, rng));
                     create_dir(&base).unwrap();
                     current_base = base;
                 }
 
-                (path, fill_length())
+                let fill_len: usize = if rng.gen_bool(0.9) {
+                    rng.gen_range(10..8192)
+                } else {
+                    rng.gen_range(50_000..100_000)
+                };
+
+                (path, fill_len)
             })
             .collect();
 
@@ -136,18 +144,22 @@ impl RandomFill for Tmp {
             })
             .count();
 
-        paths.into_iter().map(|f| f.0).collect()
+        paths.into_iter().map(|p| p.0).collect()
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use rand::{prelude::SmallRng, SeedableRng};
+
     use super::Tmp;
 
     #[test]
     fn test_generate_random_tmp_path_length() {
+        let mut rng = SmallRng::seed_from_u64(0);
+
         for length in 1..32 {
-            let path = Tmp::generate_random_tmp(length);
+            let path = Tmp::generate_random_tmp(length, &mut rng);
             let generated_folder = path.iter().last().unwrap();
 
             assert_eq!(generated_folder.len() - "krypta_".len(), length);

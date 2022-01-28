@@ -186,6 +186,7 @@ mod tests {
     use std::{collections::HashSet, fs::OpenOptions, io::Write, path::PathBuf};
 
     use database::{models, traits::FetchAll};
+    use rand::{prelude::SmallRng, SeedableRng};
     use tmp::{RandomFill, Tmp};
 
     use crate::actions::database_sync::sync_database_from_unlocked_path;
@@ -194,9 +195,11 @@ mod tests {
     async fn test_standard_database_sync() {
         const FILES_COUNT: usize = 10_000;
 
+        let mut rng = SmallRng::seed_from_u64(3);
+
         // Prepare
         let tmp = Tmp::empty();
-        let created_files = tmp.random_fill(FILES_COUNT, || 16);
+        let created_files = tmp.random_fill(FILES_COUNT, &mut rng);
 
         let mut database = database::create_in_memory().unwrap();
         let current_device = models::Device::find_or_create_current(&database).unwrap();
@@ -232,7 +235,7 @@ mod tests {
         assert_eq!(processed_files.len(), 0);
 
         // Create a new file and make sure that it gets detected
-        let new_file = tmp.random_fill(1, || 128).first().unwrap().to_owned();
+        let new_file = tmp.random_fill(1, &mut rng).first().unwrap().to_owned();
         let new_file_relative = tmp.to_relative(&new_file);
 
         let processed_files =
@@ -247,7 +250,7 @@ mod tests {
         );
 
         // Mutate random file and make sure that it gets detected
-        let rand_file = created_files.get(1337).unwrap().to_owned();
+        let rand_file = created_files.get(2).unwrap().to_owned();
         let rand_file_relative = tmp.to_relative(&rand_file);
 
         // Write "random" data to file
