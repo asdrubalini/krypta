@@ -70,10 +70,28 @@ impl PathTree {
         }
     }
 
-    pub fn ordered(self) -> OrderedTree {
-        let mut paths = vec![];
-        traverse_paths_ordered(&self.0, vec![], &mut paths);
-        OrderedTree { paths }
+    pub fn print_ordered(&self) {
+        let mut output = vec![];
+        traverse_paths_ordered(&self.0, vec![], &mut output);
+
+        let mut prev_dir = OsString::new();
+
+        for path in output {
+            let full_path_len = path.iter().count();
+            let containing_dir: OsString = path.iter().take(full_path_len - 1).collect();
+            let containing_dir_len = containing_dir.len();
+
+            let whitespaces: String = (0..containing_dir_len).into_iter().map(|_| ' ').collect();
+            let filename = path.iter().last().unwrap().to_string_lossy().to_string();
+
+            if containing_dir != prev_dir {
+                println!("├── {}", containing_dir.to_string_lossy());
+            }
+
+            println!("{whitespaces}├── {filename}");
+
+            prev_dir = containing_dir;
+        }
     }
 }
 
@@ -96,11 +114,11 @@ fn traverse_paths_ordered(item: &PathKind, current_path: Vec<OsString>, output: 
 }
 
 pub struct OrderedTree {
-    paths: Vec<PathBuf>,
+    paths: Vec<String>,
 }
 
 impl Iterator for OrderedTree {
-    type Item = PathBuf;
+    type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.paths.pop()
