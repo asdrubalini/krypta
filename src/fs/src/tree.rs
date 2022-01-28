@@ -191,9 +191,9 @@ mod tests {
         let files = ["hehe.txt"];
         let tree: PathTree = files.iter().map(PathBuf::from).collect();
 
-        let expected = root!(f!("hehe.txt"));
+        let expected_structure = root!(f!("hehe.txt"));
 
-        assert_eq!(tree.0, expected);
+        assert_eq!(tree.0, expected_structure);
     }
 
     #[test]
@@ -206,10 +206,19 @@ mod tests {
         ];
         let tree: PathTree = files.iter().map(PathBuf::from).collect();
 
-        let expected =
+        let expected_structure =
             PathType::Directory(files.iter().map(|path| f!(path)).collect::<HashMap<_, _>>());
 
-        assert_eq!(tree.0, expected);
+        assert_eq!(tree.0, expected_structure);
+
+        let directories = tree.directory_structure();
+        let expected_dirs: Vec<PathBuf> = vec![];
+
+        assert_eq!(directories.len(), expected_dirs.len());
+
+        for dir in directories {
+            assert!(expected_dirs.contains(&dir))
+        }
     }
 
     #[test]
@@ -217,9 +226,21 @@ mod tests {
         let files = ["some/path/lol/midget-porn.mp4"];
         let tree: PathTree = files.iter().map(PathBuf::from).collect();
 
-        let expected = root!(d!("some", d!("path", d!("lol", f!("midget-porn.mp4")))));
+        let expected_structure = root!(d!("some", d!("path", d!("lol", f!("midget-porn.mp4")))));
 
-        assert_eq!(tree.0, expected);
+        assert_eq!(tree.0, expected_structure);
+
+        let directories = tree.directory_structure();
+        let expected_dirs: Vec<PathBuf> = vec!["some", "some/path", "some/path/lol"]
+            .into_iter()
+            .map(PathBuf::from)
+            .collect();
+
+        assert_eq!(directories.len(), expected_dirs.len());
+
+        for dir in directories {
+            assert!(expected_dirs.contains(&dir))
+        }
     }
 
     #[test]
@@ -227,12 +248,24 @@ mod tests {
         let files = ["some/path/lol/midget-porn.mp4", "some/path/lol.dat"];
         let tree: PathTree = files.iter().map(PathBuf::from).collect();
 
-        let expected = root!(d!(
+        let expected_structure = root!(d!(
             "some",
             d!("path", d!("lol", f!("midget-porn.mp4")), f!("lol.dat"))
         ));
 
-        assert_eq!(tree.0, expected);
+        assert_eq!(tree.0, expected_structure);
+
+        let directories = tree.directory_structure();
+        let expected_dirs: Vec<PathBuf> = vec!["some", "some/path", "some/path/lol"]
+            .into_iter()
+            .map(PathBuf::from)
+            .collect();
+
+        assert_eq!(directories.len(), expected_dirs.len());
+
+        for dir in directories {
+            assert!(expected_dirs.contains(&dir))
+        }
     }
 
     #[test]
@@ -247,7 +280,7 @@ mod tests {
         ];
         let tree: PathTree = files.iter().map(PathBuf::from).collect();
 
-        let expected = root!(
+        let expected_structure = root!(
             d!("bdsm", f!("hard-sex-orgasm.mp3")),
             d!(
                 "some",
@@ -266,6 +299,28 @@ mod tests {
             )
         );
 
-        assert_eq!(tree.0, expected);
+        assert_eq!(tree.0, expected_structure);
+
+        let directories = tree.directory_structure();
+        let expected_dirs: Vec<PathBuf> = vec![
+            "bdsm",
+            "some",
+            "some/path",
+            "some/path/lol",
+            "super",
+            "super/mega",
+            "super/mega/ultra",
+            "super/mega/ultra/nested",
+            "super/mega/ultra/nested/dir",
+        ]
+        .into_iter()
+        .map(PathBuf::from)
+        .collect();
+
+        assert_eq!(directories.len(), expected_dirs.len());
+
+        for dir in directories {
+            assert!(expected_dirs.contains(&dir))
+        }
     }
 }
