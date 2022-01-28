@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use indexmap::IndexSet;
 use itertools::Itertools;
 
 /// Where the actual paths are stored
@@ -70,28 +71,52 @@ impl PathTree {
         }
     }
 
-    pub fn print_ordered(&self) {
+    pub fn print_ordered_pretty(&self) {
         let mut output = vec![];
         traverse_paths_ordered(&self.0, vec![], &mut output);
 
         let mut prev_dir = OsString::new();
 
         for path in output {
-            let full_path_len = path.iter().count();
-            let containing_dir: OsString = path.iter().take(full_path_len - 1).collect();
-            let containing_dir_len = containing_dir.len();
+            let directory: OsString = path.iter().take(path.iter().count() - 1).collect();
+            let directory_len = directory.len();
 
-            let whitespaces: String = (0..containing_dir_len).into_iter().map(|_| ' ').collect();
+            let whitespaces: String = (0..directory_len).into_iter().map(|_| ' ').collect();
             let filename = path.iter().last().unwrap().to_string_lossy().to_string();
 
-            if containing_dir != prev_dir {
-                println!("├── {}", containing_dir.to_string_lossy());
+            if directory != prev_dir {
+                println!("├── {}", directory.to_string_lossy());
             }
 
             println!("{whitespaces}├── {filename}");
 
-            prev_dir = containing_dir;
+            prev_dir = directory;
         }
+    }
+
+    pub fn directory_structure(self) -> Vec<PathBuf> {
+        let mut output = vec![];
+        traverse_paths_ordered(&self.0, vec![], &mut output);
+
+        let mut paths_ordered: IndexSet<PathBuf> = IndexSet::new();
+
+        for file_path in output {
+            let directory: PathBuf = file_path
+                .iter()
+                .take(file_path.iter().count() - 1)
+                .collect();
+
+            for len in 1..directory.iter().count() + 1 {
+                let partial_dir: PathBuf = directory.iter().take(len).collect();
+                if !paths_ordered.contains(&partial_dir) {
+                    paths_ordered.insert(partial_dir);
+                }
+            }
+        }
+
+        let mut paths_ordered: Vec<PathBuf> = paths_ordered.into_iter().collect();
+        paths_ordered.sort_by_key(|path| path.iter().count());
+        paths_ordered
     }
 }
 
@@ -166,9 +191,9 @@ mod tests {
         let files = ["hehe.txt"];
         let tree: PathTree = files.iter().map(PathBuf::from).collect();
 
-        let expected = root!(f!("hehe.txt"));
+        let expected_structure = root!(f!("hehe.txt"));
 
-        assert_eq!(tree.0, expected);
+        assert_eq!(tree.0, expected_structure);
     }
 
     #[test]
@@ -181,10 +206,19 @@ mod tests {
         ];
         let tree: PathTree = files.iter().map(PathBuf::from).collect();
 
-        let expected =
+        let expected_structure =
             PathType::Directory(files.iter().map(|path| f!(path)).collect::<HashMap<_, _>>());
 
-        assert_eq!(tree.0, expected);
+        assert_eq!(tree.0, expected_structure);
+
+        let directories = tree.directory_structure();
+        let expected_dirs: Vec<PathBuf> = vec![];
+
+        assert_eq!(directories.len(), expected_dirs.len());
+
+        for dir in directories {
+            assert!(expected_dirs.contains(&dir))
+        }
     }
 
     #[test]
@@ -192,9 +226,21 @@ mod tests {
         let files = ["some/path/lol/midget-porn.mp4"];
         let tree: PathTree = files.iter().map(PathBuf::from).collect();
 
-        let expected = root!(d!("some", d!("path", d!("lol", f!("midget-porn.mp4")))));
+        let expected_structure = root!(d!("some", d!("path", d!("lol", f!("midget-porn.mp4")))));
 
-        assert_eq!(tree.0, expected);
+        assert_eq!(tree.0, expected_structure);
+
+        let directories = tree.directory_structure();
+        let expected_dirs: Vec<PathBuf> = vec!["some", "some/path", "some/path/lol"]
+            .into_iter()
+            .map(PathBuf::from)
+            .collect();
+
+        assert_eq!(directories.len(), expected_dirs.len());
+
+        for dir in directories {
+            assert!(expected_dirs.contains(&dir))
+        }
     }
 
     #[test]
@@ -202,12 +248,24 @@ mod tests {
         let files = ["some/path/lol/midget-porn.mp4", "some/path/lol.dat"];
         let tree: PathTree = files.iter().map(PathBuf::from).collect();
 
-        let expected = root!(d!(
+        let expected_structure = root!(d!(
             "some",
             d!("path", d!("lol", f!("midget-porn.mp4")), f!("lol.dat"))
         ));
 
-        assert_eq!(tree.0, expected);
+        assert_eq!(tree.0, expected_structure);
+
+        let directories = tree.directory_structure();
+        let expected_dirs: Vec<PathBuf> = vec!["some", "some/path", "some/path/lol"]
+            .into_iter()
+            .map(PathBuf::from)
+            .collect();
+
+        assert_eq!(directories.len(), expected_dirs.len());
+
+        for dir in directories {
+            assert!(expected_dirs.contains(&dir))
+        }
     }
 
     #[test]
@@ -222,7 +280,7 @@ mod tests {
         ];
         let tree: PathTree = files.iter().map(PathBuf::from).collect();
 
-        let expected = root!(
+        let expected_structure = root!(
             d!("bdsm", f!("hard-sex-orgasm.mp3")),
             d!(
                 "some",
@@ -241,6 +299,28 @@ mod tests {
             )
         );
 
-        assert_eq!(tree.0, expected);
+        assert_eq!(tree.0, expected_structure);
+
+        let directories = tree.directory_structure();
+        let expected_dirs: Vec<PathBuf> = vec![
+            "bdsm",
+            "some",
+            "some/path",
+            "some/path/lol",
+            "super",
+            "super/mega",
+            "super/mega/ultra",
+            "super/mega/ultra/nested",
+            "super/mega/ultra/nested/dir",
+        ]
+        .into_iter()
+        .map(PathBuf::from)
+        .collect();
+
+        assert_eq!(directories.len(), expected_dirs.len());
+
+        for dir in directories {
+            assert!(expected_dirs.contains(&dir))
+        }
     }
 }

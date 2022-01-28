@@ -7,7 +7,7 @@ pub async fn tree(db: &mut Database) -> anyhow::Result<()> {
         .map(|f| f.as_path_buf())
         .collect();
 
-    tree.print_ordered();
+    tree.print_ordered_pretty();
 
     Ok(())
 }
