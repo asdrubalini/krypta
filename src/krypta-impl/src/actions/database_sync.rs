@@ -116,7 +116,7 @@ fn find_paths_requiring_insertion_or_update(
     let local_paths_metadata = PathFinder::from_source_path(unlocked_path)?.metadatas;
 
     let database_paths_last_modified =
-        models::File::find_known_paths_with_last_modified(db, device)?;
+        models::File::find_unlocked_paths_with_last_modified(db, device)?;
 
     let mut require_insertion: HashMap<PathBuf, Metadata> = HashMap::new();
     let mut require_update: HashMap<PathBuf, Metadata> = HashMap::new();

@@ -58,6 +58,8 @@ impl InsertMany for File {}
 
 impl Update for File {
     fn update(mut self, db: &Database) -> DatabaseResult<File> {
+        assert_ne!(self.id, None);
+
         self.update_updated_at(); // Make sure that updated_at is up to date
 
         let file = db.query_row(
@@ -114,7 +116,7 @@ impl File {
         }
     }
 
-    /// Generate a pseudorandom hex string with the same length as SHA-256
+    /// Generate a pseudorandom 32 bytes hex string
     fn pseudorandom_hex_string() -> String {
         let mut generator = rand::thread_rng();
 
@@ -127,11 +129,14 @@ impl File {
             .collect()
     }
 
+    /// Update `updated_at` field to now
     fn update_updated_at(&mut self) {
         self.updated_at = Utc::now();
     }
 
-    pub fn find_known_paths_with_last_modified(
+    /// Find unlocked paths known to the current device and their
+    /// last_modified date
+    pub fn find_unlocked_paths_with_last_modified(
         db: &Database,
         device: &Device,
     ) -> DatabaseResult<HashMap<PathBuf, f64>> {
@@ -239,17 +244,20 @@ impl File {
         Ok(files)
     }
 
+    /// Convert self into a crypto::Encryptor, if possible
     pub fn try_into_encryptor<P: AsRef<Path>>(
         self,
         locked_path: P,
         unlocked_path: P,
     ) -> Result<FileEncryptUnit, CryptoError> {
+        // Build absolute paths
         let mut unlocked = unlocked_path.as_ref().to_owned();
         unlocked.push(self.path);
 
         let mut locked = locked_path.as_ref().to_owned();
         locked.push(self.random_hash);
 
+        // Should never fail as key and nonce lens are constant
         let key: [u8; AEAD_KEY_SIZE] = self.key.try_into().unwrap();
         let nonce: [u8; AEAD_NONCE_SIZE] = self.nonce.try_into().unwrap();
 
@@ -285,11 +293,28 @@ impl MetadataFile {
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
+    use std::thread;
+    use std::time::Duration;
+
+    use chrono::{DateTime, NaiveDateTime, Utc};
+    use crypto::crypt::{AEAD_KEY_SIZE, AEAD_NONCE_SIZE};
 
     use crate::create_in_memory;
-    use crate::traits::{Count, FetchAll, Insert, InsertMany};
+    use crate::models::{Device, FileDevice};
+    use crate::traits::{Count, FetchAll, Insert, InsertMany, Update};
 
     use super::File;
+
+    macro_rules! random_file {
+        () => {
+            File::new(
+                "x.txt".to_string(),
+                PathBuf::from("foo/bar/x.txt"),
+                File::pseudorandom_hex_string(),
+                1337,
+            )
+        };
+    }
 
     #[test]
     fn test_pseudorandom_hex_string_is_valid_length_and_contains_valid_chars() {
@@ -438,5 +463,75 @@ mod tests {
 
         let archive_count = File::count(&database).unwrap();
         assert_eq!(archive_count, 8192);
+    }
+
+    #[test]
+    fn test_file_new() {
+        let file = random_file!();
+
+        assert_eq!(file.id, None);
+        assert_eq!(file.title, "x.txt".to_string());
+        assert_eq!(file.path, String::from("foo/bar/x.txt"));
+        assert_eq!(PathBuf::from(&file), PathBuf::from("foo/bar/x.txt"));
+        assert_eq!(file.random_hash.len(), 64);
+        assert_eq!(file.contents_hash.len(), 64);
+        assert_eq!(file.size, 1337);
+        assert_ne!(
+            file.created_at,
+            DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(0, 0), Utc)
+        );
+        assert_ne!(
+            file.updated_at,
+            DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(0, 0), Utc)
+        );
+        assert_eq!(file.key.len(), AEAD_KEY_SIZE);
+        assert_eq!(file.nonce.len(), AEAD_NONCE_SIZE);
+    }
+
+    #[test]
+    fn test_insert_and_update() {
+        let database = create_in_memory().unwrap();
+
+        let file = random_file!();
+
+        let inserted = file.insert(&database).unwrap();
+        thread::sleep(Duration::from_millis(10));
+        let updated = inserted.clone().update(&database).unwrap();
+
+        assert_ne!(updated.id, None);
+        assert_eq!(inserted.created_at, updated.created_at);
+        assert_ne!(inserted.updated_at, updated.updated_at);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_update_non_existing() {
+        let database = create_in_memory().unwrap();
+
+        let file = random_file!();
+        file.update(&database).unwrap();
+    }
+
+    #[test]
+    fn test_find_empty_unlocked_paths_with_last_modified() {
+        let database = create_in_memory().unwrap();
+        let device = Device::find_or_create_current(&database).unwrap();
+
+        let paths = File::find_unlocked_paths_with_last_modified(&database, &device).unwrap();
+        assert_eq!(paths.len(), 0);
+    }
+
+    #[test]
+    fn test_find_single_unlocked_paths_with_last_modified() {
+        let database = create_in_memory().unwrap();
+        let device = Device::find_or_create_current(&database).unwrap();
+
+        let file = random_file!().insert(&database).unwrap();
+        FileDevice::new(&file, &device, true, false, 0.0)
+            .insert(&database)
+            .unwrap();
+
+        let paths = File::find_unlocked_paths_with_last_modified(&database, &device).unwrap();
+        assert_eq!(paths.len(), 1);
     }
 }
