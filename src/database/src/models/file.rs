@@ -44,7 +44,7 @@ impl Search for File {
     fn search(db: &Database, query: impl AsRef<str>) -> DatabaseResult<Vec<Self>> {
         let mut stmt = db.prepare(include_str!("sql/file/search.sql"))?;
         let mut rows = stmt.query(named_params! {
-            ":query": format!("%{}%",query.as_ref())
+            ":query": format!("%{}%", query.as_ref())
         })?;
 
         let mut files = vec![];
