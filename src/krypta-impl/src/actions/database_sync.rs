@@ -179,10 +179,15 @@ fn compute_hash_for_paths(
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashSet, fs::OpenOptions, io::Write, path::PathBuf};
+    use std::{
+        collections::HashSet,
+        fs::{remove_file, OpenOptions},
+        io::Write,
+        path::PathBuf,
+    };
 
     use database::{models, traits::FetchAll};
-    use rand::{prelude::SmallRng, SeedableRng};
+    use rand::{prelude::SmallRng, Rng, SeedableRng};
     use tmp::{RandomFill, Tmp};
 
     use crate::actions::database_sync::sync_database_from_unlocked_path;
@@ -246,14 +251,16 @@ mod tests {
         );
 
         // Mutate random file and make sure that it gets detected
-        let rand_file = created_files.get(2).unwrap().to_owned();
+        let rand_file = created_files
+            .get(rng.gen_range(0..created_files.len() - 1))
+            .unwrap()
+            .to_owned();
         let rand_file_relative = tmp.to_relative(&rand_file);
 
         // Write "random" data to file
         let mut rand_file = OpenOptions::new().write(true).open(&rand_file).unwrap();
         rand_file.write_all(&[0u8; 128]).unwrap();
         rand_file.flush().unwrap();
-        drop(rand_file);
 
         let processed_files =
             sync_database_from_unlocked_path(&mut database, &tmp.path(), &current_device)
@@ -265,5 +272,20 @@ mod tests {
             PathBuf::from(processed_files.first().unwrap()),
             rand_file_relative
         );
+
+        // Remove random file and make sure that nothing happens
+        let rand_file = created_files
+            .get(rng.gen_range(0..created_files.len() - 1))
+            .unwrap()
+            .to_owned();
+
+        remove_file(&rand_file).unwrap();
+
+        let processed_files =
+            sync_database_from_unlocked_path(&mut database, &tmp.path(), &current_device)
+                .await
+                .unwrap();
+
+        assert_eq!(processed_files.len(), 0);
     }
 }
