@@ -12,6 +12,8 @@ use database::{
 };
 use fs::PathFinder;
 
+/// Update database according to files found in `unlocked_path`, inserting
+/// or updating when necessary
 pub async fn sync_database_from_unlocked_path(
     db: &mut Database,
     unlocked_path: impl AsRef<Path>,
@@ -22,14 +24,14 @@ pub async fn sync_database_from_unlocked_path(
     let (paths_requiring_insertion, paths_requiring_update) =
         find_paths_requiring_insertion_or_update(db, unlocked_path, device)?;
 
-    let involved_paths = paths_requiring_insertion
+    let need_hashing_paths = paths_requiring_insertion
         .iter()
         .chain(paths_requiring_update.iter())
         .map(|(item, _)| item)
         .collect::<Vec<_>>();
 
     // Compute all hashes for files that have been updated or just inserted
-    let hashes = find_hashes_for_local_paths(unlocked_path, &involved_paths)?;
+    let hashes = compute_hash_for_paths(unlocked_path, &need_hashing_paths)?;
 
     // First handle newly created files
     // Obtain models::InsertFile and populate the database
@@ -111,7 +113,8 @@ fn find_paths_requiring_insertion_or_update(
 ) -> anyhow::Result<(HashMap<PathBuf, Metadata>, HashMap<PathBuf, Metadata>)> {
     let unlocked_path = unlocked_path.as_ref();
 
-    let local_paths_metadata = find_local_paths_and_metadata(unlocked_path)?;
+    let local_paths_metadata = PathFinder::from_source_path(unlocked_path)?.metadatas;
+
     let database_paths_last_modified =
         models::File::find_known_paths_with_last_modified(db, device)?;
 
@@ -140,16 +143,9 @@ fn find_paths_requiring_insertion_or_update(
     Ok((require_insertion, require_update))
 }
 
-fn find_local_paths_and_metadata(
-    unlocked_path: &Path,
-) -> anyhow::Result<HashMap<PathBuf, Metadata>> {
-    let path_finder = PathFinder::from_source_path(unlocked_path)?;
-    Ok(path_finder.metadatas)
-}
-
 /// Compute BLAKE3 hashes for files in `unlocked_path`
 /// returned paths are relative and do not contain host-specific bits
-fn find_hashes_for_local_paths(
+fn compute_hash_for_paths(
     unlocked_path: impl AsRef<Path>,
     relative_paths: &[impl AsRef<Path>],
 ) -> anyhow::Result<HashMap<PathBuf, String>> {
