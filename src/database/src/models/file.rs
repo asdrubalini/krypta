@@ -10,8 +10,10 @@ use crypto::crypt::{
 };
 use crypto::errors::CryptoError;
 use database_macros::{Insert, TableName, TryFromRow};
-use rand::Rng;
+use rand::SeedableRng;
+use rand_chacha::ChaCha20Rng;
 use rusqlite::named_params;
+use utils::RandomString;
 
 use crate::{errors::DatabaseResult, Database};
 
@@ -94,7 +96,7 @@ impl From<&File> for PathBuf {
 impl File {
     /// Build a new `InsertFile` and generate on the fly some stuff
     pub fn new(title: String, path: PathBuf, contents_hash: String, size: u64) -> Self {
-        let random_hash = File::pseudorandom_hex_string();
+        let random_hash = File::random_hash_string();
         let now = chrono::Utc::now();
 
         // Key and nonce generation
@@ -117,16 +119,9 @@ impl File {
     }
 
     /// Generate a pseudorandom 32 bytes hex string
-    fn pseudorandom_hex_string() -> String {
-        let mut generator = rand::thread_rng();
-
-        (0..32)
-            .into_iter()
-            .map(|_| {
-                let random_byte: u8 = generator.gen_range(0..=255);
-                format!("{:02x}", random_byte)
-            })
-            .collect()
+    fn random_hash_string() -> String {
+        let mut generator = ChaCha20Rng::from_entropy();
+        RandomString::hex_with_rng(&mut generator, 32)
     }
 
     /// Update `updated_at` field to now
@@ -298,6 +293,7 @@ mod tests {
 
     use chrono::{DateTime, NaiveDateTime, Utc};
     use crypto::crypt::{AEAD_KEY_SIZE, AEAD_NONCE_SIZE};
+    use utils::RandomString;
 
     use crate::create_in_memory;
     use crate::models::{Device, FileDevice};
@@ -305,15 +301,13 @@ mod tests {
 
     use super::File;
 
-    macro_rules! random_file {
-        () => {
-            File::new(
-                "x.txt".to_string(),
-                PathBuf::from("foo/bar/x.txt"),
-                File::pseudorandom_hex_string(),
-                1337,
-            )
-        };
+    fn new_random_file() -> File {
+        File::new(
+            RandomString::alphanum(10),
+            PathBuf::from(format!("foo/bar/{}", RandomString::alphanum(10))),
+            File::random_hash_string(),
+            1337,
+        )
     }
 
     #[test]
@@ -321,7 +315,7 @@ mod tests {
         let valid_chars = "0123456789abcdfe";
 
         for _ in 0..10_000 {
-            let result = File::pseudorandom_hex_string();
+            let result = File::random_hash_string();
             assert_eq!(result.len(), 64);
 
             for chr in result.chars() {
@@ -467,7 +461,12 @@ mod tests {
 
     #[test]
     fn test_file_new() {
-        let file = random_file!();
+        let file = File::new(
+            String::from("x.txt"),
+            PathBuf::from("foo/bar/x.txt"),
+            File::random_hash_string(),
+            1337,
+        );
 
         assert_eq!(file.id, None);
         assert_eq!(file.title, "x.txt".to_string());
@@ -492,7 +491,7 @@ mod tests {
     fn test_insert_and_update() {
         let database = create_in_memory().unwrap();
 
-        let file = random_file!();
+        let file = new_random_file();
 
         let inserted = file.insert(&database).unwrap();
         thread::sleep(Duration::from_millis(10));
@@ -508,7 +507,7 @@ mod tests {
     fn test_update_non_existing() {
         let database = create_in_memory().unwrap();
 
-        let file = random_file!();
+        let file = new_random_file();
         file.update(&database).unwrap();
     }
 
@@ -526,12 +525,77 @@ mod tests {
         let database = create_in_memory().unwrap();
         let device = Device::find_or_create_current(&database).unwrap();
 
-        let file = random_file!().insert(&database).unwrap();
+        let file = new_random_file().insert(&database).unwrap();
         FileDevice::new(&file, &device, true, false, 0.0)
             .insert(&database)
             .unwrap();
 
         let paths = File::find_unlocked_paths_with_last_modified(&database, &device).unwrap();
         assert_eq!(paths.len(), 1);
+    }
+
+    #[test]
+    fn test_find_many_unlocked_paths_with_last_modified() {
+        let database = create_in_memory().unwrap();
+        let device = Device::find_or_create_current(&database).unwrap();
+
+        FileDevice::new(
+            &new_random_file().insert(&database).unwrap(),
+            &device,
+            true,
+            false,
+            0.0,
+        )
+        .insert(&database)
+        .unwrap();
+
+        FileDevice::new(
+            &new_random_file().insert(&database).unwrap(),
+            &device,
+            true,
+            false,
+            0.0,
+        )
+        .insert(&database)
+        .unwrap();
+
+        let paths = File::find_unlocked_paths_with_last_modified(&database, &device).unwrap();
+        assert_eq!(paths.len(), 2);
+    }
+
+    #[test]
+    fn test_find_unlocked_paths_with_last_modified_other_device() {
+        let database = create_in_memory().unwrap();
+
+        let device = Device::new("random-id-1", "random-name-1")
+            .insert(&database)
+            .unwrap();
+
+        FileDevice::new(
+            &new_random_file().insert(&database).unwrap(),
+            &device,
+            true,
+            false,
+            0.0,
+        )
+        .insert(&database)
+        .unwrap();
+
+        FileDevice::new(
+            &new_random_file().insert(&database).unwrap(),
+            &device,
+            true,
+            false,
+            0.0,
+        )
+        .insert(&database)
+        .unwrap();
+
+        let other_device = Device::new("random-id-2", "random-name-2")
+            .insert(&database)
+            .unwrap();
+
+        let paths = File::find_unlocked_paths_with_last_modified(&database, &other_device).unwrap();
+        assert_eq!(paths.len(), 0);
     }
 }

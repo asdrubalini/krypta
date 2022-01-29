@@ -9,11 +9,12 @@ fn main() {
 
     match args.next().unwrap().as_str() {
         "populate-unlocked" => populate_unlocked(),
+        "coverage" => coverage(),
         _ => panic!("xtask: invalid argument"),
     };
 }
 
-fn _exec(command: impl AsRef<str>) {
+fn exec(command: impl AsRef<str>) {
     let command = command.as_ref();
     println!("Running {command}");
     let mut command = command.split_ascii_whitespace();
@@ -29,6 +30,10 @@ fn _exec(command: impl AsRef<str>) {
         .unwrap();
 
     assert!(status.success());
+}
+
+fn coverage() {
+    exec("cargo tarpaulin --workspace --release");
 }
 
 fn populate_unlocked() {

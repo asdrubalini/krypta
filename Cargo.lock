@@ -299,9 +299,11 @@ dependencies = [
  "database-macros",
  "log",
  "rand",
+ "rand_chacha",
  "rusqlite",
  "thiserror",
  "tmp",
+ "utils",
 ]
 
 [[package]]
@@ -878,6 +880,7 @@ version = "0.0.0"
 dependencies = [
  "rand",
  "rayon",
+ "utils",
 ]
 
 [[package]]
@@ -929,6 +932,13 @@ name = "utf8-width"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7cf7d77f457ef8dfa11e4cd5933c5ddb5dc52a94664071951219a97710f0a32b"
+
+[[package]]
+name = "utils"
+version = "0.0.0"
+dependencies = [
+ "rand",
+]
 
 [[package]]
 name = "vcpkg"

@@ -12,6 +12,7 @@ members = [
     "src/tmp",
     "src/cli",
     "src/database",
+    "src/utils",
 ]
 
 [dependencies]

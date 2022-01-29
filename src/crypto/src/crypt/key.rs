@@ -4,6 +4,7 @@ use rand_chacha::ChaCha20Rng;
 use super::{AEAD_KEY_SIZE, AEAD_NONCE_SIZE};
 
 pub fn generate_random_secure_key_nonce_pair() -> ([u8; AEAD_KEY_SIZE], [u8; AEAD_NONCE_SIZE]) {
+    // TODO: make sure that this Rng is crypto safe
     let mut rng = ChaCha20Rng::from_entropy();
 
     let mut key = [0u8; AEAD_KEY_SIZE];

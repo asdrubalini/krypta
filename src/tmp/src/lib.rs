@@ -5,17 +5,11 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use rand::{distributions::Alphanumeric, thread_rng, Rng};
+use rand::{thread_rng, Rng};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use utils::RandomString;
 
 const TMP_PATH_LENGTH: usize = 16;
-
-pub fn random_string(length: usize, rng: &mut impl Rng) -> String {
-    rng.sample_iter(&Alphanumeric)
-        .take(length)
-        .map(char::from)
-        .collect::<String>()
-}
 
 #[derive(Debug)]
 pub struct Tmp {
@@ -33,7 +27,7 @@ impl Tmp {
     #[cfg(target_os = "linux")]
     fn generate_random_tmp(folder_length: usize, rng: &mut impl Rng) -> PathBuf {
         let mut random_name = "krypta_".to_string();
-        random_name.push_str(&random_string(folder_length, rng));
+        random_name.push_str(&RandomString::alphanum_with_rng(rng, folder_length));
 
         let mut random_tmp = PathBuf::new();
         random_tmp.push("/tmp/");
@@ -109,7 +103,7 @@ impl RandomFill for Tmp {
             .into_iter()
             .map(|_| {
                 let mut path = PathBuf::from(&current_base);
-                path.push(random_string(TMP_PATH_LENGTH, rng));
+                path.push(RandomString::alphanum_with_rng(rng, TMP_PATH_LENGTH));
 
                 let rand = rng.gen::<f32>();
 
@@ -117,7 +111,7 @@ impl RandomFill for Tmp {
                     current_base = self.path();
                 } else if rand > 0.98 {
                     let mut base = current_base.clone();
-                    base.push(random_string(TMP_PATH_LENGTH, rng));
+                    base.push(RandomString::alphanum_with_rng(rng, TMP_PATH_LENGTH));
                     create_dir(&base).unwrap();
                     current_base = base;
                 }
