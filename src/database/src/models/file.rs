@@ -203,7 +203,7 @@ impl File {
     /// Count how many unlocked files are there on disk (according to database)
     pub fn count_unlocked(db: &Database, device: &Device) -> DatabaseResult<u64> {
         let count = db.query_row(
-            include_str!("sql/file/count_locked.sql"),
+            include_str!("sql/file/count_unlocked.sql"),
             named_params! {
                 ":platform_id": device.platform_id
             },
@@ -216,7 +216,7 @@ impl File {
     /// Count how many locked files are there on disk (according to database)
     pub fn count_locked(db: &Database, device: &Device) -> DatabaseResult<u64> {
         let count = db.query_row(
-            include_str!("sql/file/count_unlocked.sql"),
+            include_str!("sql/file/count_locked.sql"),
             named_params! {
                 ":platform_id": device.platform_id
             },
@@ -630,5 +630,99 @@ mod tests {
         assert_eq!(found_tags.len(), 2);
         assert_eq!(found_tags.get(0).unwrap().name, String::from("random-tag"));
         assert_eq!(found_tags.get(1).unwrap().name, String::from("other-tag"));
+    }
+
+    #[test]
+    fn test_count_locked() {
+        let database = create_in_memory().unwrap();
+
+        let device = Device::new("random-id-1", "random-name-1")
+            .insert(&database)
+            .unwrap();
+
+        assert_eq!(File::count_locked(&database, &device).unwrap(), 0);
+
+        FileDevice::new(
+            &new_random_file().insert(&database).unwrap(),
+            &device,
+            false,
+            true,
+            0.0,
+        )
+        .insert(&database)
+        .unwrap();
+
+        assert_eq!(File::count_locked(&database, &device).unwrap(), 1);
+
+        FileDevice::new(
+            &new_random_file().insert(&database).unwrap(),
+            &device,
+            false,
+            false,
+            0.0,
+        )
+        .insert(&database)
+        .unwrap();
+
+        assert_eq!(File::count_locked(&database, &device).unwrap(), 1);
+
+        FileDevice::new(
+            &new_random_file().insert(&database).unwrap(),
+            &device,
+            false,
+            true,
+            0.0,
+        )
+        .insert(&database)
+        .unwrap();
+
+        assert_eq!(File::count_locked(&database, &device).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_count_unlocked() {
+        let database = create_in_memory().unwrap();
+
+        let device = Device::new("random-id-1", "random-name-1")
+            .insert(&database)
+            .unwrap();
+
+        assert_eq!(File::count_locked(&database, &device).unwrap(), 0);
+
+        FileDevice::new(
+            &new_random_file().insert(&database).unwrap(),
+            &device,
+            true,
+            false,
+            0.0,
+        )
+        .insert(&database)
+        .unwrap();
+
+        assert_eq!(File::count_unlocked(&database, &device).unwrap(), 1);
+
+        FileDevice::new(
+            &new_random_file().insert(&database).unwrap(),
+            &device,
+            false,
+            false,
+            0.0,
+        )
+        .insert(&database)
+        .unwrap();
+
+        assert_eq!(File::count_unlocked(&database, &device).unwrap(), 1);
+
+        FileDevice::new(
+            &new_random_file().insert(&database).unwrap(),
+            &device,
+            true,
+            false,
+            0.0,
+        )
+        .insert(&database)
+        .unwrap();
+
+        assert_eq!(File::count_unlocked(&database, &device).unwrap(), 2);
     }
 }

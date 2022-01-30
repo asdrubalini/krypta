@@ -16,7 +16,7 @@ pub async fn tree(db: &mut Database) -> anyhow::Result<()> {
         let tags = files.get(&path).unwrap().tags(db)?;
 
         let tags_pretty: String = if tags.is_empty() {
-            "(no-tags)".to_string()
+            "(no tags)".to_string()
         } else {
             tags.into_iter()
                 .map(|tag| format!("{} ", tag.name))
