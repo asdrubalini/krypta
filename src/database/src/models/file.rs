@@ -153,6 +153,7 @@ impl File {
         Ok(items)
     }
 
+    /// Get file matching path
     fn find_file_from_path(db: &Database, path: &Path) -> DatabaseResult<File> {
         let file = db.query_row(
             include_str!("sql/file/find_file_from_path.sql"),
@@ -163,6 +164,7 @@ impl File {
         Ok(file)
     }
 
+    /// Get files matching paths
     pub fn find_files_from_paths(
         db: &mut Database,
         paths: &[impl AsRef<Path>],
@@ -195,6 +197,7 @@ impl File {
         Ok(results)
     }
 
+    /// Get the total size of the archive
     pub fn archive_size(db: &Database) -> DatabaseResult<u64> {
         let size = db.query_row(include_str!("sql/file/size.sql"), [], |row| row.get("size"))?;
         Ok(size)
