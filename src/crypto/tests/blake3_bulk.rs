@@ -11,13 +11,13 @@ mod common;
 
 #[test]
 fn test_blake3_same_file() {
-    let tmp = Tmp::empty();
+    let tmp = Tmp::random();
 
     let mut paths = vec![];
 
     // Populate with 8192 empty files
     for i in 0..8192 {
-        let mut unlocked_path = tmp.path();
+        let mut unlocked_path = tmp.base_path();
         unlocked_path.push(format!("{}.txt", i));
 
         generate_plaintext_with_content(&unlocked_path, "".as_bytes());
@@ -30,7 +30,7 @@ fn test_blake3_same_file() {
 
     // Compute hashes
     for i in 0..8192 {
-        let mut unlocked_path = tmp.path();
+        let mut unlocked_path = tmp.base_path();
         unlocked_path.push(format!("{}.txt", i));
 
         let hash = results.get(&unlocked_path).unwrap();
@@ -40,14 +40,14 @@ fn test_blake3_same_file() {
 
 #[test]
 fn test_blake3_random_files() {
-    let tmp = Tmp::empty();
+    let tmp = Tmp::random();
 
     let mut rng = SmallRng::seed_from_u64(0);
     let mut generated_paths = vec![];
 
     // Populate files
     for i in 0..BLAKE3_EXPECTED_HASHES.len() {
-        let mut current_path = tmp.path();
+        let mut current_path = tmp.base_path();
         current_path.push(format!("random_{}.txt", i));
 
         generate_random_plaintext_file_with_rng(&mut rng, &current_path, 2usize.pow(20));

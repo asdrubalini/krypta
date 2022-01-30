@@ -13,11 +13,45 @@ const TMP_PATH_LENGTH: usize = 16;
 
 #[derive(Debug)]
 pub struct Tmp {
-    path: PathBuf,
+    base_path: PathBuf,
 }
 
 impl Tmp {
-    /// Generate a random path in the form of "/tmp/<random chars>/"
+    /// Create new Tmp with random path based on thread rng
+    pub fn random() -> Self {
+        Self::random_with_rng(&mut thread_rng())
+    }
+
+    /// Create new Tmp with random path based on provided rng
+    pub fn random_with_rng(rng: &mut impl Rng) -> Self {
+        let random_path = Self::generate_random_tmp(TMP_PATH_LENGTH, rng);
+
+        if PathBuf::from(&random_path).exists() {
+            panic!("Random tmp path already exists: {:?}", random_path);
+        }
+
+        create_dir(&random_path).unwrap();
+
+        Self {
+            base_path: random_path,
+        }
+    }
+
+    /// Get the Tmp's base path
+    pub fn base_path(&self) -> PathBuf {
+        self.base_path.clone()
+    }
+
+    /// Convert an absolute path to a relative one stripping off the /tmp/{name}/ bits
+    pub fn to_relative(&self, absolute_path: impl AsRef<Path>) -> PathBuf {
+        let absolute_path = absolute_path.as_ref().to_owned();
+        absolute_path
+            .iter()
+            .skip(self.base_path().iter().count())
+            .collect()
+    }
+
+    /// Generate a random tmp path in the form of /tmp/{name}/
     #[cfg(target_os = "linux")]
     fn generate_random_tmp(folder_length: usize, rng: &mut impl Rng) -> PathBuf {
         let mut random_name = "krypta_".to_string();
@@ -29,56 +63,17 @@ impl Tmp {
 
         random_tmp
     }
-
-    pub fn empty() -> Self {
-        Self::empty_with_rng(&mut thread_rng())
-    }
-
-    pub fn empty_with_rng(rng: &mut impl Rng) -> Self {
-        let random_tmp = Self::generate_random_tmp(TMP_PATH_LENGTH, rng);
-
-        if PathBuf::from(&random_tmp).exists() {
-            panic!("Random tmp path already exists: {:?}", random_tmp);
-        }
-
-        create_dir(&random_tmp).unwrap();
-
-        Self { path: random_tmp }
-    }
-
-    pub fn with_path(path: impl AsRef<Path>) -> Self {
-        let path = path.as_ref().to_path_buf();
-
-        if PathBuf::from(&path).exists() {
-            panic!("Random tmp path already exists: {:?}", path);
-        }
-
-        create_dir(&path).unwrap();
-
-        Self { path }
-    }
-
-    pub fn path(&self) -> PathBuf {
-        self.path.clone()
-    }
-
-    pub fn to_relative(&self, absolute_path: impl AsRef<Path>) -> PathBuf {
-        let absolute_path = absolute_path.as_ref().to_owned();
-        absolute_path
-            .iter()
-            .skip(self.path().iter().count())
-            .collect()
-    }
 }
 
 impl Drop for Tmp {
+    /// Cleanup the Tmp patg
     fn drop(&mut self) {
-        if self.path.exists() {
-            remove_dir_all(&self.path).unwrap();
+        if self.base_path.exists() {
+            remove_dir_all(&self.base_path).unwrap();
         } else {
             panic!(
                 "Dropping `TempPath`, but folder {:?} does not exist",
-                self.path
+                self.base_path
             )
         }
     }
@@ -86,14 +81,19 @@ impl Drop for Tmp {
 
 pub trait RandomFill {
     /// Random fill with files
-    fn random_fill(&self, count: usize, rng: &mut impl Rng) -> Vec<PathBuf>;
+    fn random_fill(&self, count: usize, rng: &mut impl Rng)
+        -> Result<Vec<PathBuf>, std::io::Error>;
 }
 
 impl RandomFill for Tmp {
-    fn random_fill(&self, count: usize, rng: &mut impl Rng) -> Vec<PathBuf> {
-        let mut current_base = self.path();
+    fn random_fill(
+        &self,
+        count: usize,
+        rng: &mut impl Rng,
+    ) -> Result<Vec<PathBuf>, std::io::Error> {
+        let mut current_base = self.base_path();
 
-        let paths: Vec<(PathBuf, usize)> = (0..count)
+        let paths: Result<Vec<(PathBuf, usize)>, std::io::Error> = (0..count)
             .into_iter()
             .map(|_| {
                 let mut path = PathBuf::from(&current_base);
@@ -102,11 +102,11 @@ impl RandomFill for Tmp {
                 let rand = rng.gen::<f32>();
 
                 if rand > 0.99 {
-                    current_base = self.path();
+                    current_base = self.base_path();
                 } else if rand > 0.98 {
                     let mut base = current_base.clone();
                     base.push(RandomString::alphanum_with_rng(rng, TMP_PATH_LENGTH));
-                    create_dir(&base).unwrap();
+                    create_dir(&base)?;
                     current_base = base;
                 }
 
@@ -116,9 +116,11 @@ impl RandomFill for Tmp {
                     rng.gen_range(50_000..100_000)
                 };
 
-                (path, fill_len)
+                Ok((path, fill_len))
             })
             .collect();
+
+        let paths = paths?;
 
         paths
             .par_iter()
@@ -127,12 +129,13 @@ impl RandomFill for Tmp {
                     File::create(path).unwrap_or_else(|_| panic!("Cannot create {:?}", path));
                 let random_bytes: Vec<u8> = (0..*fill_len).map(|_| rand::random::<u8>()).collect();
 
-                file.write_all(&random_bytes).unwrap();
+                file.write_all(&random_bytes)?;
                 file.flush().unwrap();
+                Ok(())
             })
-            .count();
+            .collect::<Result<(), std::io::Error>>()?;
 
-        paths.into_iter().map(|p| p.0).collect()
+        Ok(paths.into_iter().map(|p| p.0).collect())
     }
 }
 
@@ -151,24 +154,6 @@ mod tests {
             let generated_folder = path.iter().last().unwrap();
 
             assert_eq!(generated_folder.len() - "krypta_".len(), length);
-        }
-    }
-
-    #[test]
-    fn test_temp_path_folder_creation_and_destruction() {
-        let mut rng = SmallRng::seed_from_u64(1337);
-
-        for _ in 0..256 {
-            let path = {
-                let tmp = Tmp::empty_with_rng(&mut rng);
-
-                // Make sure that path gets created
-                assert!(tmp.path().exists());
-                tmp.path()
-            };
-
-            // Make sure that path gets destroyed
-            assert!(!path.exists());
         }
     }
 }

@@ -59,7 +59,7 @@ fn encrypt_decrypt_with_key(
 
 #[test]
 fn small_file_seeded_key() {
-    let tmp = Tmp::empty();
+    let tmp = Tmp::random();
     let mut rng = SmallRng::seed_from_u64(0);
 
     let tests_file_size = [
@@ -69,24 +69,24 @@ fn small_file_seeded_key() {
     for length in tests_file_size {
         println!("Testing with plaintext len = {}", length);
 
-        let mut plaintext_file = tmp.path();
+        let mut plaintext_file = tmp.base_path();
         plaintext_file.push(PLAINTEXT_FILE);
 
         generate_random_plaintext_file_with_rng(&mut rng, plaintext_file, length);
 
         let (key, nonce) = generate_seeded_key();
-        encrypt_decrypt_with_key(tmp.path(), key, nonce);
+        encrypt_decrypt_with_key(tmp.base_path(), key, nonce);
     }
 }
 
 #[test]
 fn test_locked_file_is_different_than_unlocked() {
-    let tmp = Tmp::empty();
+    let tmp = Tmp::random();
 
-    let mut blank_path = tmp.path();
+    let mut blank_path = tmp.base_path();
     blank_path.push("blank.txt");
 
-    let mut locked_path = tmp.path();
+    let mut locked_path = tmp.base_path();
     locked_path.push("out.txt");
 
     let plaintext_content = (0..256).into_iter().map(|_| 0x0).collect::<Vec<u8>>();

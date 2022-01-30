@@ -32,8 +32,8 @@ mod tests {
     use super::{config, encrypt, sync};
 
     fn init_paths_with_rng(rng: &mut impl Rng) -> (Tmp, Tmp) {
-        let locked_path = Tmp::empty_with_rng(rng);
-        let unlocked_path = Tmp::empty_with_rng(rng);
+        let locked_path = Tmp::random_with_rng(rng);
+        let unlocked_path = Tmp::random_with_rng(rng);
 
         unlocked_path.random_fill(25_000, rng);
 
@@ -49,8 +49,10 @@ mod tests {
 
         let (locked_tmp, unlocked_tmp) = init_paths_with_rng(&mut rng);
 
-        config::set_locked(&db, locked_tmp.path()).await.unwrap();
-        config::set_unlocked(&db, unlocked_tmp.path())
+        config::set_locked(&db, locked_tmp.base_path())
+            .await
+            .unwrap();
+        config::set_unlocked(&db, unlocked_tmp.base_path())
             .await
             .unwrap();
 

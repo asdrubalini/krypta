@@ -52,9 +52,9 @@ pub mod tests {
 
     #[test]
     fn test_connect_and_create() {
-        let tmp = Tmp::empty();
+        let tmp = Tmp::random();
 
-        let mut database_file = tmp.path();
+        let mut database_file = tmp.base_path();
         database_file.push("database.db");
 
         env::set_var("DATABASE_FILE", &database_file);

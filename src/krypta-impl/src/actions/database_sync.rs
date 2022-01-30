@@ -199,15 +199,15 @@ mod tests {
         let mut rng = SmallRng::seed_from_u64(3);
 
         // Prepare
-        let tmp = Tmp::empty();
-        let created_files = tmp.random_fill(FILES_COUNT, &mut rng);
+        let tmp = Tmp::random();
+        let created_files = tmp.random_fill(FILES_COUNT, &mut rng).unwrap();
 
         let mut database = database::create_in_memory().unwrap();
         let current_device = models::Device::find_or_create_current(&database).unwrap();
 
         // Populate database
         let processed_files =
-            sync_database_from_unlocked_path(&mut database, &tmp.path(), &current_device)
+            sync_database_from_unlocked_path(&mut database, &tmp.base_path(), &current_device)
                 .await
                 .unwrap();
 
@@ -229,18 +229,23 @@ mod tests {
 
         // Subsequent syncs should return zero files
         let processed_files =
-            sync_database_from_unlocked_path(&mut database, &tmp.path(), &current_device)
+            sync_database_from_unlocked_path(&mut database, &tmp.base_path(), &current_device)
                 .await
                 .unwrap();
 
         assert_eq!(processed_files.len(), 0);
 
         // Create a new file and make sure that it gets detected
-        let new_file = tmp.random_fill(1, &mut rng).first().unwrap().to_owned();
+        let new_file = tmp
+            .random_fill(1, &mut rng)
+            .unwrap()
+            .first()
+            .unwrap()
+            .to_owned();
         let new_file_relative = tmp.to_relative(&new_file);
 
         let processed_files =
-            sync_database_from_unlocked_path(&mut database, &tmp.path(), &current_device)
+            sync_database_from_unlocked_path(&mut database, &tmp.base_path(), &current_device)
                 .await
                 .unwrap();
 
@@ -263,7 +268,7 @@ mod tests {
         rand_file.flush().unwrap();
 
         let processed_files =
-            sync_database_from_unlocked_path(&mut database, &tmp.path(), &current_device)
+            sync_database_from_unlocked_path(&mut database, &tmp.base_path(), &current_device)
                 .await
                 .unwrap();
 
@@ -282,7 +287,7 @@ mod tests {
         remove_file(&rand_file).unwrap();
 
         let processed_files =
-            sync_database_from_unlocked_path(&mut database, &tmp.path(), &current_device)
+            sync_database_from_unlocked_path(&mut database, &tmp.base_path(), &current_device)
                 .await
                 .unwrap();
 

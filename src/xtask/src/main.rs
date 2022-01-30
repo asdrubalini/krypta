@@ -37,9 +37,9 @@ fn coverage() {
 }
 
 fn populate_unlocked() {
-    let tmp = Tmp::empty();
+    let tmp = Tmp::random();
 
-    println!("Generating random files at {:?}", tmp.path());
+    println!("Generating random files at {:?}", tmp.base_path());
 
     let mut rng = SmallRng::seed_from_u64(0);
     tmp.random_fill(25_000, &mut rng);

@@ -15,10 +15,10 @@ fn test_path_finder() {
     let mut rng = SmallRng::seed_from_u64(4);
 
     for (i, files_count) in (100..150).enumerate() {
-        let tmp = Tmp::empty();
+        let tmp = Tmp::random();
         tmp.random_fill(files_count, &mut rng);
 
-        let path_finder = PathFinder::from_source_path(tmp.path()).unwrap();
+        let path_finder = PathFinder::from_source_path(tmp.base_path()).unwrap();
 
         assert_eq!(path_finder.metadatas.len(), files_count);
 
