@@ -17,6 +17,7 @@ impl Default for PathTree {
     }
 }
 
+/// TODO: accept &Path instead of PathBuf
 impl FromIterator<PathBuf> for PathTree {
     fn from_iter<T: IntoIterator<Item = PathBuf>>(iter: T) -> Self {
         let mut tree = PathTree::default();
@@ -71,27 +72,11 @@ impl PathTree {
         }
     }
 
-    pub fn print_ordered_pretty(&self) {
+    /// Traverse the tree and get all the paths sorted
+    pub fn paths_ordered(&self) -> Vec<PathBuf> {
         let mut output = vec![];
         traverse_paths_ordered(&self.0, vec![], &mut output);
-
-        let mut prev_dir = OsString::new();
-
-        for path in output {
-            let directory: OsString = path.iter().take(path.iter().count() - 1).collect();
-            let directory_len = directory.len();
-
-            let whitespaces: String = (0..directory_len).into_iter().map(|_| ' ').collect();
-            let filename = path.iter().last().unwrap().to_string_lossy().to_string();
-
-            if directory != prev_dir {
-                println!("├── {}", directory.to_string_lossy());
-            }
-
-            println!("{whitespaces}├── {filename}");
-
-            prev_dir = directory;
-        }
+        output
     }
 
     pub fn directory_structure(self) -> Vec<PathBuf> {

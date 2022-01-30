@@ -19,7 +19,7 @@ use crate::{errors::DatabaseResult, Database};
 
 use crate::traits::{Count, FetchAll, InsertMany, Search, TryFromRow, Update, UpdateMany};
 
-use super::Device;
+use super::{Device, Tag};
 
 #[derive(TableName, TryFromRow, Insert, Debug, Clone, PartialEq, Eq)]
 pub struct File {
@@ -258,6 +258,21 @@ impl File {
 
         FileEncryptUnit::try_new(unlocked, locked, key, nonce)
     }
+
+    /// Get a list of tags related to a File
+    pub fn tags(&self, db: &Database) -> DatabaseResult<Vec<Tag>> {
+        let mut stmt = db.prepare(include_str!("sql/file/tags.sql"))?;
+        let mut rows = stmt.query(named_params! {
+            ":file_id": self.id.expect("missing file.id")
+        })?;
+
+        let mut tags = vec![];
+        while let Some(row) = rows.next()? {
+            tags.push(Tag::try_from_row(row)?);
+        }
+
+        Ok(tags)
+    }
 }
 
 pub struct MetadataFile {
@@ -296,7 +311,7 @@ mod tests {
     use utils::RandomString;
 
     use crate::create_in_memory;
-    use crate::models::{Device, FileDevice};
+    use crate::models::{Device, FileDevice, FileTag, Tag};
     use crate::traits::{Count, FetchAll, Insert, InsertMany, Update};
 
     use super::File;
@@ -597,5 +612,23 @@ mod tests {
 
         let paths = File::find_unlocked_paths_with_last_modified(&database, &other_device).unwrap();
         assert_eq!(paths.len(), 0);
+    }
+
+    #[test]
+    fn test_file_tags() {
+        let database = create_in_memory().unwrap();
+
+        let file = new_random_file().insert(&database).unwrap();
+        let tag1 = Tag::new("random-tag").insert(&database).unwrap();
+        let tag2 = Tag::new("other-tag").insert(&database).unwrap();
+
+        FileTag::new(&file, &tag1).insert(&database).unwrap();
+        FileTag::new(&file, &tag2).insert(&database).unwrap();
+
+        let found_tags = file.tags(&database).unwrap();
+
+        assert_eq!(found_tags.len(), 2);
+        assert_eq!(found_tags.get(0).unwrap().name, String::from("random-tag"));
+        assert_eq!(found_tags.get(1).unwrap().name, String::from("other-tag"));
     }
 }

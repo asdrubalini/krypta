@@ -6,11 +6,11 @@ use database_macros::{Insert, TableName, TryFromRow};
 use rusqlite::named_params;
 
 use crate::errors::DatabaseResult;
-use crate::{models, Database};
+use crate::Database;
 
 use crate::traits::{InsertMany, TryFromRow, Update, UpdateMany};
 
-use super::File;
+use super::{Device, File};
 
 /// Convert a std::fs::Metadata into a UNIX epoch u64
 #[cfg(target_os = "linux")]
@@ -35,8 +35,8 @@ pub struct FileDevice {
 impl FileDevice {
     /// Build a new `FileDevice`
     pub fn new(
-        file: &models::File,
-        device: &models::Device,
+        file: &File,
+        device: &Device,
         is_unlocked: bool,
         is_locked: bool,
         last_modified: f64,
