@@ -16,12 +16,6 @@ pub struct Tmp {
     path: PathBuf,
 }
 
-impl Default for Tmp {
-    fn default() -> Self {
-        Self::empty()
-    }
-}
-
 impl Tmp {
     /// Generate a random path in the form of "/tmp/<random chars>/"
     #[cfg(target_os = "linux")]
@@ -162,9 +156,11 @@ mod tests {
 
     #[test]
     fn test_temp_path_folder_creation_and_destruction() {
+        let mut rng = SmallRng::seed_from_u64(1337);
+
         for _ in 0..256 {
             let path = {
-                let tmp = Tmp::empty();
+                let tmp = Tmp::empty_with_rng(&mut rng);
 
                 // Make sure that path gets created
                 assert!(tmp.path().exists());
