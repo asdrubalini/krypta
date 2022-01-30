@@ -33,7 +33,7 @@ fn exec(command: impl AsRef<str>) {
 }
 
 fn coverage() {
-    exec("cargo tarpaulin --workspace --release");
+    exec("cargo tarpaulin --workspace --release --skip-clean");
 }
 
 fn populate_unlocked() {
