@@ -76,7 +76,10 @@ impl ComputeUnit for FileDecryptUnit {
             let empty: &[u8] = &[];
 
             let plaintext = stream_decryptor.decrypt_next(empty).map_err(|_| {
-                CryptoError::CipherOperationError(CipherOperationError::DecryptNext, (&self).into())
+                CryptoError::CipherOperationError(
+                    CipherOperationError::DecryptNext,
+                    PathPair::from(&self),
+                )
             })?;
             unlocked_file_buf.write_all(&plaintext)?;
 
@@ -101,14 +104,20 @@ impl ComputeUnit for FileDecryptUnit {
             }
 
             let plaintext = stream_decryptor.decrypt_next(chunk).map_err(|_| {
-                CryptoError::CipherOperationError(CipherOperationError::DecryptNext, (&self).into())
+                CryptoError::CipherOperationError(
+                    CipherOperationError::DecryptNext,
+                    PathPair::from(&self),
+                )
             })?;
             unlocked_file_buf.write_all(&plaintext)?;
         };
 
         // decrypt_last consume and must be called at the very end
         let plaintext = stream_decryptor.decrypt_last(last_chunk).map_err(|_| {
-            CryptoError::CipherOperationError(CipherOperationError::DecryptLast, (&self).into())
+            CryptoError::CipherOperationError(
+                CipherOperationError::DecryptLast,
+                PathPair::from(&self),
+            )
         })?;
         unlocked_file_buf.write_all(&plaintext)?;
 

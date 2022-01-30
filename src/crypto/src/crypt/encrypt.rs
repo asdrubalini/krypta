@@ -76,7 +76,10 @@ impl ComputeUnit for FileEncryptUnit {
             let empty: &[u8] = &[];
 
             let ciphertext = stream_encryptor.encrypt_last(empty).map_err(|_| {
-                CryptoError::CipherOperationError(CipherOperationError::EncryptLast, (&self).into())
+                CryptoError::CipherOperationError(
+                    CipherOperationError::EncryptLast,
+                    PathPair::from(&self),
+                )
             })?;
 
             locked_file_buf.write_all(&ciphertext)?;
@@ -100,14 +103,20 @@ impl ComputeUnit for FileEncryptUnit {
             }
 
             let ciphertext = stream_encryptor.encrypt_next(chunk).map_err(|_| {
-                CryptoError::CipherOperationError(CipherOperationError::EncryptNext, (&self).into())
+                CryptoError::CipherOperationError(
+                    CipherOperationError::EncryptNext,
+                    PathPair::from(&self),
+                )
             })?;
             locked_file_buf.write_all(&ciphertext)?;
         };
 
         // encrypt_last consume and must be called at the very end
         let ciphertext = stream_encryptor.encrypt_last(last_chunk).map_err(|_| {
-            CryptoError::CipherOperationError(CipherOperationError::EncryptLast, (&self).into())
+            CryptoError::CipherOperationError(
+                CipherOperationError::EncryptLast,
+                PathPair::from(&self),
+            )
         })?;
         locked_file_buf.write_all(&ciphertext)?;
 
