@@ -728,4 +728,39 @@ mod tests {
 
         assert_eq!(File::count_unlocked(&database, &device).unwrap(), 2);
     }
+
+    #[test]
+    fn test_find_file_from_path() {
+        let database = create_in_memory().unwrap();
+
+        let inserted_file = new_random_file().insert(&database).unwrap();
+        let found_file =
+            File::find_file_from_path(&database, &PathBuf::from(&inserted_file)).unwrap();
+
+        assert_eq!(inserted_file, found_file);
+    }
+
+    #[test]
+    fn test_find_need_encryption() {
+        let database = create_in_memory().unwrap();
+        let device = Device::new("random-id-1", "random-name-1")
+            .insert(&database)
+            .unwrap();
+
+        let need_encryption = File::find_need_encryption(&database, &device).unwrap();
+        assert_eq!(need_encryption.len(), 0);
+
+        FileDevice::new(
+            &new_random_file().insert(&database).unwrap(),
+            &device,
+            true,
+            false,
+            0.0,
+        )
+        .insert(&database)
+        .unwrap();
+
+        let need_encryption = File::find_need_encryption(&database, &device).unwrap();
+        assert_eq!(need_encryption.len(), 1);
+    }
 }
