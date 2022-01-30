@@ -16,7 +16,7 @@ fn test_path_finder() {
 
     for (i, files_count) in (100..150).enumerate() {
         let tmp = Tmp::random();
-        tmp.random_fill(files_count, &mut rng);
+        tmp.random_fill(files_count, &mut rng).unwrap();
 
         let path_finder = PathFinder::from_source_path(tmp.base_path()).unwrap();
 

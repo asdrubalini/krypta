@@ -42,7 +42,7 @@ fn populate_unlocked() {
     println!("Generating random files at {:?}", tmp.base_path());
 
     let mut rng = SmallRng::seed_from_u64(0);
-    tmp.random_fill(25_000, &mut rng);
+    tmp.random_fill(25_000, &mut rng).unwrap();
 
     println!("Done generating random files ");
 

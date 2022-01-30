@@ -35,7 +35,7 @@ mod tests {
         let locked_path = Tmp::random_with_rng(rng);
         let unlocked_path = Tmp::random_with_rng(rng);
 
-        unlocked_path.random_fill(25_000, rng);
+        unlocked_path.random_fill(25_000, rng).unwrap();
 
         (locked_path, unlocked_path)
     }
