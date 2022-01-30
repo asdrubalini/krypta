@@ -94,7 +94,7 @@ impl From<&File> for PathBuf {
 }
 
 impl File {
-    /// Build a new `InsertFile` and generate on the fly some stuff
+    /// Build a new `File` and generate on the fly some stuff
     pub fn new(title: String, path: PathBuf, contents_hash: String, size: u64) -> Self {
         let random_hash = File::random_hash_string();
         let now = chrono::Utc::now();
