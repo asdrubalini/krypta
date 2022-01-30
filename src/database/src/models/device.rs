@@ -35,11 +35,6 @@ pub fn get_current_platform_id() -> Result<String, std::io::Error> {
     Ok(machine_id)
 }
 
-#[cfg(target_os = "windows")]
-pub fn get_current_platform_id() -> Result<String, std::io::Error> {
-    Ok("no-platform-id-on-windows".to_string())
-}
-
 impl Device {
     pub fn new<S: AsRef<str>>(platform_id: S, name: S) -> Self {
         let platform_id = platform_id.as_ref().to_owned();
@@ -90,7 +85,7 @@ impl Search for Device {
 pub mod tests {
     use crate::{create_in_memory, traits::Search};
 
-    use super::Device;
+    use super::{get_current_platform_id, Device};
 
     #[test]
     fn test_find_or_create_current() {
@@ -104,5 +99,12 @@ pub mod tests {
             found_device.first().unwrap().platform_id,
             device.platform_id
         );
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn test_get_current_platform_id() {
+        let platform_id = get_current_platform_id().unwrap();
+        assert_eq!(platform_id.len(), 32);
     }
 }
