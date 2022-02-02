@@ -51,5 +51,7 @@ pub enum CliCommand {
     /// Display files tree
     Tree,
 
+    List,
+
     Debug,
 }

@@ -3,7 +3,7 @@ use std::{collections::HashMap, path::PathBuf};
 use database::{models, traits::FetchAll, Database};
 use fs::PathTree;
 
-pub async fn tree(db: &mut Database) -> anyhow::Result<()> {
+pub async fn list(db: &mut Database) -> anyhow::Result<()> {
     let files: HashMap<PathBuf, models::File> = models::File::fetch_all(db)?
         .into_iter()
         .map(|file| (PathBuf::from(&file), file))
