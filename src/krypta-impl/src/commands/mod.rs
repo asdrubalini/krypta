@@ -2,6 +2,7 @@ mod config;
 mod debug;
 mod encrypt;
 mod execute;
+mod find;
 mod force_sync;
 mod list;
 mod status;
