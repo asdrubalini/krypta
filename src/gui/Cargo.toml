@@ -1,0 +1,10 @@
+[package]
+name = "gui"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+database = { version = "0.0.0", path = "../database" }
+
+eframe = "0.17"
+egui = "0.17"

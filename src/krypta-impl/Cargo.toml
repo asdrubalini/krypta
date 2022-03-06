@@ -8,6 +8,7 @@ fs = { version = "0.0.0", path = "../fs" }
 crypto = { version = "0.0.0", path = "../crypto" }
 cli = { version = "0.0.0", path = "../cli" }
 database = { version = "0.0.0", path = "../database" }
+gui = { version = "0.0.0", path = "../gui" }
 
 tokio = { version = "1", features = [ "macros", "rt", "rt-multi-thread" ] }
 
