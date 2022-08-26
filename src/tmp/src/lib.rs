@@ -52,7 +52,7 @@ impl Tmp {
     }
 
     /// Generate a random tmp path in the form of /tmp/{name}/
-    #[cfg(target_os = "linux")]
+    #[cfg(target_family = "unix")]
     fn generate_random_tmp(folder_length: usize, rng: &mut impl Rng) -> PathBuf {
         let mut random_name = "krypta_".to_string();
         random_name.push_str(&RandomString::alphanum_with_rng(rng, folder_length));
