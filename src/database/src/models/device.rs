@@ -1,6 +1,3 @@
-use std::fs::File;
-use std::io::Read;
-
 use database_macros::{Insert, TableName, TryFromRow};
 use rusqlite::named_params;
 
@@ -20,19 +17,49 @@ pub struct Device {
     pub name: String,
 }
 
+#[cfg(target_os = "macos")]
+pub fn get_host_unique_id() -> String {
+    use std::process::Command;
+
+    use serde_json::Value;
+
+    let output = Command::new("system_profiler")
+        .args(["SPHardwareDataType", "-json"])
+        .output()
+        .expect("cannot run `system_profiler` command");
+
+    let json_string = String::from_utf8(output.stdout).unwrap();
+    let json: Value = serde_json::from_str(&json_string).unwrap();
+
+    json.get("SPHardwareDataType")
+        .unwrap()
+        .get(0)
+        .unwrap()
+        .get("platform_UUID")
+        .unwrap()
+        .as_str()
+        .unwrap()
+        .to_string()
+}
+
 #[cfg(target_os = "linux")]
-pub fn get_current_platform_id() -> Result<String, std::io::Error> {
+pub fn get_host_unique_id() -> String {
+    use std::fs::File;
+    use std::io::Read;
+    use uuid::Uuid;
+
     // On Linux, platform id is `/etc/machine-id`
 
-    let mut f = File::open("/etc/machine-id")?;
+    let mut f = File::open("/etc/machine-id").expect("cannot open `/etc/machine-id`");
     let mut machine_id = String::new();
 
-    f.read_to_string(&mut machine_id)?;
+    f.read_to_string(&mut machine_id)
+        .expect("cannot read `/etc/machine-id`");
 
     // Trim newline at the end
     machine_id = machine_id.replace('\n', "");
 
-    Ok(machine_id)
+    Uuid::new_v5(&Uuid::NAMESPACE_URL, machine_id.as_bytes()).to_string()
 }
 
 impl Device {
@@ -50,7 +77,7 @@ impl Device {
     /// Attempts to find the current device in the database, creating one if it doesn't
     /// exists yet
     pub fn find_or_create_current(db: &Database) -> DatabaseResult<Self> {
-        let platform_id = get_current_platform_id()?;
+        let platform_id = get_host_unique_id();
         let mut results = Self::search(db, &platform_id)?;
 
         if results.is_empty() {
@@ -85,7 +112,7 @@ impl Search for Device {
 pub mod tests {
     use crate::{create_in_memory, traits::Search};
 
-    use super::{get_current_platform_id, Device};
+    use super::{get_host_unique_id, Device};
 
     #[test]
     fn test_find_or_create_current() {
@@ -102,9 +129,8 @@ pub mod tests {
     }
 
     #[test]
-    #[cfg(target_os = "linux")]
-    fn test_get_current_platform_id() {
-        let platform_id = get_current_platform_id().unwrap();
-        assert_eq!(platform_id.len(), 32);
+    fn test_get_host_unique_id() {
+        let platform_id = get_host_unique_id();
+        assert_eq!(platform_id.len(), 36);
     }
 }

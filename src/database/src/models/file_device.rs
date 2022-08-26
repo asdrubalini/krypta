@@ -13,7 +13,7 @@ use crate::traits::{InsertMany, TryFromRow, Update, UpdateMany};
 use super::{Device, File};
 
 /// Convert a std::fs::Metadata into a UNIX epoch u64
-#[cfg(target_os = "linux")]
+#[cfg(target_family = "unix")]
 pub fn metadata_to_last_modified(metadata: &Metadata) -> f64 {
     metadata
         .modified()
