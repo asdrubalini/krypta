@@ -221,9 +221,10 @@ mod tests {
             .map(|file| PathBuf::from(&file))
             .collect::<HashSet<_>>(); // HashSet for faster lookups
 
+        let tmp_len = Tmp::prefix_len() + 1;
         // Make sure that each created file exists in the database
         for file in created_files.iter() {
-            let created_file = file.iter().skip(3).collect::<PathBuf>();
+            let created_file = file.iter().skip(tmp_len).collect::<PathBuf>();
             assert!(database_paths.contains(&created_file));
         }
 

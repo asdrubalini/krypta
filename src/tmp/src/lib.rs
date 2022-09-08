@@ -51,14 +51,28 @@ impl Tmp {
             .collect()
     }
 
-    /// Generate a random tmp path in the form of /tmp/{name}/
+    pub fn prefix_len() -> usize {
+        Self::prefix().iter().count()
+    }
+
     #[cfg(target_family = "unix")]
+    fn prefix() -> PathBuf {
+        use std::env;
+
+        if let Some(prefix) = env::var_os("KRYPTA_TMP_PREFIX") {
+            PathBuf::from(prefix)
+        } else {
+            PathBuf::from("/tmp/")
+        }
+    }
+
+    /// Generate a random tmp path in the form of /tmp/{name}/
     fn generate_random_tmp(folder_length: usize, rng: &mut impl Rng) -> PathBuf {
         let mut random_name = "krypta_".to_string();
         random_name.push_str(&RandomString::alphanum_with_rng(rng, folder_length));
 
         let mut random_tmp = PathBuf::new();
-        random_tmp.push("/tmp/");
+        random_tmp.push(Self::prefix());
         random_tmp.push(random_name);
 
         random_tmp
