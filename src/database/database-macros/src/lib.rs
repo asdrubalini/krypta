@@ -2,6 +2,7 @@ use convert_case::{Case, Casing};
 use proc_macro::{self, TokenStream};
 use quote::quote;
 use syn::{parse_macro_input, DeriveInput};
+use std::fmt::Write as _;
 
 /// Derive TableName trait for model struct. Table name is based on the struct
 /// name converted to snake_case
@@ -81,8 +82,9 @@ pub fn derive_insert(input: TokenStream) -> TokenStream {
 
                 let field_str = field_name.to_string();
 
-                query_args.push_str(&format!("`{field_str}`,"));
-                query_values.push_str(&format!(":{field_str},"));
+                // could be query_args.push_str(&format!(...)) but this avoids allocations
+                let _ = write!(query_args, "`{field_str}`,");
+                let _ = write!(query_values, ":{field_str},");
 
                 let mut arg_name = ":".to_string();
                 arg_name.push_str(&field_name.to_string());

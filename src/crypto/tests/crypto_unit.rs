@@ -48,8 +48,8 @@ fn encrypt_decrypt_with_key(
 
     // Make sure that plaintext and recovered files are the same
     assert!(diff(
-        &unlocked_path.as_os_str().to_string_lossy().to_string(),
-        &recovered_path.as_os_str().to_string_lossy().to_string()
+        &unlocked_path.as_os_str().to_string_lossy(),
+        &recovered_path.as_os_str().to_string_lossy(),
     ));
 
     remove_file(unlocked_path).unwrap();
