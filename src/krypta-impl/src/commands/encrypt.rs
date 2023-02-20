@@ -9,8 +9,7 @@ pub async fn encrypt(db: &mut Database) -> anyhow::Result<()> {
     let unlocked_path = models::DeviceConfig::get_unlocked_path(db, &current_device)?
         .expect("Cannot find `unlocked_path` in config");
 
-    let _synced_files =
-        sync_locked_path_from_database(db, &current_device, locked_path, unlocked_path).await?;
+    sync_locked_path_from_database(db, &current_device, locked_path, unlocked_path).await?;
 
     Ok(())
 }

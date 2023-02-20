@@ -1,1 +1,2 @@
-KRYPTA_TMP_PREFIX=/Volumes/SanDisk/tmp/ cargo test --release --all -- --nocapture
+# KRYPTA_TMP_PREFIX=/Volumes/SanDisk/tmp/ KRYPTA_TMP_PERSIST=1 cargo test --release --all -- --nocapture
+cargo test --release --all -- --nocapture

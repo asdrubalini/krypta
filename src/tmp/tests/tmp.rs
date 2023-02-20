@@ -15,6 +15,7 @@ fn test_temp_path_folder_creation_and_destruction() {
         };
 
         // Make sure that path gets destroyed
+        
         assert!(!path.exists());
     }
 }

@@ -4,10 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use chacha20poly1305::{
-    aead::{stream, NewAead},
-    XChaCha20Poly1305,
-};
+use chacha20poly1305::{aead::stream, KeyInit, XChaCha20Poly1305};
 use memmap2::MmapOptions;
 
 use crate::{
@@ -86,6 +83,7 @@ impl ComputeUnit for FileDecryptUnit {
             return Ok(());
         }
 
+        // SAFETY: nobody else is accessing this file
         let locked_file_map = unsafe { MmapOptions::new().map(&locked_file)? };
         let mut unlocked_file_buf = BufWriter::new(unlocked_file);
 

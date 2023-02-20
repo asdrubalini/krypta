@@ -5,7 +5,8 @@ use std::{
 };
 
 use chacha20poly1305::{
-    aead::{stream, NewAead},
+    aead::stream,
+    KeyInit,
     XChaCha20Poly1305,
 };
 use memmap2::MmapOptions;
@@ -87,6 +88,7 @@ impl ComputeUnit for FileEncryptUnit {
             return Ok(());
         }
 
+        // SAFETY: nobody else is accessing this file
         let unlocked_file_map = unsafe { MmapOptions::new().map(&unlocked_file)? };
         let mut locked_file_buf = BufWriter::new(locked_file);
 

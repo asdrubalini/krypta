@@ -2,7 +2,7 @@
 use std::{
     fs::{create_dir, remove_dir_all, File},
     io::Write,
-    path::{Path, PathBuf},
+    path::{Path, PathBuf}, env,
 };
 
 use rand::{thread_rng, Rng};
@@ -57,8 +57,6 @@ impl Tmp {
 
     #[cfg(target_family = "unix")]
     fn prefix() -> PathBuf {
-        use std::env;
-
         if let Some(prefix) = env::var_os("KRYPTA_TMP_PREFIX") {
             PathBuf::from(prefix)
         } else {
@@ -82,6 +80,10 @@ impl Tmp {
 impl Drop for Tmp {
     /// Cleanup the Tmp patg
     fn drop(&mut self) {
+        if env::var_os("KRYPTA_TMP_PERSIST").is_some() {
+            return;
+        }
+
         if self.base_path.exists() {
             remove_dir_all(&self.base_path).unwrap();
         } else {
