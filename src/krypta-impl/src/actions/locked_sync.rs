@@ -7,6 +7,7 @@ use database::{
     Database,
 };
 
+#[deprecated]
 pub async fn sync_locked_path_from_database(
     db: &mut Database,
     current_device: &Device,
@@ -52,6 +53,7 @@ pub async fn sync_locked_path_from_database(
 }
 
 /// Convert a bunch of file into bulk encryptor
+#[deprecated]
 fn files_into_encryptor(
     need_encryption: impl IntoIterator<Item = models::File>,
     locked_path: &Path,
@@ -66,6 +68,7 @@ fn files_into_encryptor(
 }
 
 /// Turn the encryption status into models::FileDevice(s)
+#[deprecated]
 fn encryption_status_into_file_device(
     db: &mut Database,
     encryption_status: impl IntoIterator<Item = (PathBuf, bool)>,

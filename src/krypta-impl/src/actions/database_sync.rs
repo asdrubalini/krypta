@@ -14,6 +14,7 @@ use fs::PathFinder;
 
 /// Update database according to files found in `unlocked_path`, inserting
 /// or updating when necessary
+#[deprecated]
 pub async fn sync_database_from_unlocked_path(
     db: &mut Database,
     unlocked_path: impl AsRef<Path>,
@@ -106,6 +107,7 @@ pub async fn sync_database_from_unlocked_path(
 
 /// Find all files in `unlocked_path` that need to be inserted into the database
 /// returned paths are relative and do not contain host-specific bits
+#[deprecated]
 fn find_paths_requiring_insertion_or_update(
     db: &Database,
     unlocked_path: impl AsRef<Path>,
@@ -145,6 +147,7 @@ fn find_paths_requiring_insertion_or_update(
 
 /// Compute BLAKE3 hashes for files in `unlocked_path`
 /// returned paths are relative and do not contain host-specific bits
+#[deprecated]
 fn compute_hash_for_paths(
     unlocked_path: impl AsRef<Path>,
     relative_paths: &[impl AsRef<Path>],
