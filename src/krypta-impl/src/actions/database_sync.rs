@@ -6,106 +6,13 @@ use std::{
 
 use crypto::{hash::Blake3Concurrent, traits::ComputeBulk};
 use database::{
-    models::{self, metadata_to_last_modified, Device},
+    models::{self, Device},
     traits::{InsertMany, UpdateMany},
     Database,
 };
 use fs::PathFinder;
 
-/// Update database according to files found in `unlocked_path`, inserting
-/// or updating when necessary
-#[deprecated]
-pub async fn sync_database_from_unlocked_path(
-    db: &mut Database,
-    unlocked_path: impl AsRef<Path>,
-    device: &Device,
-) -> anyhow::Result<Vec<models::File>> {
-    let unlocked_path = unlocked_path.as_ref();
-
-    let (paths_requiring_insertion, paths_requiring_update) =
-        find_paths_requiring_insertion_or_update(db, unlocked_path, device)?;
-
-    let need_hashing_paths = paths_requiring_insertion
-        .iter()
-        .chain(paths_requiring_update.iter())
-        .map(|(item, _)| item)
-        .collect::<Vec<_>>();
-
-    // Compute all hashes for files that have been updated or just inserted
-    let hashes = compute_hash_for_paths(unlocked_path, &need_hashing_paths)?;
-
-    // First handle newly created files
-    // Obtain models::InsertFile and populate the database
-    let files_to_insert = paths_requiring_insertion
-        .iter()
-        .map(|(path, metadata)| {
-            // Should always be Some
-            let hash = hashes.get(path).unwrap();
-            models::MetadataFile::new(path, metadata).into_file(hash.to_string())
-        })
-        .collect::<Vec<models::File>>();
-
-    // Insert models::File
-    let inserted_files = models::File::insert_many(db, files_to_insert)?;
-
-    let file_devices_to_insert = inserted_files
-        .iter()
-        .map(|file| {
-            // Should never fail
-            let metadata = paths_requiring_insertion.get(&PathBuf::from(file)).unwrap();
-            models::FileDevice::new(
-                file,
-                device,
-                true,
-                false,
-                metadata_to_last_modified(metadata),
-            )
-        })
-        .collect::<Vec<_>>();
-
-    // Insert models::FileDevice
-    models::FileDevice::insert_many(db, file_devices_to_insert)?;
-
-    // Then handle files that have been updated
-    let update_paths = paths_requiring_update
-        .iter()
-        .map(|(item, _)| item)
-        .collect::<Vec<_>>();
-
-    let files_to_update = models::File::find_files_from_paths(db, &update_paths)?
-        .into_iter()
-        .map(|mut file| {
-            // Should never fail
-            let hash = hashes.get(&PathBuf::from(&file)).unwrap();
-            file.contents_hash = hash.to_owned();
-            file
-        })
-        .collect::<Vec<_>>();
-
-    let mut updated_files = models::File::update_many(db, files_to_update)?;
-
-    let file_devices_to_update = models::FileDevice::find_by_files(db, &updated_files)?
-        .into_iter()
-        .zip(updated_files.iter())
-        .map(|(mut file_device, file)| {
-            // Should never fail
-            let metadata = paths_requiring_update.get(&PathBuf::from(file)).unwrap();
-
-            // Convert into UpdateFileDevice and mutate last_modified
-            file_device.last_modified = metadata_to_last_modified(metadata);
-
-            file_device
-        })
-        .collect::<Vec<_>>();
-
-    models::FileDevice::update_many(db, file_devices_to_update)?;
-
-    let mut affected_files = inserted_files;
-    affected_files.append(&mut updated_files);
-    Ok(affected_files)
-}
-
-/// Find all files in `unlocked_path` that need to be inserted into the database
+/// Find all files in a certain path that need to be inserted into the database
 /// returned paths are relative and do not contain host-specific bits
 #[deprecated]
 fn find_paths_requiring_insertion_or_update(

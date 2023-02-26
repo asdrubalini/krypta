@@ -9,7 +9,7 @@ pub async fn list(db: &mut Database) -> anyhow::Result<()> {
         .map(|file| (PathBuf::from(&file), file))
         .collect();
 
-    let paths_tree: PathTree = files.iter().map(|(path, _file)| path.to_owned()).collect();
+    let paths_tree: PathTree = files.keys().map(|path| path.to_owned()).collect();
     let paths_ordered = paths_tree.paths_ordered();
 
     for path in paths_ordered {

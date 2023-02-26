@@ -32,15 +32,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS `file_random_hash` ON `file` (`random_hash`);
 CREATE UNIQUE INDEX IF NOT EXISTS `file_time` ON `file` (`created_at`, `updated_at`);
 CREATE UNIQUE INDEX IF NOT EXISTS `file_path` ON `file` (`path`);
 
-CREATE TABLE IF NOT EXISTS `file_device` (
-	`file_id` INTEGER NOT NULL,
-	`device_id` INTEGER NOT NULL,
-	`is_unlocked` INTEGER NOT NULL,
-	`is_locked` INTEGER NOT NULL,
-	`last_modified` REAL NOT NULL,
-	PRIMARY KEY(`file_id`, `device_id`)
-) STRICT;
-
 CREATE TABLE IF NOT EXISTS `device` (
 	`id` INTEGER NOT NULL UNIQUE,
 	`platform_id` TEXT NOT NULL UNIQUE,
