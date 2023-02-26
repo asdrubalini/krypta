@@ -1,5 +1,4 @@
 use std::any::type_name;
-use std::collections::HashMap;
 use std::path::Path;
 use std::time::Instant;
 use std::{fs::Metadata, path::PathBuf};
@@ -19,7 +18,7 @@ use crate::{errors::DatabaseResult, Database};
 
 use crate::traits::{Count, FetchAll, InsertMany, Search, TryFromRow, Update, UpdateMany};
 
-use super::{Device, Tag};
+use super::Tag;
 
 #[derive(TableName, TryFromRow, Insert, Debug, Clone, PartialEq, Eq)]
 pub struct File {
@@ -129,30 +128,6 @@ impl File {
         self.updated_at = Utc::now();
     }
 
-    /// Find unlocked paths known to the current device and their
-    /// last_modified date
-    pub fn find_unlocked_paths_with_last_modified(
-        db: &Database,
-        device: &Device,
-    ) -> DatabaseResult<HashMap<PathBuf, f64>> {
-        let mut stmt = db.prepare(include_str!(
-            "sql/file/find_known_paths_with_last_modified.sql"
-        ))?;
-        let mut rows = stmt.query(named_params! {
-            ":platform_id": device.to_owned().platform_id
-        })?;
-
-        let mut items = HashMap::new();
-        while let Some(row) = rows.next()? {
-            let path = PathBuf::from(row.get::<_, String>(0)?);
-            let last_modified = row.get::<_, f64>(1)?;
-
-            items.insert(path, last_modified);
-        }
-
-        Ok(items)
-    }
-
     /// Get file matching path
     fn find_file_from_path(db: &Database, path: &Path) -> DatabaseResult<File> {
         let file = db.query_row(
@@ -201,45 +176,6 @@ impl File {
     pub fn archive_size(db: &Database) -> DatabaseResult<u64> {
         let size = db.query_row(include_str!("sql/file/size.sql"), [], |row| row.get("size"))?;
         Ok(size)
-    }
-
-    /// Count how many unlocked files are there on disk (according to database)
-    pub fn count_unlocked(db: &Database, device: &Device) -> DatabaseResult<u64> {
-        let count = db.query_row(
-            include_str!("sql/file/count_unlocked.sql"),
-            named_params! {
-                ":platform_id": device.platform_id
-            },
-            |row| row.get("count"),
-        )?;
-
-        Ok(count)
-    }
-
-    /// Count how many locked files are there on disk (according to database)
-    pub fn count_locked(db: &Database, device: &Device) -> DatabaseResult<u64> {
-        let count = db.query_row(
-            include_str!("sql/file/count_locked.sql"),
-            named_params! {
-                ":platform_id": device.platform_id
-            },
-            |row| row.get("count"),
-        )?;
-
-        Ok(count)
-    }
-
-    /// Find files that need to be encrypted for the specified device
-    pub fn find_need_encryption(db: &Database, device: &Device) -> DatabaseResult<Vec<File>> {
-        let mut stmt = db.prepare(include_str!("sql/file/need_encryption.sql"))?;
-        let mut rows = stmt.query(named_params! { ":platform_id": &device.platform_id })?;
-
-        let mut files = vec![];
-        while let Some(row) = rows.next()? {
-            files.push(File::try_from_row(row)?);
-        }
-
-        Ok(files)
     }
 
     /// Convert self into a crypto::Encryptor, if possible
@@ -314,7 +250,7 @@ mod tests {
     use utils::RandomString;
 
     use crate::create_in_memory;
-    use crate::models::{Device, FileDevice, FileTag, Tag};
+    use crate::models::{FileTag, Tag};
     use crate::traits::{Count, FetchAll, Insert, InsertMany, Update};
 
     use super::File;
@@ -530,94 +466,6 @@ mod tests {
     }
 
     #[test]
-    fn test_find_empty_unlocked_paths_with_last_modified() {
-        let database = create_in_memory().unwrap();
-        let device = Device::find_or_create_current(&database).unwrap();
-
-        let paths = File::find_unlocked_paths_with_last_modified(&database, &device).unwrap();
-        assert_eq!(paths.len(), 0);
-    }
-
-    #[test]
-    fn test_find_single_unlocked_paths_with_last_modified() {
-        let database = create_in_memory().unwrap();
-        let device = Device::find_or_create_current(&database).unwrap();
-
-        let file = new_random_file().insert(&database).unwrap();
-        FileDevice::new(&file, &device, true, false, 0.0)
-            .insert(&database)
-            .unwrap();
-
-        let paths = File::find_unlocked_paths_with_last_modified(&database, &device).unwrap();
-        assert_eq!(paths.len(), 1);
-    }
-
-    #[test]
-    fn test_find_many_unlocked_paths_with_last_modified() {
-        let database = create_in_memory().unwrap();
-        let device = Device::find_or_create_current(&database).unwrap();
-
-        FileDevice::new(
-            &new_random_file().insert(&database).unwrap(),
-            &device,
-            true,
-            false,
-            0.0,
-        )
-        .insert(&database)
-        .unwrap();
-
-        FileDevice::new(
-            &new_random_file().insert(&database).unwrap(),
-            &device,
-            true,
-            false,
-            0.0,
-        )
-        .insert(&database)
-        .unwrap();
-
-        let paths = File::find_unlocked_paths_with_last_modified(&database, &device).unwrap();
-        assert_eq!(paths.len(), 2);
-    }
-
-    #[test]
-    fn test_find_unlocked_paths_with_last_modified_other_device() {
-        let database = create_in_memory().unwrap();
-
-        let device = Device::new("random-id-1", "random-name-1")
-            .insert(&database)
-            .unwrap();
-
-        FileDevice::new(
-            &new_random_file().insert(&database).unwrap(),
-            &device,
-            true,
-            false,
-            0.0,
-        )
-        .insert(&database)
-        .unwrap();
-
-        FileDevice::new(
-            &new_random_file().insert(&database).unwrap(),
-            &device,
-            true,
-            false,
-            0.0,
-        )
-        .insert(&database)
-        .unwrap();
-
-        let other_device = Device::new("random-id-2", "random-name-2")
-            .insert(&database)
-            .unwrap();
-
-        let paths = File::find_unlocked_paths_with_last_modified(&database, &other_device).unwrap();
-        assert_eq!(paths.len(), 0);
-    }
-
-    #[test]
     fn test_file_tags() {
         let database = create_in_memory().unwrap();
 
@@ -636,100 +484,6 @@ mod tests {
     }
 
     #[test]
-    fn test_count_locked() {
-        let database = create_in_memory().unwrap();
-
-        let device = Device::new("random-id-1", "random-name-1")
-            .insert(&database)
-            .unwrap();
-
-        assert_eq!(File::count_locked(&database, &device).unwrap(), 0);
-
-        FileDevice::new(
-            &new_random_file().insert(&database).unwrap(),
-            &device,
-            false,
-            true,
-            0.0,
-        )
-        .insert(&database)
-        .unwrap();
-
-        assert_eq!(File::count_locked(&database, &device).unwrap(), 1);
-
-        FileDevice::new(
-            &new_random_file().insert(&database).unwrap(),
-            &device,
-            false,
-            false,
-            0.0,
-        )
-        .insert(&database)
-        .unwrap();
-
-        assert_eq!(File::count_locked(&database, &device).unwrap(), 1);
-
-        FileDevice::new(
-            &new_random_file().insert(&database).unwrap(),
-            &device,
-            false,
-            true,
-            0.0,
-        )
-        .insert(&database)
-        .unwrap();
-
-        assert_eq!(File::count_locked(&database, &device).unwrap(), 2);
-    }
-
-    #[test]
-    fn test_count_unlocked() {
-        let database = create_in_memory().unwrap();
-
-        let device = Device::new("random-id-1", "random-name-1")
-            .insert(&database)
-            .unwrap();
-
-        assert_eq!(File::count_locked(&database, &device).unwrap(), 0);
-
-        FileDevice::new(
-            &new_random_file().insert(&database).unwrap(),
-            &device,
-            true,
-            false,
-            0.0,
-        )
-        .insert(&database)
-        .unwrap();
-
-        assert_eq!(File::count_unlocked(&database, &device).unwrap(), 1);
-
-        FileDevice::new(
-            &new_random_file().insert(&database).unwrap(),
-            &device,
-            false,
-            false,
-            0.0,
-        )
-        .insert(&database)
-        .unwrap();
-
-        assert_eq!(File::count_unlocked(&database, &device).unwrap(), 1);
-
-        FileDevice::new(
-            &new_random_file().insert(&database).unwrap(),
-            &device,
-            true,
-            false,
-            0.0,
-        )
-        .insert(&database)
-        .unwrap();
-
-        assert_eq!(File::count_unlocked(&database, &device).unwrap(), 2);
-    }
-
-    #[test]
     fn test_find_file_from_path() {
         let database = create_in_memory().unwrap();
 
@@ -738,29 +492,5 @@ mod tests {
             File::find_file_from_path(&database, &PathBuf::from(&inserted_file)).unwrap();
 
         assert_eq!(inserted_file, found_file);
-    }
-
-    #[test]
-    fn test_find_need_encryption() {
-        let database = create_in_memory().unwrap();
-        let device = Device::new("random-id-1", "random-name-1")
-            .insert(&database)
-            .unwrap();
-
-        let need_encryption = File::find_need_encryption(&database, &device).unwrap();
-        assert_eq!(need_encryption.len(), 0);
-
-        FileDevice::new(
-            &new_random_file().insert(&database).unwrap(),
-            &device,
-            true,
-            false,
-            0.0,
-        )
-        .insert(&database)
-        .unwrap();
-
-        let need_encryption = File::find_need_encryption(&database, &device).unwrap();
-        assert_eq!(need_encryption.len(), 1);
     }
 }
