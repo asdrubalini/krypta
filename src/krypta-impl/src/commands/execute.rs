@@ -11,6 +11,10 @@ pub async fn execute_command(database: &mut Database) -> anyhow::Result<()> {
         CliCommand::Tree => todo!(),
         CliCommand::List => list::list(database).await,
         CliCommand::Debug => debug::debug(database).await,
+        CliCommand::Add {
+            real_path,
+            virtual_path,
+        } => todo!(),
     }?;
 
     Ok(())
