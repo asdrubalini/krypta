@@ -11,6 +11,12 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum CliCommand {
+    /// Set config values
+    Config {
+        key: String,
+        value: Option<String>,
+    },
+
     /// Get the status of the current database
     Status,
 
@@ -21,8 +27,8 @@ pub enum CliCommand {
 
     /// Directly add a path without FUSE
     Add {
-        real_path: PathBuf,
-        virtual_path: PathBuf,
+        target_path: PathBuf,
+        prefix: PathBuf,
     },
 
     /// Display files tree

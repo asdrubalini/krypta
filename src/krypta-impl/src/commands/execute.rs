@@ -1,19 +1,20 @@
 use cli::{CliCommand, Parser};
 use database::Database;
 
-use super::{debug, find, list, status};
+use super::{config, debug, find, list, status};
 
 /// Parse and execute command, if valid
 pub async fn execute_command(database: &mut Database) -> anyhow::Result<()> {
     match cli::Cli::parse().command {
+        CliCommand::Config { key, value } => config::config(key, value).await,
         CliCommand::Status => status::status(database).await,
         CliCommand::Find { query } => find::find(database, query).await,
         CliCommand::Tree => todo!(),
         CliCommand::List => list::list(database).await,
         CliCommand::Debug => debug::debug(database).await,
         CliCommand::Add {
-            real_path,
-            virtual_path,
+            target_path: path,
+            prefix,
         } => todo!(),
     }?;
 
