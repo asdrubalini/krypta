@@ -15,6 +15,7 @@
       <sourceFolder url="file://$MODULE_DIR$/src/tmp/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/src/utils/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/xtask/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/vfs/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

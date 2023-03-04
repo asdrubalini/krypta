@@ -5,5 +5,6 @@ mod execute;
 mod find;
 mod list;
 mod status;
+mod tree;
 
 pub use execute::execute_command;

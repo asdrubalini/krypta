@@ -1,7 +1,7 @@
 use cli::{CliCommand, Parser};
 use database::Database;
 
-use super::{add, config, debug, find, list, status};
+use super::{add, config, debug, find, list, status, tree};
 
 /// Parse and execute command, if valid
 pub async fn execute_command(database: &mut Database) -> anyhow::Result<()> {
@@ -9,13 +9,13 @@ pub async fn execute_command(database: &mut Database) -> anyhow::Result<()> {
         CliCommand::Config { key, value } => config::config(key, value).await,
         CliCommand::Status => status::status(database).await,
         CliCommand::Find { query } => find::find(database, query).await,
-        CliCommand::Tree => todo!(),
+        CliCommand::Tree => tree::tree(database).await,
         CliCommand::List => list::list(database).await,
         CliCommand::Debug => debug::debug(database).await,
         CliCommand::Add {
-            target_path,
+            target_path: source_path,
             prefix,
-        } => add::add(database, target_path, prefix).await,
+        } => add::add(database, source_path, prefix).await,
     };
 
     Ok(())

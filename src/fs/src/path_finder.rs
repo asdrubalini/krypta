@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     fs::Metadata,
-    path::{Iter, Path, PathBuf},
+    path::{Path, PathBuf},
     time::Instant,
 };
 
