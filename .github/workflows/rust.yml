@@ -21,6 +21,9 @@ jobs:
           override: true
           toolchain: stable
           components: clippy
+      
+      - name: Install FUSE
+        run: apt install fuse
 
       - uses: Swatinem/rust-cache@v1
 
