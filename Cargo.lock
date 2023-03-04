@@ -421,6 +421,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "fuse"
+version = "0.4.0-dev"
+source = "git+https://github.com/asdrubalini/fuse-rs#26f14a4289862a6cd0c5b481c51a3c8390151d4a"
+dependencies = [
+ "fuse-abi",
+ "fuse-sys",
+ "libc",
+ "log",
+ "thread-scoped",
+]
+
+[[package]]
+name = "fuse-abi"
+version = "0.4.0-dev"
+source = "git+https://github.com/asdrubalini/fuse-rs#26f14a4289862a6cd0c5b481c51a3c8390151d4a"
+
+[[package]]
+name = "fuse-sys"
+version = "0.4.0-dev"
+source = "git+https://github.com/asdrubalini/fuse-rs#26f14a4289862a6cd0c5b481c51a3c8390151d4a"
+dependencies = [
+ "pkg-config",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1006,6 +1031,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "thread-scoped"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bcbb6aa301e5d3b0b5ef639c9a9c7e2f1c944f177b460c04dc24c69b1fa2bd99"
+
+[[package]]
 name = "time"
 version = "0.1.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1135,6 +1166,13 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
+
+[[package]]
+name = "vfs"
+version = "0.1.0"
+dependencies = [
+ "fuse",
+]
 
 [[package]]
 name = "walkdir"

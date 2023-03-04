@@ -3,8 +3,9 @@ use std::{collections::HashMap, path::PathBuf};
 use database::{models, traits::FetchAll, Database};
 use fs::PathTree;
 
-pub async fn list(db: &mut Database) -> anyhow::Result<()> {
-    let files: HashMap<PathBuf, models::File> = models::File::fetch_all(db)?
+pub async fn list(db: &mut Database) {
+    let files: HashMap<PathBuf, models::File> = models::File::fetch_all(db)
+        .unwrap()
         .into_iter()
         .map(|file| (PathBuf::from(&file), file))
         .collect();
@@ -13,7 +14,7 @@ pub async fn list(db: &mut Database) -> anyhow::Result<()> {
     let paths_ordered = paths_tree.paths_ordered();
 
     for path in paths_ordered {
-        let tags = files.get(&path).unwrap().tags(db)?;
+        let tags = files.get(&path).unwrap().tags(db).unwrap();
 
         let tags_pretty: String = if tags.is_empty() {
             "(no tags)".to_string()
@@ -25,6 +26,4 @@ pub async fn list(db: &mut Database) -> anyhow::Result<()> {
 
         println!("{} -> {}", path.to_string_lossy(), tags_pretty);
     }
-
-    Ok(())
 }

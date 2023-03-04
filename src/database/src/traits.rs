@@ -1,4 +1,4 @@
-use rusqlite::Row;
+use rusqlite::{Connection, Row};
 use std::{any::type_name, time::Instant};
 
 use crate::{errors::DatabaseResult, Database};
@@ -26,11 +26,10 @@ pub trait Insert: Sized + TableName + TryFromRow {
 /// A model that can be mass-inserted
 pub trait InsertMany: Sized + Insert {
     fn insert_many(
-        db: &mut Database,
+        db: &Connection,
         insertables: impl IntoIterator<Item = Self>,
     ) -> DatabaseResult<Vec<Self>> {
         let insertables: Vec<Self> = insertables.into_iter().collect();
-        let tx = db.transaction()?;
         let mut inserted_items = vec![];
 
         log::trace!(
@@ -42,10 +41,8 @@ pub trait InsertMany: Sized + Insert {
         let start = Instant::now();
 
         for insertable in insertables {
-            inserted_items.push(insertable.insert(&tx)?);
+            inserted_items.push(insertable.insert(&db)?);
         }
-
-        tx.commit()?;
 
         log::trace!(
             "[{}] Took {:?} for inserting {} items",
@@ -61,7 +58,7 @@ pub trait InsertMany: Sized + Insert {
     /// Custom hook for doing something else after inserting
     #[inline]
     fn insert_many_hook(
-        _db: &mut Database,
+        _tx: &Connection,
         insertables: impl IntoIterator<Item = Self>,
     ) -> DatabaseResult<Vec<Self>> {
         // Do nothing by default

@@ -1,3 +1,4 @@
+mod add;
 mod config;
 mod debug;
 mod execute;

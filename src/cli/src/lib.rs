@@ -28,7 +28,7 @@ pub enum CliCommand {
     /// Directly add a path without FUSE
     Add {
         target_path: PathBuf,
-        prefix: PathBuf,
+        prefix: Option<PathBuf>,
     },
 
     /// Display files tree
