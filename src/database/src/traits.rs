@@ -41,7 +41,7 @@ pub trait InsertMany: Sized + Insert {
         let start = Instant::now();
 
         for insertable in insertables {
-            inserted_items.push(insertable.insert(&db)?);
+            inserted_items.push(insertable.insert(db)?);
         }
 
         log::trace!(
