@@ -22,8 +22,8 @@ jobs:
           toolchain: stable
           components: clippy
       
-      #- name: Install FUSE
-        #run: sudo apt install fuse
+      - name: Install FUSE
+        run: sudo apt install libfuse3-dev
 
       - uses: Swatinem/rust-cache@v2
 
