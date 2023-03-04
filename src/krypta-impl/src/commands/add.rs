@@ -121,7 +121,7 @@ pub async fn add(db: &mut Database, source_path: PathBuf, virtual_prefix: Option
     std::io::stdin().read_line(&mut in_buf).unwrap();
 
     in_buf = in_buf.trim().to_lowercase();
-    if in_buf.is_empty() || in_buf.starts_with('y') {
+    if in_buf.is_empty() || !in_buf.starts_with('y') {
         println!("Stopped.");
         std::process::exit(0);
     }

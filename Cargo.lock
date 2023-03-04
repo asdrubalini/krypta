@@ -589,6 +589,7 @@ dependencies = [
  "dotenv",
  "fs",
  "log",
+ "once_cell",
  "pretty_env_logger",
  "rand",
  "serde",
