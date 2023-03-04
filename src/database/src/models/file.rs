@@ -182,11 +182,11 @@ impl File {
     pub fn try_into_encryptor<P: AsRef<Path>>(
         self,
         locked_path: P,
-        unlocked_path: P,
+        source_path: P,
     ) -> Result<FileEncryptUnit, CryptoError> {
         // Build absolute paths
-        let mut unlocked = unlocked_path.as_ref().to_owned();
-        unlocked.push(self.path);
+        let mut source = source_path.as_ref().to_owned();
+        source.push(self.path);
 
         let mut locked = locked_path.as_ref().to_owned();
         locked.push(self.random_hash);
@@ -195,7 +195,7 @@ impl File {
         let key: [u8; AEAD_KEY_SIZE] = self.key.try_into().unwrap();
         let nonce: [u8; AEAD_NONCE_SIZE] = self.nonce.try_into().unwrap();
 
-        FileEncryptUnit::try_new(unlocked, locked, key, nonce)
+        FileEncryptUnit::try_new(source, locked, key, nonce)
     }
 
     /// Get a list of tags related to a File

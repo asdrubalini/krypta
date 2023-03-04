@@ -6,15 +6,9 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Config {
     pub locked_path: Option<String>,
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self { locked_path: None }
-    }
 }
 
 impl Config {

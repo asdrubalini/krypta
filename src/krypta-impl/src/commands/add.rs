@@ -1,9 +1,12 @@
 use std::{
     collections::HashMap,
+    io::Write,
     path::{Path, PathBuf},
 };
 
-use crypto::{hash::Blake3Concurrent, traits::ComputeBulk};
+use crypto::{
+    crypt::FileEncryptBulk, errors::CryptoError, hash::Blake3Concurrent, traits::ComputeBulk,
+};
 use database::{models, traits::InsertMany, Database};
 use fs::PathFinder;
 
@@ -43,75 +46,93 @@ fn compute_paths_hashes(
     Ok(relative_result)
 }
 
-/// encrypt files into `locked_path`
-//pub async fn sync_locked_path_from_database(
-//db: &mut Database,
-//current_device: &Device,
-//locked_path: impl AsRef<Path>,
-//unlocked_path: impl AsRef<Path>,
-//) -> anyhow::Result<()> {
-//let unlocked_path = unlocked_path.as_ref();
-//let locked_path = locked_path.as_ref();
+/// Encrypt many files
+pub async fn encrypt_many_files(
+    files: Vec<models::File>,
+    virtual_prefix: PathBuf,
+    source_root_path: impl AsRef<Path>,
+    locked_path: impl AsRef<Path>,
+) -> anyhow::Result<()> {
+    let source_root_path = source_root_path.as_ref();
+    let locked_path = locked_path.as_ref();
 
-//// Find paths that need encryption
-//let need_encryption = models::File::find_need_encryption(db, current_device)?;
+    let virtual_prefix_len = virtual_prefix.into_iter().count();
 
-//// Start encryption job
-//log::trace!("Encryption job started");
-//let encryptor = files_into_encryptor(need_encryption, locked_path, unlocked_path)?;
-//let encryption_status = encryptor.start_all();
-//log::trace!("Done with encryption job");
+    // Start encryption job
+    log::trace!("Encryption job started");
 
-//// Error check
-//let errors_count = encryption_status
-//.iter()
-//.filter(|(_, status)| !(**status))
-//.count();
-//log::info!(
-//"Encrypted {} files, with {} errors",
-//encryption_status.len(),
-//errors_count
-//);
+    let encryptors = files
+        .into_iter()
+        .map(|mut file| {
+            // remove `virtual_prefix` from File
+            let p: PathBuf = PathBuf::from(file.path)
+                .into_iter()
+                .skip(virtual_prefix_len)
+                .collect();
 
-//// Get file_device(s) and mark them as encrypted
-//let file_devices = encryption_status_into_file_device(db, encryption_status, unlocked_path)?;
-//let file_devices: Vec<models::FileDevice> = file_devices
-//.into_iter()
-//.map(|mut file_device| {
-//file_device.is_locked = true;
-//file_device
-//})
-//.collect();
+            file.path = p.to_string_lossy().to_string();
 
-//models::FileDevice::update_many(db, file_devices)?;
+            models::File::try_into_encryptor(file, locked_path, source_root_path)
+        })
+        .collect::<Result<Vec<_>, CryptoError>>()?;
 
-//Ok(())
-//}
+    let encryptor = FileEncryptBulk::new(encryptors);
+    let encryption_status = encryptor.start_all();
+
+    log::trace!("Done with encryption job");
+
+    // Error check
+    let errors_count = encryption_status
+        .iter()
+        .filter(|(_, status)| !(**status))
+        .count();
+
+    log::info!(
+        "Encrypted {} files, with {} errors",
+        encryption_status.len(),
+        errors_count
+    );
+
+    Ok(())
+}
 
 /// Add a path `target_path` to database in `prefix`
-pub async fn add(db: &mut Database, target_path: PathBuf, virtual_prefix: Option<PathBuf>) {
+pub async fn add(db: &mut Database, source_path: PathBuf, virtual_prefix: Option<PathBuf>) {
     let locked_path = Config::get_locked_path();
     let virtual_prefix = virtual_prefix.unwrap_or("".into());
 
-    let found_files = PathFinder::from_source_path(&target_path)
-        .unwrap_or_else(|error| panic!("Cannot find files in {target_path:?}: {:?}", error));
+    let pathfinder = PathFinder::from_source_path(&source_path)
+        .unwrap_or_else(|error| panic!("Cannot find files in {source_path:?}: {:?}", error));
 
-    let hashes_map = compute_paths_hashes(
-        &target_path,
-        &found_files
-            .metadatas
-            .iter()
-            .map(|(path, _metadata)| path.as_path())
-            .collect::<Vec<_>>(),
-    )
-    .unwrap();
+    let found_paths = pathfinder
+        .metadatas
+        .keys()
+        .map(|path| path.as_path())
+        .collect::<Vec<_>>();
+
+    print!(
+        "You are inserting {} paths into krypta. Are you sure? y/N ",
+        found_paths.len()
+    );
+
+    std::io::stdout().lock().flush().unwrap();
+
+    let mut in_buf = String::new();
+    std::io::stdin().read_line(&mut in_buf).unwrap();
+
+    in_buf = in_buf.trim().to_lowercase(); // trim whitespace and convert to lowercase
+    if in_buf.is_empty() || in_buf.chars().next().unwrap() != 'y' {
+        println!("Stopped.");
+        std::process::exit(0);
+    }
+
+    let hashes_map = compute_paths_hashes(&source_path, &found_paths).unwrap();
 
     // first add files to database
     let mut files = vec![];
 
-    for (file_path, metadata) in found_files.metadatas {
+    for (file_path, metadata) in pathfinder.metadatas {
         let file_hash = hashes_map.get(&file_path).unwrap().to_owned();
-        let title = file_path.to_string_lossy().to_string();
 
         // full_path = prefix + host_relative_path
         let full_path = {
@@ -120,19 +141,22 @@ pub async fn add(db: &mut Database, target_path: PathBuf, virtual_prefix: Option
             p
         };
 
+        let title = full_path.to_string_lossy().to_string();
+
         let f = models::File::new(title, full_path, file_hash, metadata.len());
         files.push(f);
     }
 
-    let mut tx = db.transaction().unwrap();
+    let tx = db.transaction().unwrap();
 
     // insert all files
-    models::File::insert_many(&mut tx, files).unwrap();
+    let files = models::File::insert_many(&tx, files).unwrap();
+    println!("Added {} files to the database", files.len());
 
     // start encryption job
-    // TODO
+    encrypt_many_files(files, virtual_prefix, source_path, locked_path)
+        .await
+        .unwrap();
 
     tx.commit().unwrap();
-
-    todo!()
 }
