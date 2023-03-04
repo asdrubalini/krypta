@@ -23,7 +23,7 @@ jobs:
           components: clippy
       
       - name: Install FUSE
-        run: sudo apt install libfuse3-dev
+        run: sudo apt install fuse libfuse-dev
 
       - uses: Swatinem/rust-cache@v2
 
