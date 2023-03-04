@@ -13,6 +13,6 @@ pub async fn tree(db: &Database) {
         .collect();
 
     for path in paths.paths_ordered() {
-        println!("{}", path.to_string_lossy().to_string());
+        println!("{}", path.to_string_lossy());
     }
 }

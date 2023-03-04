@@ -56,7 +56,7 @@ pub async fn encrypt_many_files(
     let source_root_path = source_root_path.as_ref();
     let locked_path = locked_path.as_ref();
 
-    let virtual_prefix_len = virtual_prefix.into_iter().count();
+    let virtual_prefix_len = virtual_prefix.iter().count();
 
     // Start encryption job
     log::trace!("Encryption job started");
@@ -66,7 +66,7 @@ pub async fn encrypt_many_files(
         .map(|mut file| {
             // remove `virtual_prefix` from File
             let p: PathBuf = PathBuf::from(file.path)
-                .into_iter()
+                .iter()
                 .skip(virtual_prefix_len)
                 .collect();
 
@@ -120,8 +120,8 @@ pub async fn add(db: &mut Database, source_path: PathBuf, virtual_prefix: Option
     let mut in_buf = String::new();
     std::io::stdin().read_line(&mut in_buf).unwrap();
 
-    in_buf = in_buf.trim().to_lowercase(); // trim whitespace and convert to lowercase
-    if in_buf.is_empty() || in_buf.chars().next().unwrap() != 'y' {
+    in_buf = in_buf.trim().to_lowercase();
+    if in_buf.is_empty() || in_buf.starts_with('y') {
         println!("Stopped.");
         std::process::exit(0);
     }
@@ -159,4 +159,6 @@ pub async fn add(db: &mut Database, source_path: PathBuf, virtual_prefix: Option
         .unwrap();
 
     tx.commit().unwrap();
+
+    println!("All done.");
 }
