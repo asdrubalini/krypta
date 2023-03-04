@@ -1,7 +1,9 @@
+use std::path::PathBuf;
+
 use crate::utils::config::Config;
 
-pub async fn config(key: String, value: Option<String>) -> anyhow::Result<()> {
-    let mut config = Config::read();
+pub async fn config(key: String, value: Option<String>) {
+    let mut config = Config::get();
 
     let value_mut = match key.as_str() {
         "locked" => &mut config.locked_path,
@@ -11,7 +13,15 @@ pub async fn config(key: String, value: Option<String>) -> anyhow::Result<()> {
     match value {
         Some(new_value) => {
             // set
-            *value_mut = Some(new_value)
+
+            if key == "locked" {
+                let path = PathBuf::from(new_value).canonicalize().unwrap();
+                let new_value = path.to_string_lossy().to_string();
+
+                *value_mut = Some(new_value);
+            } else {
+                *value_mut = Some(new_value)
+            }
         }
         None => {
             // get
@@ -19,7 +29,5 @@ pub async fn config(key: String, value: Option<String>) -> anyhow::Result<()> {
         }
     }
 
-    Config::write(config);
-
-    Ok(())
+    Config::set(config);
 }

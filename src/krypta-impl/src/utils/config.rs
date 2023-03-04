@@ -18,7 +18,7 @@ impl Default for Config {
 }
 
 impl Config {
-    pub fn read() -> Self {
+    pub(crate) fn get() -> Self {
         let config_path = config_file_path();
 
         if config_path.exists() {
@@ -32,7 +32,7 @@ impl Config {
         }
     }
 
-    pub fn write(config: Self) {
+    pub(crate) fn set(config: Self) {
         let config_path = config_file_path();
 
         let mut f = File::options()
@@ -43,6 +43,13 @@ impl Config {
 
         let s = toml::to_string_pretty(&config).unwrap();
         f.write_all(s.as_bytes()).unwrap();
+    }
+
+    pub fn get_locked_path() -> PathBuf {
+        Config::get()
+            .locked_path
+            .map(PathBuf::from)
+            .expect("Please set the `locked_path` by running `krypta config locked <locked_path>`")
     }
 }
 

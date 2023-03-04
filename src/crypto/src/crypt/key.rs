@@ -18,7 +18,6 @@ pub fn generate_random_secure_key_nonce_pair() -> ([u8; AEAD_KEY_SIZE], [u8; AEA
 
 #[cfg(test)]
 mod tests {
-
     use crate::crypt::{AEAD_KEY_SIZE, AEAD_NONCE_SIZE};
 
     use super::generate_random_secure_key_nonce_pair;
