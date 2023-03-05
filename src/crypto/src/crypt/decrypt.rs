@@ -138,7 +138,7 @@ impl FileDecryptBulk {
 
 impl ComputeBulk for FileDecryptBulk {
     type Compute = FileDecryptUnit;
-    type Output = bool;
+    type Output = Result<(), CryptoError>;
     type Key = PathBuf;
 
     fn units(&self) -> Vec<Self::Compute> {
@@ -152,6 +152,6 @@ impl ComputeBulk for FileDecryptBulk {
     fn map_output(
         result: Result<<<Self as ComputeBulk>::Compute as ComputeUnit>::Output, CryptoError>,
     ) -> Self::Output {
-        result.is_ok()
+        result
     }
 }

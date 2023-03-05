@@ -82,18 +82,34 @@ pub async fn encrypt_many_files(
     log::trace!("Done with encryption job");
 
     // Error check
-    let errors_count = encryption_status
+    let errors = encryption_status
         .iter()
-        .filter(|(_, status)| !(**status))
-        .count();
+        .filter_map(|(_, result)| match result {
+            Ok(_) => None,
+            Err(error) => Some(error),
+        })
+        .collect::<Vec<_>>();
 
-    log::info!(
-        "Encrypted {} files, with {} errors",
-        encryption_status.len(),
-        errors_count
-    );
+    if errors.is_empty() {
+        log::info!(
+            "Encrypted {} files, with no errors",
+            encryption_status.len(),
+        );
 
-    Ok(())
+        Ok(())
+    } else {
+        for error in &errors {
+            println!("Error: {:?}", error);
+        }
+
+        log::warn!(
+            "Encrypted {} files correctly, {} errors",
+            encryption_status.len(),
+            errors.len()
+        );
+
+        Err(anyhow::Error::msg("Unable to encrypt all files"))
+    }
 }
 
 /// Add a path `target_path` to database in `prefix`

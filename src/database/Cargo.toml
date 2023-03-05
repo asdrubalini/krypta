@@ -4,9 +4,11 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
-rusqlite = { version = "0.28", features = [ "chrono", "bundled" ] }
 crypto = { version = "0.0.0", path = "../crypto" }
 utils = { version = "0.0.0", path = "../utils" }
+fs = { version = "0.0.0", path = "../fs" }
+
+rusqlite = { version = "0.28", features = [ "chrono", "bundled" ] }
 chrono = "0.4"
 log = "0.4"
 rand = "0.8"
