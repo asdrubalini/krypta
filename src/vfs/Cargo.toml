@@ -1,7 +1,10 @@
 [package]
 name = "vfs"
-version = "0.1.0"
+version = "0.0.0"
 edition = "2021"
 
 [dependencies]
+database = { version = "0.0.0", path = "../database" }
+
 fuse = { git = "https://github.com/asdrubalini/fuse-rs" }
+libc = "0.2"
