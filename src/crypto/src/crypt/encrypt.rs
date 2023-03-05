@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use chacha20poly1305::{aead::stream, KeyInit, XChaCha20Poly1305};
+use chacha20poly1305::{aead::stream, ChaCha20Poly1305, KeyInit, XChaCha20Poly1305};
 use memmap2::MmapOptions;
 
 use crate::{
@@ -13,7 +13,7 @@ use crate::{
     BUFFER_SIZE,
 };
 
-use super::{PathPair, AEAD_KEY_SIZE, AEAD_NONCE_SIZE};
+use super::{KeyArray, NonceArray, PathPair};
 
 #[derive(Debug, Clone)]
 pub struct FileEncryptUnit {
@@ -21,8 +21,8 @@ pub struct FileEncryptUnit {
     unlocked_path: PathBuf,
     // The destination file
     locked_path: PathBuf,
-    key: Box<[u8; AEAD_KEY_SIZE]>,
-    nonce: Box<[u8; AEAD_NONCE_SIZE]>,
+    key: KeyArray,
+    nonce: NonceArray,
 }
 
 impl From<&FileEncryptUnit> for PathPair {
@@ -38,8 +38,8 @@ impl FileEncryptUnit {
     pub fn try_new<P: AsRef<Path>>(
         unlocked_path: P,
         locked_path: P,
-        key: [u8; AEAD_KEY_SIZE],
-        nonce: [u8; AEAD_NONCE_SIZE],
+        key: KeyArray,
+        nonce: NonceArray,
     ) -> Result<FileEncryptUnit, CryptoError> {
         let unlocked_path = unlocked_path.as_ref().to_path_buf();
 
@@ -49,8 +49,8 @@ impl FileEncryptUnit {
         Ok(FileEncryptUnit {
             unlocked_path,
             locked_path: locked_path.as_ref().to_path_buf(),
-            key: Box::new(key),
-            nonce: Box::new(nonce),
+            key,
+            nonce,
         })
     }
 }
@@ -63,9 +63,8 @@ impl ComputeUnit for FileEncryptUnit {
         let unlocked_file = File::open(&self.unlocked_path)?;
         let locked_file = File::create(&self.locked_path)?;
 
-        let aead = XChaCha20Poly1305::new(self.key.as_ref().into());
-        let mut stream_encryptor =
-            stream::EncryptorBE32::from_aead(aead, self.nonce.as_ref().into());
+        let aead = XChaCha20Poly1305::new(&self.key);
+        let mut stream_encryptor = stream::EncryptorLE31::from_aead(aead, &self.nonce);
 
         // Zero-sized files cannot be mmapped into memory
         if unlocked_file.metadata()?.len() == 0 {

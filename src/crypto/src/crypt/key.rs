@@ -1,17 +1,15 @@
-use rand::{RngCore, SeedableRng};
+use chacha20poly1305::{AeadCore, ChaCha20Poly1305, KeyInit, XChaCha20Poly1305};
+use rand::SeedableRng;
 use rand_chacha::ChaCha20Rng;
 
-use super::{AEAD_KEY_SIZE, AEAD_NONCE_SIZE};
+use super::{KeyArray, NonceArray};
 
-pub fn generate_random_secure_key_nonce_pair() -> ([u8; AEAD_KEY_SIZE], [u8; AEAD_NONCE_SIZE]) {
+pub fn generate_random_secure_key_nonce_pair() -> (KeyArray, NonceArray) {
     // TODO: make sure that this Rng is crypto safe
     let mut rng = ChaCha20Rng::from_entropy();
 
-    let mut key = [0u8; AEAD_KEY_SIZE];
-    let mut nonce = [0u8; AEAD_NONCE_SIZE];
-
-    rng.fill_bytes(&mut key);
-    rng.fill_bytes(&mut nonce);
+    let key = XChaCha20Poly1305::generate_key(&mut rng);
+    let nonce = XChaCha20Poly1305::generate_nonce(&mut rng);
 
     (key, nonce)
 }
@@ -25,6 +23,9 @@ mod tests {
     #[test]
     fn test_random_key() {
         let (key, nonce) = generate_random_secure_key_nonce_pair();
+
+        let key = key.as_slice();
+        let nonce = nonce.as_slice();
 
         assert_ne!(key, [0u8; AEAD_KEY_SIZE]);
         assert_ne!(nonce, [0u8; AEAD_NONCE_SIZE]);
