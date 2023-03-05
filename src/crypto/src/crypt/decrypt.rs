@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use chacha20poly1305::{aead::stream, KeyInit, XChaCha20Poly1305};
+use chacha20poly1305::{aead::stream, ChaCha20Poly1305, KeyInit, XChaCha20Poly1305};
 use memmap2::MmapOptions;
 
 use crate::{
@@ -13,7 +13,7 @@ use crate::{
     BUFFER_SIZE,
 };
 
-use super::{PathPair, AEAD_KEY_SIZE, AEAD_NONCE_SIZE, AEAD_TAG_SIZE};
+use super::{KeyArray, NonceArray, PathPair, AEAD_TAG_SIZE};
 
 #[derive(Debug, Clone)]
 pub struct FileDecryptUnit {
@@ -21,8 +21,8 @@ pub struct FileDecryptUnit {
     locked_path: PathBuf,
     // The destination file
     unlocked_path: PathBuf,
-    key: Box<[u8; AEAD_KEY_SIZE]>,
-    nonce: Box<[u8; AEAD_NONCE_SIZE]>,
+    key: KeyArray,
+    nonce: NonceArray,
 }
 
 impl From<&FileDecryptUnit> for PathPair {
@@ -38,8 +38,8 @@ impl FileDecryptUnit {
     pub fn try_new<P: AsRef<Path>>(
         locked_path: P,
         unlocked_path: P,
-        key: [u8; AEAD_KEY_SIZE],
-        nonce: [u8; AEAD_NONCE_SIZE],
+        key: KeyArray,
+        nonce: NonceArray,
     ) -> Result<FileDecryptUnit, CryptoError> {
         let locked_path = locked_path.as_ref().to_path_buf();
 
@@ -49,8 +49,8 @@ impl FileDecryptUnit {
         Ok(FileDecryptUnit {
             locked_path,
             unlocked_path: unlocked_path.as_ref().to_path_buf(),
-            key: Box::new(key),
-            nonce: Box::new(nonce),
+            key,
+            nonce,
         })
     }
 }
@@ -63,9 +63,8 @@ impl ComputeUnit for FileDecryptUnit {
         let locked_file = File::open(&self.locked_path)?;
         let unlocked_file = File::create(&self.unlocked_path)?;
 
-        let aead = XChaCha20Poly1305::new(self.key.as_ref().into());
-        let mut stream_decryptor =
-            stream::DecryptorBE32::from_aead(aead, self.nonce.as_ref().into());
+        let aead = XChaCha20Poly1305::new(&self.key);
+        let mut stream_decryptor = stream::DecryptorLE31::from_aead(aead, &self.nonce);
 
         // Zero-sized files cannot be mmapped into memory
         if locked_file.metadata()?.len() == 0 {

@@ -101,8 +101,8 @@ impl File {
 
         // Key and nonce generation
         let (key, nonce) = generate_random_secure_key_nonce_pair();
-        let key = Vec::from(key);
-        let nonce = Vec::from(nonce);
+        let key = Vec::from(key.as_slice());
+        let nonce = Vec::from(nonce.as_slice());
 
         File {
             id: None,
