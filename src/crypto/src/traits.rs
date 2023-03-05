@@ -1,5 +1,6 @@
 use std::{any::type_name, collections::HashMap, hash::Hash, time::Instant};
 
+use indicatif::{ParallelProgressIterator, ProgressStyle};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::errors::CryptoError;
@@ -49,8 +50,14 @@ pub trait ComputeBulk {
 
         let start = Instant::now();
 
+        let progress_bar_style = ProgressStyle::with_template(
+            "[{elapsed_precise}] {spinner} {bar:40.cyan/blue} {pos:>7}/{len:7}",
+        )
+        .unwrap();
+
         let results = computes
             .into_par_iter()
+            .progress_with_style(progress_bar_style)
             .map(|compute| {
                 let key = Self::map_key(&compute);
                 let result = compute.start();
