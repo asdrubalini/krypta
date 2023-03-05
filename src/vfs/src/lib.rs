@@ -84,7 +84,7 @@ impl Filesystem for KryptaFS {
             entries.push((
                 (i + 2) as u64,
                 FileType::RegularFile,
-                format!("{}", file.title),
+                file.title.to_string(),
             ));
         }
 

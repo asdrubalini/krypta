@@ -61,7 +61,7 @@ impl Config {
         File::open(&p).unwrap_or_else(|_| {
             panic!(
                 "cannot open `locked_path` {}: No such file or directory",
-                p.to_string_lossy().to_string()
+                p.to_string_lossy()
             )
         });
 
