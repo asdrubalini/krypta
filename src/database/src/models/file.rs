@@ -9,6 +9,7 @@ use crypto::crypt::{
 };
 use crypto::errors::CryptoError;
 use database_macros::{Insert, TableName, TryFromRow};
+use fs::PathTree;
 use rand::SeedableRng;
 use rand_chacha::ChaCha20Rng;
 use rusqlite::named_params;
@@ -236,6 +237,16 @@ impl MetadataFile {
     /// not present in a `Metadata` struct
     pub fn into_file(self, contents_hash: String) -> File {
         File::new(self.title, self.path, contents_hash, self.size)
+    }
+}
+
+impl FromIterator<File> for PathTree {
+    fn from_iter<T: IntoIterator<Item = File>>(files: T) -> Self {
+        files
+            .into_iter()
+            .map(|f| f.path)
+            .map(PathBuf::from)
+            .collect()
     }
 }
 

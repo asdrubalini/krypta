@@ -4,11 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use chacha20poly1305::{
-    aead::stream,
-    KeyInit,
-    XChaCha20Poly1305,
-};
+use chacha20poly1305::{aead::stream, KeyInit, XChaCha20Poly1305};
 use memmap2::MmapOptions;
 
 use crate::{
@@ -141,7 +137,7 @@ impl FileEncryptBulk {
 
 impl ComputeBulk for FileEncryptBulk {
     type Compute = FileEncryptUnit;
-    type Output = bool;
+    type Output = Result<(), CryptoError>;
     type Key = PathBuf;
 
     fn units(&self) -> Vec<Self::Compute> {
@@ -155,6 +151,6 @@ impl ComputeBulk for FileEncryptBulk {
     fn map_output(
         result: Result<<<Self as ComputeBulk>::Compute as ComputeUnit>::Output, CryptoError>,
     ) -> Self::Output {
-        result.is_ok()
+        result
     }
 }

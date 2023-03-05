@@ -308,6 +308,7 @@ dependencies = [
  "chrono",
  "crypto",
  "database-macros",
+ "fs",
  "log",
  "rand",
  "rand_chacha",

@@ -78,12 +78,11 @@ impl Filesystem for KryptaFS {
         let mut entries = vec![
             (1, FileType::Directory, ".".to_string()),
             (1, FileType::Directory, "..".to_string()),
-            (2, FileType::RegularFile, "hello.txt".to_string()),
         ];
 
         for (i, file) in files.into_iter().enumerate() {
             entries.push((
-                (i + 3) as u64,
+                (i + 2) as u64,
                 FileType::RegularFile,
                 format!("{}", file.title),
             ));
@@ -93,6 +92,7 @@ impl Filesystem for KryptaFS {
             // i + 1 means the index of the next entry
             reply.add(entry.0, (i + 1) as i64, entry.1, entry.2);
         }
+
         reply.ok();
     }
 }
