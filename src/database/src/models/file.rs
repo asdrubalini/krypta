@@ -196,7 +196,7 @@ impl File {
         let key: [u8; AEAD_KEY_SIZE] = self.key.try_into().unwrap();
         let nonce: [u8; AEAD_NONCE_SIZE] = self.nonce.try_into().unwrap();
 
-        FileEncryptUnit::try_new(source, locked, key, nonce)
+        FileEncryptUnit::try_new(source, locked, key.into(), nonce.into())
     }
 
     /// Get a list of tags related to a File

@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use chacha20poly1305::{aead::stream, ChaCha20Poly1305, KeyInit, XChaCha20Poly1305};
+use chacha20poly1305::{aead::stream, KeyInit, XChaCha20Poly1305};
 use memmap2::MmapOptions;
 
 use crate::{
@@ -13,7 +13,7 @@ use crate::{
     BUFFER_SIZE,
 };
 
-use super::{KeyArray, NonceArray, PathPair};
+use super::{KeyArray, NonceArray, PathPair, AEAD_NONCE_SIZE};
 
 #[derive(Debug, Clone)]
 pub struct FileEncryptUnit {
@@ -64,7 +64,10 @@ impl ComputeUnit for FileEncryptUnit {
         let locked_file = File::create(&self.locked_path)?;
 
         let aead = XChaCha20Poly1305::new(&self.key);
-        let mut stream_encryptor = stream::EncryptorLE31::from_aead(aead, &self.nonce);
+
+        let nonce: &[u8; AEAD_NONCE_SIZE - 4] =
+            self.nonce[0..AEAD_NONCE_SIZE - 4].try_into().unwrap();
+        let mut stream_encryptor = stream::EncryptorLE31::from_aead(aead, nonce.into());
 
         // Zero-sized files cannot be mmapped into memory
         if unlocked_file.metadata()?.len() == 0 {

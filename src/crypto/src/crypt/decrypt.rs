@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use chacha20poly1305::{aead::stream, ChaCha20Poly1305, KeyInit, XChaCha20Poly1305};
+use chacha20poly1305::{aead::stream, KeyInit, XChaCha20Poly1305};
 use memmap2::MmapOptions;
 
 use crate::{
@@ -13,7 +13,7 @@ use crate::{
     BUFFER_SIZE,
 };
 
-use super::{KeyArray, NonceArray, PathPair, AEAD_TAG_SIZE};
+use super::{KeyArray, NonceArray, PathPair, AEAD_NONCE_SIZE, AEAD_TAG_SIZE};
 
 #[derive(Debug, Clone)]
 pub struct FileDecryptUnit {
@@ -64,7 +64,10 @@ impl ComputeUnit for FileDecryptUnit {
         let unlocked_file = File::create(&self.unlocked_path)?;
 
         let aead = XChaCha20Poly1305::new(&self.key);
-        let mut stream_decryptor = stream::DecryptorLE31::from_aead(aead, &self.nonce);
+
+        let nonce: &[u8; AEAD_NONCE_SIZE - 4] =
+            self.nonce[0..AEAD_NONCE_SIZE - 4].try_into().unwrap();
+        let mut stream_decryptor = stream::DecryptorLE31::from_aead(aead, nonce.into());
 
         // Zero-sized files cannot be mmapped into memory
         if locked_file.metadata()?.len() == 0 {
