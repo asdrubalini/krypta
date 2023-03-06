@@ -1,4 +1,4 @@
-use chacha20poly1305::{AeadCore, ChaCha20Poly1305, KeyInit, XChaCha20Poly1305};
+use chacha20poly1305::{AeadCore, KeyInit, XChaCha20Poly1305};
 use rand::SeedableRng;
 use rand_chacha::ChaCha20Rng;
 

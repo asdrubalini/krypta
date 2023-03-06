@@ -40,10 +40,12 @@ fn encrypt_decrypt_with_key(
     let mut recovered_path = file_path;
     recovered_path.push(RECOVERED_FILE);
 
-    let encryptor = FileEncryptUnit::try_new(&unlocked_path, &locked_path, key, nonce).unwrap();
+    let encryptor =
+        FileEncryptUnit::try_new(&unlocked_path, &locked_path, key.into(), nonce.into()).unwrap();
     encryptor.start().unwrap();
 
-    let decryptor = FileDecryptUnit::try_new(&locked_path, &recovered_path, key, nonce).unwrap();
+    let decryptor =
+        FileDecryptUnit::try_new(&locked_path, &recovered_path, key.into(), nonce.into()).unwrap();
     decryptor.start().unwrap();
 
     // Make sure that plaintext and recovered files are the same
