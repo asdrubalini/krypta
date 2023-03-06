@@ -1,4 +1,5 @@
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
+use std::io::Write;
 
 pub struct RandomString;
 
@@ -28,5 +29,22 @@ impl RandomString {
     pub fn hex(len: usize) -> String {
         let mut rng = thread_rng();
         Self::hex_with_rng(&mut rng, len)
+    }
+}
+
+pub fn ask_yes_or_no(question: impl AsRef<str>) {
+    let question = question.as_ref();
+    print!("{question} y/N ");
+
+    std::io::stdout().lock().flush().unwrap();
+
+    let mut in_buf = String::new();
+    std::io::stdin().read_line(&mut in_buf).unwrap();
+
+    in_buf = in_buf.trim().to_lowercase();
+
+    if in_buf.is_empty() || !in_buf.starts_with('y') {
+        println!("Stopped.");
+        std::process::exit(0);
     }
 }

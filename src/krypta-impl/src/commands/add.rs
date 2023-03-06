@@ -1,14 +1,15 @@
 use std::{
     collections::HashMap,
-    io::Write,
     path::{Path, PathBuf},
 };
 
+use byte_unit::Byte;
 use crypto::{
     crypt::FileEncryptBulk, errors::CryptoError, hash::Blake3Concurrent, traits::ComputeBulk,
 };
 use database::{models, traits::InsertMany, Database};
 use fs::PathFinder;
+use utils::ask_yes_or_no;
 
 use crate::utils::config::Config;
 
@@ -126,21 +127,19 @@ pub async fn add(db: &mut Database, source_path: PathBuf, virtual_prefix: Option
         .map(|path| path.as_path())
         .collect::<Vec<_>>();
 
-    print!(
-        "You are inserting {} paths into krypta. Are you sure? y/N ",
-        found_paths.len()
-    );
+    let total_size_bytes = pathfinder
+        .metadatas
+        .values()
+        .map(|metadata| metadata.len())
+        .sum::<u64>();
 
-    std::io::stdout().lock().flush().unwrap();
+    let total_size = Byte::from_bytes(total_size_bytes.into());
 
-    let mut in_buf = String::new();
-    std::io::stdin().read_line(&mut in_buf).unwrap();
-
-    in_buf = in_buf.trim().to_lowercase();
-    if in_buf.is_empty() || !in_buf.starts_with('y') {
-        println!("Stopped.");
-        std::process::exit(0);
-    }
+    ask_yes_or_no(format!(
+        "You are inserting {} paths ({}) into krypta. Are you sure?",
+        found_paths.len(),
+        total_size.get_appropriate_unit(false)
+    ));
 
     let hashes_map = compute_paths_hashes(&source_path, &found_paths).unwrap();
 
