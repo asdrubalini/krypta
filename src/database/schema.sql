@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS `file` (
 	`id` INTEGER NOT NULL UNIQUE,
 	`title` TEXT NOT NULL UNIQUE,
 	`path` TEXT NOT NULL UNIQUE,
-	`random_hash` TEXT NOT NULL UNIQUE,
+	`locked_hash` TEXT NOT NULL UNIQUE,
 	`contents_hash` TEXT NOT NULL,
 	`size` INTEGER NOT NULL,
 	`created_at` TEXT NOT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS `file` (
 ) STRICT;
 
 CREATE UNIQUE INDEX IF NOT EXISTS `file_title` ON `file` (`title` ASC);
-CREATE UNIQUE INDEX IF NOT EXISTS `file_random_hash` ON `file` (`random_hash`);
+CREATE UNIQUE INDEX IF NOT EXISTS `file_locked_hash` ON `file` (`locked_hash`);
 CREATE UNIQUE INDEX IF NOT EXISTS `file_time` ON `file` (`created_at`, `updated_at`);
 CREATE UNIQUE INDEX IF NOT EXISTS `file_path` ON `file` (`path`);
 
