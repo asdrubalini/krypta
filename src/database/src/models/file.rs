@@ -119,7 +119,7 @@ impl File {
     /// Derive locked_hash from contents_hash + salt
     fn locked_hash_string(contents_hash: impl AsRef<str>) -> String {
         let contents_hash = contents_hash.as_ref();
-        let salt = "gay";
+        let salt = "chicken mcnuggets";
 
         let mut hasher = blake3::Hasher::new();
         hasher.update(contents_hash.as_bytes());
