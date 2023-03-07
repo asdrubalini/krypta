@@ -4,16 +4,14 @@ use std::time::Instant;
 use std::{fs::Metadata, path::PathBuf};
 
 use chrono::{DateTime, Utc};
+use crypto::blake3;
 use crypto::crypt::{
     generate_random_secure_key_nonce_pair, FileEncryptUnit, AEAD_KEY_SIZE, AEAD_NONCE_SIZE,
 };
 use crypto::errors::CryptoError;
 use database_macros::{Insert, TableName, TryFromRow};
 use fs::PathTree;
-use rand::SeedableRng;
-use rand_chacha::ChaCha20Rng;
 use rusqlite::named_params;
-use utils::RandomString;
 
 use crate::{errors::DatabaseResult, Database};
 
@@ -26,7 +24,7 @@ pub struct File {
     pub id: Option<i64>,
     pub title: String,
     pub path: String,
-    pub random_hash: String,
+    pub locked_hash: String,
     pub contents_hash: String,
     pub size: u64,
     pub created_at: DateTime<Utc>,
@@ -69,7 +67,7 @@ impl Update for File {
             named_params! {
                 ":title": self.title,
                 ":path": self.path,
-                ":random_hash": self.random_hash,
+                ":locked_hash": self.locked_hash,
                 ":contents_hash": self.contents_hash,
                 ":size": self.size,
                 ":created_at": self.created_at,
@@ -96,7 +94,7 @@ impl From<&File> for PathBuf {
 impl File {
     /// Build a new `File` and generate on the fly some stuff
     pub fn new(title: String, path: PathBuf, contents_hash: String, size: u64) -> Self {
-        let random_hash = File::random_hash_string();
+        let locked_hash = File::locked_hash_string(&contents_hash);
         let now = chrono::Utc::now();
 
         // Key and nonce generation
@@ -108,7 +106,7 @@ impl File {
             id: None,
             title,
             path: path.to_string_lossy().to_string(),
-            random_hash,
+            locked_hash,
             contents_hash,
             size,
             created_at: now,
@@ -118,10 +116,16 @@ impl File {
         }
     }
 
-    /// Generate a pseudorandom 32 bytes hex string
-    fn random_hash_string() -> String {
-        let mut generator = ChaCha20Rng::from_entropy();
-        RandomString::hex_with_rng(&mut generator, 32)
+    /// Derive locked_hash from contents_hash + salt
+    fn locked_hash_string(contents_hash: impl AsRef<str>) -> String {
+        let contents_hash = contents_hash.as_ref();
+        let salt = "gay";
+
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(contents_hash.as_bytes());
+        hasher.update(salt.as_bytes());
+
+        hasher.finalize().to_string()
     }
 
     /// Update `updated_at` field to now
@@ -190,7 +194,7 @@ impl File {
         source.push(self.path);
 
         let mut locked = locked_path.as_ref().to_owned();
-        locked.push(self.random_hash);
+        locked.push(self.locked_hash);
 
         // Should never fail as key and nonce lens are constant
         let key: [u8; AEAD_KEY_SIZE] = self.key.try_into().unwrap();
@@ -258,6 +262,8 @@ mod tests {
 
     use chrono::{DateTime, NaiveDateTime, Utc};
     use crypto::crypt::{AEAD_KEY_SIZE, AEAD_NONCE_SIZE};
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha20Rng;
     use utils::RandomString;
 
     use crate::create_in_memory;
@@ -266,11 +272,17 @@ mod tests {
 
     use super::File;
 
+    /// Generate a pseudorandom 32 bytes hex string
+    fn random_hash_string() -> String {
+        let mut generator = ChaCha20Rng::from_entropy();
+        RandomString::hex_with_rng(&mut generator, 32)
+    }
+
     fn new_random_file() -> File {
         File::new(
             RandomString::alphanum(10),
             PathBuf::from(format!("foo/bar/{}", RandomString::alphanum(10))),
-            File::random_hash_string(),
+            random_hash_string(),
             1337,
         )
     }
@@ -280,7 +292,7 @@ mod tests {
         let valid_chars = "0123456789abcdfe";
 
         for _ in 0..10_000 {
-            let result = File::random_hash_string();
+            let result = random_hash_string();
             assert_eq!(result.len(), 64);
 
             for chr in result.chars() {
@@ -429,7 +441,7 @@ mod tests {
         let file = File::new(
             String::from("x.txt"),
             PathBuf::from("foo/bar/x.txt"),
-            File::random_hash_string(),
+            random_hash_string(),
             1337,
         );
 
@@ -437,7 +449,7 @@ mod tests {
         assert_eq!(file.title, "x.txt".to_string());
         assert_eq!(file.path, String::from("foo/bar/x.txt"));
         assert_eq!(PathBuf::from(&file), PathBuf::from("foo/bar/x.txt"));
-        assert_eq!(file.random_hash.len(), 64);
+        assert_eq!(file.locked_hash.len(), 64);
         assert_eq!(file.contents_hash.len(), 64);
         assert_eq!(file.size, 1337);
         assert_ne!(

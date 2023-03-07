@@ -1,7 +1,7 @@
 UPDATE file
 SET title = :title,
     path = :path,
-    random_hash = :random_hash,
+    locked_hash = :locked_hash,
     contents_hash = :contents_hash,
     size = :size,
     created_at = :created_at,
