@@ -35,13 +35,13 @@ mod tests {
         (locked_path, unlocked_path)
     }
 
-    #[tokio::test]
-    async fn test_integration() {
-        // TODO: do something useful here
-        let mut db = database::create_in_memory().unwrap();
+    //#[tokio::test]
+    //async fn test_integration() {
+    //// TODO: do something useful here
+    //let mut db = database::create_in_memory().unwrap();
 
-        let mut rng = SmallRng::seed_from_u64(1);
+    //let mut rng = SmallRng::seed_from_u64(1);
 
-        let (locked_tmp, unlocked_tmp) = init_paths_with_rng(&mut rng);
-    }
+    //let (locked_tmp, unlocked_tmp) = init_paths_with_rng(&mut rng);
+    //}
 }
