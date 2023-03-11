@@ -37,5 +37,8 @@ pub enum CliCommand {
     /// List all the files
     List,
 
+    /// Check that database and locked_path are in sync
+    Check,
+
     Debug,
 }
