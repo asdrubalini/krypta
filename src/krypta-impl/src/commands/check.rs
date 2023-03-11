@@ -33,7 +33,7 @@ pub async fn check(db: &mut Database) {
         }
     }
 
-    for (fs_file, _) in &fs_files {
+    for fs_file in fs_files.keys() {
         if db_files.get(fs_file).is_none() {
             panic!(
                 "consistency error: file with Hash {:?} is in Fs but cannot be found in Database",

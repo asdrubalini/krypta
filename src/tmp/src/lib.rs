@@ -1,8 +1,9 @@
 /// A random path generator in /tmp/ that automatically creates and deletes the path
 use std::{
+    env,
     fs::{create_dir, remove_dir_all, File},
     io::Write,
-    path::{Path, PathBuf}, env,
+    path::{Path, PathBuf},
 };
 
 use rand::{thread_rng, Rng};
@@ -110,7 +111,6 @@ impl RandomFill for Tmp {
         let mut current_base = self.base_path();
 
         let paths: Result<Vec<(PathBuf, usize)>, std::io::Error> = (0..count)
-            .into_iter()
             .map(|_| {
                 let mut path = PathBuf::from(&current_base);
                 path.push(RandomString::alphanum_with_rng(rng, TMP_PATH_LENGTH));
