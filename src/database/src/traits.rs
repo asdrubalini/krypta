@@ -13,6 +13,7 @@ pub trait TryFromRow: Sized {
     fn try_from_row(row: &Row) -> Result<Self, rusqlite::Error>;
 }
 
+/// Get model from its primary key
 pub trait Get: Sized {
     fn get(db: &Database, id: i64) -> DatabaseResult<Option<Self>>;
 }
