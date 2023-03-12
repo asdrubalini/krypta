@@ -39,11 +39,8 @@ impl Debug for File {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut d = f.debug_struct("File");
 
-        match self.id {
-            Some(id) => {
-                d.field("id", &id);
-            }
-            None => (),
+        if let Some(id) = self.id {
+            d.field("id", &id);
         }
 
         d.field("title", &self.title)
