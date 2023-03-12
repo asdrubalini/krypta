@@ -1,3 +1,5 @@
+#![allow(warnings)]
+
 use std::{
     ffi::OsStr,
     path::Path,

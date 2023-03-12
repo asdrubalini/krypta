@@ -1,4 +1,5 @@
 use std::any::type_name;
+use std::fmt::Debug;
 use std::path::Path;
 use std::time::Instant;
 use std::{fs::Metadata, path::PathBuf};
@@ -15,11 +16,11 @@ use rusqlite::named_params;
 
 use crate::{errors::DatabaseResult, Database};
 
-use crate::traits::{Count, FetchAll, InsertMany, Search, TryFromRow, Update, UpdateMany};
+use crate::traits::{Count, FetchAll, Get, InsertMany, Search, TryFromRow, Update, UpdateMany};
 
 use super::Tag;
 
-#[derive(TableName, TryFromRow, Insert, Debug, Clone, PartialEq, Eq)]
+#[derive(TableName, TryFromRow, Insert, Clone, PartialEq, Eq)]
 pub struct File {
     pub id: Option<i64>,
     pub title: String,
@@ -33,9 +34,48 @@ pub struct File {
     pub nonce: Vec<u8>,
 }
 
+/// don't include crypto key and nonce in debug
+impl Debug for File {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut d = f.debug_struct("File");
+
+        match self.id {
+            Some(id) => {
+                d.field("id", &id);
+            }
+            None => (),
+        }
+
+        d.field("title", &self.title)
+            .field("path", &self.path)
+            .field("locked_hash", &self.locked_hash)
+            .field("contents_hash", &self.contents_hash)
+            .field("size", &self.size)
+            .field("created_at", &self.created_at)
+            .field("updated_at", &self.updated_at)
+            .finish()
+    }
+}
+
 impl Count for File {}
 
 impl FetchAll for File {}
+
+impl Get for File {
+    fn get(db: &Database, id: i64) -> DatabaseResult<Option<Self>> {
+        let mut stmt = db.prepare(include_str!("sql/file/get.sql"))?;
+        let mut rows = stmt.query(named_params! {
+            ":id": id
+        })?;
+
+        let f = match rows.next()? {
+            Some(row) => Some(File::try_from_row(row)?),
+            None => None,
+        };
+
+        Ok(f)
+    }
+}
 
 impl Search for File {
     /// Search files stored in database

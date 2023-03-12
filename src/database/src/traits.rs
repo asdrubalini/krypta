@@ -13,6 +13,10 @@ pub trait TryFromRow: Sized {
     fn try_from_row(row: &Row) -> Result<Self, rusqlite::Error>;
 }
 
+pub trait Get: Sized {
+    fn get(db: &Database, id: i64) -> DatabaseResult<Option<Self>>;
+}
+
 /// A model that can be full-text searched
 pub trait Search: Sized {
     fn search(db: &Database, query: impl AsRef<str>) -> DatabaseResult<Vec<Self>>;
