@@ -1,6 +1,9 @@
 use cli::{CliCommand, Parser};
 use database::Database;
 
+#[cfg(debug_assertions)]
+use super::prune;
+
 use super::{add, check, config, debug, find, list, status, tree};
 
 /// Parse and execute command, if valid
@@ -17,6 +20,9 @@ pub async fn execute_command(database: &mut Database) -> anyhow::Result<()> {
             prefix,
         } => add::add(database, source_path, prefix).await,
         CliCommand::Check => check::check(database).await,
+
+        #[cfg(debug_assertions)]
+        CliCommand::Prune => prune::prune(database).await,
     };
 
     Ok(())
