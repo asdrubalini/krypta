@@ -40,5 +40,9 @@ pub enum CliCommand {
     /// Check that database and locked_path are in sync
     Check,
 
+    #[cfg(debug_assertions)]
+    /// Prune everything (debug mode only)
+    Prune,
+
     Debug,
 }

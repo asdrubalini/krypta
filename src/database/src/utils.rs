@@ -1,4 +1,7 @@
-use std::{env, path::Path};
+use std::{
+    env,
+    path::{Path, PathBuf},
+};
 
 use rusqlite::Connection;
 
@@ -6,9 +9,14 @@ use crate::errors::DatabaseResult;
 
 pub type Database = Connection;
 
+pub fn database_file() -> PathBuf {
+    let database_path = env::var("DATABASE_FILE").expect("Cannot read DATABASE_FILE env");
+    PathBuf::from(database_path)
+}
+
 /// Connect to SQLite database
 pub fn connect_or_create() -> DatabaseResult<Database> {
-    let database_path = env::var("DATABASE_FILE").expect("Cannot read DATABASE_FILE env");
+    let database_path = database_file();
 
     let is_database_new = !Path::new(&database_path).exists();
     let connection = Connection::open(database_path)?;
