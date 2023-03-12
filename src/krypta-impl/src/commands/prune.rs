@@ -31,7 +31,6 @@ pub async fn prune(db: &mut Database) {
     println!("recreating database...");
     remove_file(database_file()).unwrap();
 
-    drop(db);
     let _ = connect_or_create().unwrap();
 
     println!("all done");
